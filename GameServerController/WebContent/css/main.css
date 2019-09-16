@@ -1,0 +1,66 @@
+html, body
+{
+	height: 100%;
+}
+
+body, #wrapper
+{
+	min-height: 100%;
+}
+
+textarea
+{
+	resize: none;
+	font-family: monospace;
+}
+
+#content
+{
+	background-repeat: none;
+	background-size: cover;
+	min-height: 100%;
+}
+
+#left-elements
+{
+	width: 80%;
+}
+
+#sidebar
+{
+	background-image: url("../images/blacksquares.jpg");
+	width: 15%;
+}
+
+#options
+{
+	margin-top: 4%;
+	height: 90%;
+}
+
+#homeLink
+{
+	text-decoration: none;
+}
+
+.status-image
+{
+	position: relative;
+	left: 75%;
+	top: 20%;
+}
+
+.server-title
+{
+	margin-left: -10%;
+}
+
+#inner-content
+{
+	width: 90%;
+}
+
+#addServerLink
+{
+	font-size: 0.5em;
+}
