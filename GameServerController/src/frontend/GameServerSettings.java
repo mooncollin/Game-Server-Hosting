@@ -28,7 +28,7 @@ import forms.TextField;
 import html.CompoundElement;
 import html.Element;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 import models.NodeTable;
@@ -60,7 +60,7 @@ public class GameServerSettings extends HttpServlet
 			return;
 		}
 		
-		TableTemp foundGameServer;
+		Table foundGameServer;
 		try
 		{
 			foundGameServer = Query.query(StartUpApplication.database, GameServerTable.class)
@@ -151,7 +151,7 @@ public class GameServerSettings extends HttpServlet
 		
 		if(serverFound.getFirst().equals(MinecraftServer.class))
 		{
-			TableTemp minecraftServerFound;
+			Table minecraftServerFound;
 			try
 			{
 				minecraftServerFound = Query.query(StartUpApplication.database, MinecraftServerTable.class)

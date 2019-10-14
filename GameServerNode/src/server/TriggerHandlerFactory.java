@@ -5,13 +5,13 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import model.TableTemp;
+import model.Table;
 import models.TriggersTable;
 import server.TriggerHandlerCondition.TriggerHandlerConditionType;
 
 public class TriggerHandlerFactory
 {	
-	public static TriggerHandler getSpecificTriggerHandler(TableTemp trigger, GameServer server)
+	public static TriggerHandler getSpecificTriggerHandler(Table trigger, GameServer server)
 	{
 		Objects.requireNonNull(trigger);
 		Objects.requireNonNull(server);

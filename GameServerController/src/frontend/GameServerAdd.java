@@ -28,7 +28,7 @@ import forms.TextField;
 import html.CompoundElement;
 import html.Element;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.GameServerTable;
 import models.NodeTable;
 import server.GameServer;
@@ -48,7 +48,7 @@ public class GameServerAdd extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		List<TableTemp> nodes;
+		List<Table> nodes;
 		try
 		{
 			nodes = Query.query(StartUpApplication.database, NodeTable.class)

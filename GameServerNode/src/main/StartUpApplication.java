@@ -17,7 +17,7 @@ import javax.servlet.annotation.WebListener;
 import api.NodeUsage;
 import model.Database;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.GameServerTable;
 import models.NodeTable;
 import models.TriggersTable;
@@ -119,7 +119,7 @@ public class StartUpApplication implements ServletContextListener
 		}
 	}
 	
-	public static void addTrigger(TableTemp trigger)
+	public static void addTrigger(Table trigger)
 	{
 		removeTrigger(trigger);
 		var correspondingServer = getServer(trigger.getColumnValue(TriggersTable.SERVER_OWNER));
@@ -161,7 +161,7 @@ public class StartUpApplication implements ServletContextListener
 		}
 	}
 	
-	public static void removeTrigger(TableTemp trigger)
+	public static void removeTrigger(Table trigger)
 	{
 		var correspondingServer = getServer(trigger.getColumnValue(TriggersTable.SERVER_OWNER));
 		if(correspondingServer != null)

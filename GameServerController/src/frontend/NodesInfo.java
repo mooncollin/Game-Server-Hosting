@@ -14,7 +14,7 @@ import backend.main.ControllerProperties;
 import backend.main.StartUpApplication;
 import html.CompoundElement;
 import html.Element;
-import model.TableTemp;
+import model.Table;
 import models.GameServerTable;
 import tags.Script;
 import util.Template;
@@ -96,7 +96,7 @@ public class NodesInfo extends HttpServlet
 			CompoundElement tableBody = new CompoundElement("tbody");
 			table.addElement(tableBody);
 			
-			List<TableTemp> servers;
+			List<Table> servers;
 			try
 			{
 				servers = new GameServerTable().query(StartUpApplication.database)

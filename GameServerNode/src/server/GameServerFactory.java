@@ -9,13 +9,13 @@ import api.minecraft.MinecraftServer;
 import main.NodeProperties;
 import main.StartUpApplication;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 
 public class GameServerFactory
 {
-	public static GameServer getSpecificServer(TableTemp server)
+	public static GameServer getSpecificServer(Table server)
 	{
 		Objects.requireNonNull(server);
 		GameServer specificServer = null;
@@ -23,7 +23,7 @@ public class GameServerFactory
 		var fileName = Paths.get(folderLocation.getAbsolutePath(), server.getColumnValue(GameServerTable.EXECUTABLE_NAME)).toFile();
 		if(server.getColumn(GameServerTable.SERVER_TYPE).getValue().equals("minecraft"))
 		{
-			TableTemp minecraftServer;
+			Table minecraftServer;
 			try
 			{
 				minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)

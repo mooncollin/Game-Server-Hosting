@@ -61,7 +61,7 @@ public class ModelTests
 		}
 	}
 	
-	private static class CustomerTable extends TableTemp
+	private static class CustomerTable extends Table
 	{
 		public static final Column<Integer> ID =
 				new Column<Integer>(Integer.class, "id", Types.INTEGER, 0, true, false, true, null);

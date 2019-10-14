@@ -3,9 +3,9 @@ package models;
 import java.sql.Types;
 
 import model.Column;
-import model.TableTemp;
+import model.Table;
 
-public class MinecraftServerTable extends TableTemp
+public class MinecraftServerTable extends Table
 {
 	public static final Column<Integer> ID =
 			new Column<Integer>(Integer.class, "id", Types.INTEGER, 0, true, false, true, null);

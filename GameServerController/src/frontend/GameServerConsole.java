@@ -23,7 +23,7 @@ import forms.TextField;
 import html.CompoundElement;
 import html.Element;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.TriggersTable;
 import server.GameServer;
 import tags.Anchor;
@@ -171,7 +171,7 @@ public class GameServerConsole extends HttpServlet
 		outputTriggers.addElement(outputTriggersLink);
 		triggerTabs.addElement(outputTriggers);
 		
-		List<TableTemp> triggers;
+		List<Table> triggers;
 		try
 		{
 			triggers = Query.query(StartUpApplication.database, TriggersTable.class)
@@ -201,7 +201,7 @@ public class GameServerConsole extends HttpServlet
 		response.getWriter().print(template);
 	}
 	
-	private CompoundElement getTriggers(List<TableTemp> triggers, String filterType, String serverName)
+	private CompoundElement getTriggers(List<Table> triggers, String filterType, String serverName)
 	{
 		CompoundElement allTriggers = new CompoundElement("div");
 		if(filterType.equals("allTriggers"))

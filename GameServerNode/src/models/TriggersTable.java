@@ -3,9 +3,9 @@ package models;
 import java.sql.Types;
 
 import model.Column;
-import model.TableTemp;
+import model.Table;
 
-public class TriggersTable extends TableTemp
+public class TriggersTable extends Table
 {
 	public static final Column<Integer> ID =
 			new Column<Integer>(Integer.class, "id", Types.INTEGER, 0, true, false, true, null);

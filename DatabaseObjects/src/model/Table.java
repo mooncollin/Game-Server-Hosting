@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class TableTemp
+public class Table
 {
 	private final String tableName;
 	private boolean existsCache;
@@ -28,7 +28,7 @@ public class TableTemp
 	
 	private boolean inDatabase;
 	
-	public TableTemp(String tableName, Column<?>... columns)
+	public Table(String tableName, Column<?>... columns)
 	{
 		this.tableName = tableName;
 		currentColumns = Stream.of(columns)

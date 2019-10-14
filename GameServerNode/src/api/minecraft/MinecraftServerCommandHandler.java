@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import main.StartUpApplication;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 import server.GameServer;
@@ -104,7 +104,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		}
 		
 		
-		TableTemp minecraftServer;
+		Table minecraftServer;
 		try
 		{
 			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)

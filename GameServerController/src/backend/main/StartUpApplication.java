@@ -15,7 +15,7 @@ import javax.servlet.annotation.WebListener;
 
 import model.Database;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import model.Filter.FilterType;
 import model.Filter.RelationType;
 import models.GameServerTable;
@@ -74,7 +74,7 @@ public class StartUpApplication implements ServletContextListener
 		for(int i = 0; i < NODE_NAMES.length; i++)
 		{
 			var url = createNodeURL(NODE_ADDRESSES[i], NODE_PORTS[i], extension);
-			List<TableTemp> gameServers;
+			List<Table> gameServers;
 			try
 			{
 				gameServers = new GameServerTable().query(StartUpApplication.database)

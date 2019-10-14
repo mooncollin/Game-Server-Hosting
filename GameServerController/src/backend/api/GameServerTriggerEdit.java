@@ -23,7 +23,7 @@ import backend.main.StartUpApplication;
 import frontend.GameServerConsole;
 import frontend.Index;
 import model.Query;
-import model.TableTemp;
+import model.Table;
 import models.TriggersTable;
 import utils.Utils;
 
@@ -79,7 +79,7 @@ public class GameServerTriggerEdit extends HttpServlet
 			return;
 		}
 		
-		TableTemp trigger;
+		Table trigger;
 		try
 		{
 			trigger = Query.query(StartUpApplication.database, TriggersTable.class)

@@ -13,12 +13,12 @@ import model.Filter.RelationType;
 
 public class Query
 {
-	private final TableTemp model;
+	private final Table model;
 	private final Column<?>[] modelColumns;
 	private List<Filter> filters;
 	private final Database database;
 	
-	public static <T extends TableTemp> Query query(Database database, Class<T> tableClass)
+	public static <T extends Table> Query query(Database database, Class<T> tableClass)
 	{
 		try
 		{
@@ -30,7 +30,7 @@ public class Query
 		}
 	}
 	
-	public Query(Database database, TableTemp model)
+	public Query(Database database, Table model)
 	{
 		filters 		= new LinkedList<Filter>();
 		this.model 		= Objects.requireNonNull(model);
@@ -94,7 +94,7 @@ public class Query
 		return sqlString;
 	}
 	
-	public TableTemp first() throws SQLException
+	public Table first() throws SQLException
 	{
 		var sqlString = toString();
 		
@@ -113,9 +113,9 @@ public class Query
 		}
 	}
 	
-	public List<TableTemp> all() throws SQLException
+	public List<Table> all() throws SQLException
 	{
-		var results = new LinkedList<TableTemp>();
+		var results = new LinkedList<Table>();
 		
 		var sqlString = toString();
 		
@@ -148,7 +148,7 @@ public class Query
 		}
 	}
 	
-	private TableTemp generateRow(ResultSet results) throws SQLException
+	private Table generateRow(ResultSet results) throws SQLException
 	{
 		var columns = new Column<?>[modelColumns.length];
 		for(var i = 0; i < columns.length; i++)
@@ -156,7 +156,7 @@ public class Query
 			columns[i] = modelColumns[i].cloneWithValue(results.getObject(i+1));
 		}
 		
-		var row = new TableTemp(model.getName(), columns);
+		var row = new Table(model.getName(), columns);
 		row.setInDatabase(true);
 
 		return row;

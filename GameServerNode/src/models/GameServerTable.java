@@ -3,9 +3,9 @@ package models;
 import java.sql.Types;
 
 import model.Column;
-import model.TableTemp;
+import model.Table;
 
-public class GameServerTable extends TableTemp
+public class GameServerTable extends Table
 {
 	public static final Column<String> NAME =
 			new Column<String>(String.class, "name", Types.VARCHAR, 100, true, false, false, null);
