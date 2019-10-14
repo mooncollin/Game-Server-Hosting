@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -26,11 +27,14 @@ import forms.Form;
 import forms.TextField;
 import html.CompoundElement;
 import html.Element;
-import model.Model;
+import model.Query;
+import model.TableTemp;
+import models.GameServerTable;
+import models.NodeTable;
 import server.GameServer;
 import tags.Button;
-import util.Template;
 import utils.Pair;
+import util.Template;
 
 @WebServlet("/GameServerAdd")
 @MultipartConfig
@@ -40,10 +44,21 @@ public class GameServerAdd extends HttpServlet
 	
 	public static final String URL = "/GameServerController/GameServerAdd";
 	
-	private static final Pattern SERVER_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_]+");
+	private static final Pattern SERVER_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_  ]+");
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
+		List<TableTemp> nodes;
+		try
+		{
+			nodes = Query.query(StartUpApplication.database, NodeTable.class)
+							 .all();
+		} catch (SQLException e1)
+		{
+			response.setStatus(500);
+			return;
+		}
+		
 		Template template = Templates.getMainTemplate();
 		CompoundElement content = (CompoundElement) template.getBody().getElementById("content");
 		content.setStyle("background-image: url('images/material-back.jpeg')");
@@ -83,16 +98,22 @@ public class GameServerAdd extends HttpServlet
 		nodeSelect.setAttribute("required", "");
 		nodeSelect.setAttribute("onchange", "changeNode()");
 		
-		List<models.Node> nodes = Model.getAll(models.Node.class);
-		for(String nodeName : ControllerProperties.NODE_NAMES.split(","))
+		for(var nodeName : ControllerProperties.NODE_NAMES.split(","))
 		{
 			CompoundElement option = new CompoundElement("option", nodeName);
-			for(models.Node node : nodes)
+			for(var node : nodes)
 			{
-				if(node.getName().equals(nodeName))
+				if(node.getColumnValue(NodeTable.NAME).equals(nodeName))
 				{
-					option.setAttribute("totalram", String.valueOf(node.getRAM()));
-					option.setAttribute("reservedram", StartUpApplication.getNodeReservedRam(nodeName));
+					option.setAttribute("totalram", String.valueOf(node.getColumnValue(NodeTable.MAX_RAM_ALLOWED)));
+					try
+					{
+						option.setAttribute("reservedram", StartUpApplication.getNodeReservedRam(nodeName));
+					} catch (SQLException e)
+					{
+						response.setStatus(500);
+						return;
+					}
 					break;
 				}
 			}
@@ -189,10 +210,20 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		List<models.GameServer> servers = Model.getAll(models.GameServer.class, "name=?", serverName);
-		if(!servers.isEmpty())
+		try
 		{
-			doGet(request, response);
+			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+								  .filter(GameServerTable.NAME.cloneWithValue(serverName))
+								  .first();
+			if(gameServer != null)
+			{
+				doGet(request, response);
+				return;
+			}
+		}
+		catch(SQLException e)
+		{
+			response.setStatus(500);
 			return;
 		}
 		

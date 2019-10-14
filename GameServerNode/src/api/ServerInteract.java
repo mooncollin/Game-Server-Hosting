@@ -1,6 +1,7 @@
 package api;
 
 import java.io.IOException;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -8,11 +9,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import main.NodeProperties;
 import main.StartUpApplication;
 import server.GameServer;
 
 @WebServlet("/ServerInteract")
-public class Main extends HttpServlet
+public class ServerInteract extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
@@ -24,6 +26,7 @@ public class Main extends HttpServlet
 		
 		if(serverName == null || command == null)
 		{
+			StartUpApplication.LOGGER.log(Level.WARNING, String.format("Node: %s, ServerInteract: Invalid server name or command", NodeProperties.NAME));
 			response.setStatus(400);
 			return;
 		}
@@ -32,12 +35,14 @@ public class Main extends HttpServlet
 		
 		if(foundServer == null)
 		{
+			StartUpApplication.LOGGER.log(Level.WARNING, String.format("Node: %s, ServerInteract: Invalid server", NodeProperties.NAME));
 			response.setStatus(400);
 			return;
 		}
 		
 		if(!foundServer.getCommandHandler().commandGET(command, request, response))
 		{
+			StartUpApplication.LOGGER.log(Level.WARNING, String.format("Node: %s, ServerInteract: Invalid command", NodeProperties.NAME));
 			response.setStatus(400);
 		}
 		

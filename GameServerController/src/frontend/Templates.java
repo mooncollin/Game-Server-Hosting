@@ -58,9 +58,9 @@ public class Templates
 		Anchor serversItem = new Anchor();
 		serversItem.setHref(Index.URL);
 		serversItem.addClasses("list-group-item", "bg-secondary", "text-light");
-		CompoundElement serversIcon = new CompoundElement("i");
+		CompoundElement serversIcon = Templates.createIcon("server");
 		CompoundElement serversText = new CompoundElement("span", "Servers");
-		serversIcon.addClasses("fas", "fa-server", "mr-2");
+		serversIcon.addClasses("mr-2");
 		
 		serversItem.addElement(serversIcon);
 		serversItem.addElement(serversText);
@@ -69,9 +69,9 @@ public class Templates
 		Anchor nodesItem = new Anchor();
 		nodesItem.setHref(NodesInfo.URL);
 		nodesItem.addClasses("list-group-item", "bg-secondary", "text-light", "mt-3");
-		CompoundElement nodesIcon = new CompoundElement("i");
+		CompoundElement nodesIcon = Templates.createIcon("project-diagram");
 		CompoundElement nodesText = new CompoundElement("span", "Nodes");
-		nodesIcon.addClasses("fas", "fa-project-diagram", "mr-2");
+		nodesIcon.addClasses("mr-2");
 		
 		nodesItem.addElement(nodesIcon);
 		nodesItem.addElement(nodesText);		
@@ -91,8 +91,7 @@ public class Templates
 		consoleLink.setAttribute("data-toggle", "tooltip");
 		consoleLink.setAttribute("data-placement", "bottom");
 		consoleLink.setTitle("Open server console");
-		CompoundElement consoleIcon = new CompoundElement("i");
-		consoleIcon.addClasses("fas", "fa-terminal");
+		CompoundElement consoleIcon = Templates.createIcon("terminal");
 		consoleLink.addElement(consoleIcon);
 		return consoleLink;
 	}
@@ -105,8 +104,8 @@ public class Templates
 		filesLink.setAttribute("data-toggle", "tooltip");
 		filesLink.setAttribute("data-placement", "bottom");
 		filesLink.setTitle("View server files");
-		CompoundElement filesIcon = new CompoundElement("i");
-		filesIcon.addClasses("fas", "fa-file", "fa-lg");
+		CompoundElement filesIcon = Templates.createIcon("file");
+		filesIcon.addClasses("fa-lg");
 		filesLink.addElement(filesIcon);
 		return filesLink;
 	}
@@ -119,8 +118,7 @@ public class Templates
 		editLink.setAttribute("data-toggle", "tooltip");
 		editLink.setAttribute("data-placement", "bottom");
 		editLink.setTitle("Edit server settings");
-		CompoundElement editIcon = new CompoundElement("i");
-		editIcon.addClasses("fas", "fa-edit");
+		CompoundElement editIcon = Templates.createIcon("edit");
 		
 		editLink.addElement(editIcon);
 		return editLink;
@@ -136,8 +134,7 @@ public class Templates
 		deleteLink.setTitle("Delete server");
 		deleteLink.setAttribute("link", Utils.encodeURL(String.format("%s?name=%s", GameServerDelete.URL, serverName)));
 		deleteLink.setOnClick(String.format("deleteServer(this, '%s')", serverName));
-		CompoundElement deleteIcon = new CompoundElement("i");
-		deleteIcon.addClasses("fas", "fa-trash-alt");
+		CompoundElement deleteIcon = Templates.createIcon("trash-alt");
 		
 		deleteLink.addElement(deleteIcon);
 		return deleteLink;
@@ -177,8 +174,8 @@ public class Templates
 		
 		CompoundElement typeColumn = new CompoundElement("td", typeName);
 		
-		CompoundElement statusIcon = new CompoundElement("i");
-		statusIcon.addClasses("fas", "fa-circle", "mr-2");
+		CompoundElement statusIcon = Templates.createIcon("circle");
+		statusIcon.addClasses("mr-2");
 		
 		CompoundElement statusColumn = new CompoundElement("td");
 		statusColumn.setID("status-" + serverName);
@@ -249,5 +246,13 @@ public class Templates
 		stop.addClasses("btn", "btn-danger");
 		stop.setOnClick("stopServer()");
 		return stop;
+	}
+	
+	public static CompoundElement createIcon(String fontAwesomeType)
+	{
+		CompoundElement icon = new CompoundElement("i");
+		icon.addClasses("fas", String.format("fa-%s", fontAwesomeType));
+		
+		return icon;
 	}
 }

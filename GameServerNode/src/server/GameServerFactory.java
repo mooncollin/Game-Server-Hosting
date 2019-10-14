@@ -2,37 +2,48 @@ package server;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.List;
+import java.sql.SQLException;
 import java.util.Objects;
 
 import api.minecraft.MinecraftServer;
 import main.NodeProperties;
-import model.Model;
+import main.StartUpApplication;
+import model.Query;
+import model.TableTemp;
+import models.GameServerTable;
+import models.MinecraftServerTable;
 
 public class GameServerFactory
 {
-	public static GameServer getSpecificServer(models.GameServer server)
+	public static GameServer getSpecificServer(TableTemp server)
 	{
 		Objects.requireNonNull(server);
 		GameServer specificServer = null;
-		File folderLocation = new File(Paths.get(NodeProperties.DEPLOY_FOLDER, server.getName()).toString());
-		File fileName = Paths.get(folderLocation.getAbsolutePath(), server.getExecutableName()).toFile();
-		if(server.getServerType().equals("minecraft"))
+		var folderLocation = new File(Paths.get(NodeProperties.DEPLOY_FOLDER, server.getColumnValue(GameServerTable.NAME)).toString());
+		var fileName = Paths.get(folderLocation.getAbsolutePath(), server.getColumnValue(GameServerTable.EXECUTABLE_NAME)).toFile();
+		if(server.getColumn(GameServerTable.SERVER_TYPE).getValue().equals("minecraft"))
 		{
-			List<models.MinecraftServer> minecraftServers = Model.getAll(models.MinecraftServer.class, "id=?", server.getSpecificID());
-			if(minecraftServers.isEmpty())
+			TableTemp minecraftServer;
+			try
+			{
+				minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+										   .filter(MinecraftServerTable.ID.cloneWithValue(server.getColumnValue(GameServerTable.SPECIFIC_ID)))
+										   .first();
+			} catch (SQLException e)
 			{
 				return null;
 			}
-			models.MinecraftServer minecraftServer = minecraftServers.get(0);
 			
 			if(!folderLocation.exists())
 			{
 				folderLocation.mkdir();
 			}
 			
-			specificServer = new MinecraftServer(server.getName(), folderLocation, fileName, minecraftServer.getMaxHeapSize(), minecraftServer.getArguments());
-			((MinecraftServer) specificServer).autoRestart(minecraftServer.getRestarts());
+			specificServer = new MinecraftServer(server.getColumnValue(GameServerTable.NAME), 
+					folderLocation, fileName, minecraftServer.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE), 
+					minecraftServer.getColumnValue(MinecraftServerTable.ARGUMENTS));
+			
+			((MinecraftServer) specificServer).autoRestart(minecraftServer.getColumnValue(MinecraftServerTable.AUTO_RESTARTS));
 		}
 		
 		return specificServer;

@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
-import java.util.List;
 import java.util.Objects;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,7 +22,9 @@ import javax.servlet.http.HttpServletResponse;
 import backend.main.StartUpApplication;
 import frontend.GameServerConsole;
 import frontend.Index;
-import model.Model;
+import model.Query;
+import model.TableTemp;
+import models.TriggersTable;
 import utils.Utils;
 
 @WebServlet("/GameServerTriggerEdit")
@@ -37,13 +40,13 @@ public class GameServerTriggerEdit extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String value = request.getParameter("value");
-		String idStr = request.getParameter("id");
+		var serverName = request.getParameter("name");
+		var value = request.getParameter("value");
+		var idStr = request.getParameter("id");
+		var command = Objects.requireNonNullElse(request.getParameter("command"), "");
+		var action = Objects.requireNonNullElse(request.getParameter("action"), "");
+		var type = request.getParameter("type");
 		int id;
-		String command = Objects.requireNonNullElse(request.getParameter("command"), "");
-		String action = Objects.requireNonNullElse(request.getParameter("action"), "");
-		String type = request.getParameter("type");
 		
 		final String redirectUrl = Utils.encodeURL(String.format("%s?name=%s", GameServerConsole.URL, serverName));
 		
@@ -76,20 +79,33 @@ public class GameServerTriggerEdit extends HttpServlet
 			return;
 		}
 		
-		models.Triggers trigger;
-		List<models.Triggers> triggers = Model.getAll(models.Triggers.class, "id=?", id);
-		if(triggers.isEmpty())
+		TableTemp trigger;
+		try
 		{
-			trigger = new models.Triggers(type.toLowerCase(), "", "", serverName, "");
-		}
-		else
+			trigger = Query.query(StartUpApplication.database, TriggersTable.class)
+							   .filter(TriggersTable.ID.cloneWithValue(id))
+							   .first();
+		} catch (SQLException e)
 		{
-			trigger = triggers.get(0);
+			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			response.setStatus(500);
+			return;
 		}
 		
-		String parsedValue = value;
+		if(trigger == null)
+		{
+			trigger = new TriggersTable();
+			trigger.setColumnValue(TriggersTable.TYPE, type.toLowerCase());
+			trigger.setColumnValue(TriggersTable.COMMAND, "");
+			trigger.setColumnValue(TriggersTable.VALUE, "");
+			trigger.setColumnValue(TriggersTable.SERVER_OWNER, serverName);
+			trigger.setColumnValue(TriggersTable.EXTRA, "");
+		}
 		
-		if(trigger.getType().equals("recurring"))
+		var parsedValue = value;
+		var triggerValue = trigger.getColumnValue(TriggersTable.TYPE);
+		
+		if(triggerValue.equals("recurring"))
 		{
 			Matcher hourMatcher = TIME_HOUR.matcher(value);
 			Matcher minuteMatcher = TIME_MINUTE.matcher(value);
@@ -115,7 +131,7 @@ public class GameServerTriggerEdit extends HttpServlet
 				return;
 			}
 		}
-		else if(trigger.getType().equals("time"))
+		else if(triggerValue.equals("time"))
 		{
 			try
 			{
@@ -129,17 +145,21 @@ public class GameServerTriggerEdit extends HttpServlet
 			}
 		}
 		
-		trigger.setValue(parsedValue);
-		trigger.setCommand(command);
-		trigger.setExtra(action);
+		trigger.setColumnValue(TriggersTable.VALUE, parsedValue);
+		trigger.setColumnValue(TriggersTable.COMMAND, command);
+		trigger.setColumnValue(TriggersTable.EXTRA, action);
 		
-		if(!trigger.commit())
+		try
+		{
+			trigger.commit(StartUpApplication.database);
+		} catch (SQLException e)
 		{
 			response.sendRedirect(redirectUrl);
 			return;
 		}
 		
-		final String url = Utils.encodeURL(String.format("http://%s/TriggerEdit?id=%s", foundServer.getSecond(), trigger.getID()));
+		
+		final String url = Utils.encodeURL(String.format("http://%s/TriggerEdit?id=%s", foundServer.getSecond(), trigger.getColumnValue(TriggersTable.ID)));
 		
 		try
 		{

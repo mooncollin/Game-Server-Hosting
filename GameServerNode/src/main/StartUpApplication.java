@@ -1,14 +1,13 @@
 package main;
 
-import java.time.LocalTime;
+import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Properties;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletContextEvent;
@@ -16,16 +15,20 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
 import api.NodeUsage;
-import api.minecraft.Output;
-import model.Model;
+import model.Database;
+import model.Query;
+import model.TableTemp;
+import models.GameServerTable;
+import models.NodeTable;
+import models.TriggersTable;
 import server.GameServer;
 import server.GameServerFactory;
-import server.TriggerHandler;
+import server.Output;
 import server.TriggerHandlerFactory;
 import server.TriggerHandlerRecurring;
 import server.TriggerHandlerTime;
-import utils.BoundedCircularList;
 import utils.Pair;
+import utils.BoundedCircularList;
 import utils.TimerTaskID;
 
 @WebListener
@@ -33,82 +36,106 @@ public class StartUpApplication implements ServletContextListener
 {
 	
 	private static final List<GameServer> servers;
-	public static final String NODE_NAME;
-	public static final String JAVA8;
 	public static final BoundedCircularList<Pair<Integer, Long>> nodeUsage = new BoundedCircularList<Pair<Integer, Long>>(500);
 	public static final long NODE_USAGE_WAIT_TIME = 900;
 	public static final Logger LOGGER = Logger.getGlobal();
 	
+	public static Database database;
+	
 	static
 	{
 		servers = Collections.synchronizedList(new LinkedList<GameServer>());
-		Properties properties = NodeProperties.getProperties();
-		NODE_NAME = properties.getProperty("name");
-		
-		JAVA8 = Objects.requireNonNull(System.getenv("JAVA8"), "Do you have the JAVA8 environment variable set?");
 	}
 	
 	public void contextInitialized(ServletContextEvent event)
-	{
-		Properties properties = NodeProperties.getProperties();
-		
-		Model.registerDriver();
-		Model.setURL(properties.getProperty("database_url"));
-		Model.setUsername(properties.getProperty("database_username"));
-		Model.setPassword(properties.getProperty("database_password"));
-		
-		List<models.GameServer> myGameServers = Objects.requireNonNull(Model.getAll(models.GameServer.class, "nodeOwner=?", NODE_NAME),
-				"Is the database up?");
-		
-		for(var server : myGameServers)
+	{	
+		try
 		{
-			servers.add(GameServerFactory.getSpecificServer(server));
+			Database.registerDriver("com.mysql.jdbc.Driver");
+		} catch (ClassNotFoundException e)
+		{
+			throw new RuntimeException(e.getMessage());
 		}
 		
-		List<models.Node> meList = Model.getAll(models.Node.class, "name=?", NodeProperties.NAME);
-		models.Node me;
-		if(meList.isEmpty())
+		database = new Database(NodeProperties.DATABASE_URL, NodeProperties.DATABASE_USERNAME, NodeProperties.DATABASE_PASSWORD);
+		
+		if(!database.canConnect())
 		{
-			models.Node newNode = new models.Node(NODE_NAME, NodeProperties.MAX_RAM);
-			me = newNode;
-		}
-		else
-		{
-			me = meList.get(0);
-			me.setRAM(NodeProperties.MAX_RAM);
+			throw new RuntimeException("Is the database up?");
 		}
 		
-		if(me.changed() && !me.commit())
+		try
 		{
-			throw new RuntimeException("Cannot update node in the database!");
+			var myGameServers = Query.query(database, GameServerTable.class)
+									 .filter(GameServerTable.NODE_OWNER.cloneWithValue(NodeProperties.NAME))
+									 .all();
+			
+			for(var server : myGameServers)
+			{
+				servers.add(GameServerFactory.getSpecificServer(server));
+			}
+		}
+		catch(SQLException e)
+		{
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			return;
 		}
 		
-		List<models.Triggers> triggers = Model.getAll(models.Triggers.class);
-		for(models.Triggers trigger : triggers)
+		try
 		{
-			addTrigger(trigger);
+			var me = Query.query(StartUpApplication.database, NodeTable.class)
+						  .filter(NodeTable.NAME.cloneWithValue(NodeProperties.NAME))
+						  .first();
+			
+			if(me == null)
+			{
+				me = new NodeTable();
+				me.setColumnValue(NodeTable.NAME, NodeProperties.NAME);
+				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
+			}
+			else
+			{
+				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
+			}
+			
+			me.commit(StartUpApplication.database);
+		}
+		catch(SQLException e)
+		{
+			throw new RuntimeException("Error starting up node: " + e.getMessage());
 		}
 		
-//		execService.execute(new NodeUsageRunnable());
+		try
+		{
+			var triggers = Query.query(StartUpApplication.database, TriggersTable.class)
+								.all();
+			for(var trigger : triggers)
+			{
+				addTrigger(trigger);
+			}
+		} catch (SQLException e)
+		{
+			throw new RuntimeException(e.getMessage());
+		}
 	}
 	
-	public static void addTrigger(models.Triggers trigger)
+	public static void addTrigger(TableTemp trigger)
 	{
 		removeTrigger(trigger);
-		GameServer correspondingServer = getServer(trigger.getServerOwner());
+		var correspondingServer = getServer(trigger.getColumnValue(TriggersTable.SERVER_OWNER));
 		if(correspondingServer != null)
 		{
-			TriggerHandler generatedHandler = TriggerHandlerFactory.getSpecificTriggerHandler(trigger, correspondingServer);
+			var generatedHandler = TriggerHandlerFactory.getSpecificTriggerHandler(trigger, correspondingServer);
 			if(generatedHandler != null)
 			{
 				correspondingServer.getTriggerHandlers().add(generatedHandler);
 				if(generatedHandler instanceof TriggerHandlerTime)
 				{
-					LocalTime time = ((TriggerHandlerTime) generatedHandler).getTimeExecuted();
-					TimerTask generatedTask = ((TriggerHandlerTime) generatedHandler).generateTimerTask();
+					var time = ((TriggerHandlerTime) generatedHandler).getTimeExecuted();
+					var generatedTask = ((TriggerHandlerTime) generatedHandler).generateTimerTask();
 					correspondingServer.getTimerTasks().add(generatedTask);
 					
-					Calendar today = Calendar.getInstance();
+					var today = Calendar.getInstance();
 					today.set(Calendar.HOUR_OF_DAY, time.getHour());
 					today.set(Calendar.MINUTE, time.getMinute());
 					today.set(Calendar.SECOND, time.getSecond());
@@ -122,9 +149,9 @@ public class StartUpApplication implements ServletContextListener
 				}
 				else if(generatedHandler instanceof TriggerHandlerRecurring)
 				{
-					int secondInterval = ((TriggerHandlerRecurring) generatedHandler).getRecurringPeriod();
+					var secondInterval = ((TriggerHandlerRecurring) generatedHandler).getRecurringPeriod();
 					
-					TimerTask generatedTask = ((TriggerHandlerRecurring) generatedHandler).generateTimerTask();
+					var generatedTask = ((TriggerHandlerRecurring) generatedHandler).generateTimerTask();
 					
 					correspondingServer.getTimerTasks().add(generatedTask);
 					
@@ -134,16 +161,17 @@ public class StartUpApplication implements ServletContextListener
 		}
 	}
 	
-	public static void removeTrigger(models.Triggers trigger)
+	public static void removeTrigger(TableTemp trigger)
 	{
-		GameServer correspondingServer = getServer(trigger.getServerOwner());
+		var correspondingServer = getServer(trigger.getColumnValue(TriggersTable.SERVER_OWNER));
 		if(correspondingServer != null)
 		{
-			correspondingServer.getTriggerHandlers().removeIf(t -> t.getID() == trigger.getID().longValue());
+			var triggerID = trigger.getColumnValue(TriggersTable.ID);
+			correspondingServer.getTriggerHandlers().removeIf(t -> t.getID() == triggerID.longValue());
 			correspondingServer.getTimerTasks().removeIf(timer -> {
 				if(timer instanceof TimerTaskID)
 				{
-					if(((TimerTaskID) timer).getID() == trigger.getID().longValue())
+					if(((TimerTaskID) timer).getID() == triggerID.longValue())
 					{
 						timer.cancel();
 						return true;
@@ -170,10 +198,6 @@ public class StartUpApplication implements ServletContextListener
 		{
 			NodeUsage.execService.shutdownNow();
 		}
-//		if(StartUpApplication.execService != null)
-//		{
-//			StartUpApplication.execService.shutdownNow();
-//		}
 	}
 	
 	public static GameServer getServer(String name)
@@ -199,14 +223,11 @@ public class StartUpApplication implements ServletContextListener
 	
 	public static void addServer(GameServer server)
 	{
-		if(server != null)
-		{
-			servers.add(server);
-		}
+		servers.add(Objects.requireNonNull(server));
 	}
 	
 	public static void removeServer(GameServer server)
 	{
-		servers.remove(server);
+		servers.remove(Objects.requireNonNull(server));
 	}
 }

@@ -1,7 +1,8 @@
 package api;
 
 import java.io.IOException;
-import java.util.List;
+import java.sql.SQLException;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -10,7 +11,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import main.StartUpApplication;
-import model.Model;
+import model.Query;
+import models.TriggersTable;
 
 @WebServlet("/TriggerDelete")
 public class TriggerDelete extends HttpServlet
@@ -19,7 +21,7 @@ public class TriggerDelete extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String idStr = request.getParameter("id");
+		var idStr = request.getParameter("id");
 		int id;
 		
 		if(idStr == null)
@@ -38,20 +40,18 @@ public class TriggerDelete extends HttpServlet
 			return;
 		}
 		
-		List<models.Triggers> triggers = Model.getAll(models.Triggers.class, "id=?", id);
-		if(triggers.isEmpty())
+		try
 		{
-			response.setStatus(400);
-			return;
-		}
-		
-		models.Triggers trigger = triggers.get(0);
-		
-		StartUpApplication.removeTrigger(trigger);
-		
-		if(!trigger.delete())
+			var trigger = Query.query(StartUpApplication.database, TriggersTable.class)
+							   .filter(TriggersTable.ID.cloneWithValue(id))
+							   .first();
+			StartUpApplication.removeTrigger(trigger);
+			
+			trigger.delete(StartUpApplication.database);
+		} catch (SQLException e)
 		{
-			response.setStatus(400);
+			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			response.setStatus(500);
 			return;
 		}
 	}

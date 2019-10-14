@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import main.NodeProperties;
 import main.StartUpApplication;
 import server.CommandHandler;
 import server.GameServer;
@@ -31,6 +32,8 @@ public class MinecraftServer extends GameServer
 	public static final int MINIMUM_HEAP_SIZE = 1024;
 	public static final int DEFAULT_LAST_READ_MAXIMUM_SIZE = 500;
 	public static final String SERVER_PROPERTIES_FILE_NAME = "server.properties";
+	public static final String MINIMUM_HEAP_ARGUMENT = "-Xms%dm";
+	public static final String MAXIMUM_HEAP_ARGUMENT = "-Xmx%dm";
 	
 	public static final Map<String, Object> MINECRAFT_PROPERTIES = Map.ofEntries
 	(
@@ -77,7 +80,7 @@ public class MinecraftServer extends GameServer
 		Map.entry("enforce-whitelist", false)
 	);
 	
-	private List<OutputStream> outputConnectors;
+//	private List<OutputStream> outputConnectors;
 	private boolean autoRestart;
 	private boolean expectedShutdown;
 	private int maximumHeapSize;
@@ -122,7 +125,7 @@ public class MinecraftServer extends GameServer
 						}
 					}
 				}
-				outputConnectors.removeIf(stream -> {
+				getOutputConnectors().removeIf(stream -> {
 					try
 					{
 						synchronized(stream)
@@ -160,18 +163,11 @@ public class MinecraftServer extends GameServer
 		setMaximumHeapSize(maximumHeapSize);
 		setArguments(arguments);
 		execService = Executors.newSingleThreadExecutor();
-//		outputConnectors = Collections.synchronizedList(new LinkedList<OutputStream>());
-		outputConnectors = new LinkedList<OutputStream>();
 		lastReadBounded = new BoundedCircularList<String>(DEFAULT_LAST_READ_MAXIMUM_SIZE);
 		
 		setProperties(getProperties());
 		processBuilder = new ProcessBuilder();
 		processBuilder.redirectErrorStream(true);
-	}
-	
-	public List<OutputStream> getOutputConnectors()
-	{
-		return outputConnectors;
 	}
 	
 	public void setMaximumHeapSize(int maximumHeapSize)
@@ -287,9 +283,9 @@ public class MinecraftServer extends GameServer
 	public String[] getRunCommand()
 	{
 		List<String> command = new LinkedList<String>();
-		command.add(StartUpApplication.JAVA8);
-		command.add(String.format("-Xmx%dm", maximumHeapSize));
-		command.add(String.format("-Xms%dm", maximumHeapSize));
+		command.add(NodeProperties.JAVA8);
+		command.add(String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize));
+		command.add(String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE));
 		for(String extra : arguments.split(" "))
 		{
 			command.add(extra);
@@ -355,12 +351,6 @@ public class MinecraftServer extends GameServer
 		return true;
 	}
 	
-	@Override
-	protected CommandHandler generateCommandHandler()
-	{
-		return new MinecraftServerCommandHandler(this);
-	}
-	
 	public boolean autoRestart()
 	{
 		return autoRestart;
@@ -374,5 +364,11 @@ public class MinecraftServer extends GameServer
 	public String getArguments()
 	{
 		return arguments;
+	}
+	
+	@Override
+	protected CommandHandler generateCommandHandler()
+	{
+		return new MinecraftServerCommandHandler(this);
 	}
 }

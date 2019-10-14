@@ -2,6 +2,7 @@ package api;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.sql.SQLException;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -14,6 +15,8 @@ import javax.servlet.http.Part;
 import api.minecraft.MinecraftServer;
 import main.NodeProperties;
 import main.StartUpApplication;
+import models.GameServerTable;
+import models.MinecraftServerTable;
 import server.GameServer;
 import server.GameServerFactory;
 
@@ -68,17 +71,34 @@ public class ServerAdd extends HttpServlet
 				return;
 			}
 			
-			models.MinecraftServer minecraft = new models.MinecraftServer(ram, restart.equals("yes"), "");
-			if(!minecraft.commit())
+			var minecraft = new MinecraftServerTable();
+			minecraft.getColumn(MinecraftServerTable.MAX_HEAP_SIZE).setValue(ram);
+			minecraft.getColumn(MinecraftServerTable.AUTO_RESTARTS).setValue(restart.equals("yes"));
+			minecraft.getColumn(MinecraftServerTable.ARGUMENTS).setValue("");
+			
+			try
 			{
-				response.setStatus(400);
+				minecraft.commit(StartUpApplication.database);
+			} catch (SQLException e1)
+			{
+				response.setStatus(500);
 				return;
 			}
 			
-			models.GameServer gameServer = new models.GameServer(serverName, NodeProperties.NAME, minecraft.getID(), "minecraft", execName);
-			if(!gameServer.commit())
+			var gameServer = new GameServerTable();
+			gameServer.getColumn(GameServerTable.NAME).setValue(serverName);
+			gameServer.getColumn(GameServerTable.NODE_OWNER).setValue(NodeProperties.NAME);
+			gameServer.getColumn(GameServerTable.SPECIFIC_ID).setValue(minecraft.getColumn(MinecraftServerTable.ID).getValue());
+			gameServer.getColumn(GameServerTable.SERVER_TYPE).setValue("minecraft");
+			gameServer.getColumn(GameServerTable.EXECUTABLE_NAME).setValue(execName);
+			
+			try
 			{
-				response.setStatus(400);
+				gameServer.commit(StartUpApplication.database);
+			}
+			catch(SQLException e)
+			{
+				response.setStatus(500);
 				return;
 			}
 			

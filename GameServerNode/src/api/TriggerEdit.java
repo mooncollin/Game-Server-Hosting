@@ -1,7 +1,8 @@
 package api;
 
 import java.io.IOException;
-import java.util.List;
+import java.sql.SQLException;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -10,7 +11,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import main.StartUpApplication;
-import model.Model;
+import model.Query;
+import models.TriggersTable;
 
 @WebServlet("/TriggerEdit")
 public class TriggerEdit extends HttpServlet
@@ -38,14 +40,19 @@ public class TriggerEdit extends HttpServlet
 			return;
 		}
 		
-		List<models.Triggers> triggers = Model.getAll(models.Triggers.class, "id=?", id);
-		if(triggers.isEmpty())
+		try
 		{
-			response.setStatus(400);
+			var trigger = Query.query(StartUpApplication.database, TriggersTable.class)
+							   .filter(TriggersTable.ID.cloneWithValue(id))
+							   .first();
+			StartUpApplication.addTrigger(trigger);
+		} catch (SQLException e)
+		{
+			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			response.setStatus(500);
 			return;
 		}
 		
-		models.Triggers trigger = triggers.get(0);
-		StartUpApplication.addTrigger(trigger);
+		
 	}
 }

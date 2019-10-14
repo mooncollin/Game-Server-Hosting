@@ -6,10 +6,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,7 +27,11 @@ import forms.Input;
 import forms.TextField;
 import html.CompoundElement;
 import html.Element;
-import model.Model;
+import model.Query;
+import model.TableTemp;
+import models.GameServerTable;
+import models.MinecraftServerTable;
+import models.NodeTable;
 import tags.Anchor;
 import tags.Button;
 import util.Template;
@@ -51,6 +55,23 @@ public class GameServerSettings extends HttpServlet
 		
 		var serverFound = StartUpApplication.getServerInfo().get(serverName);
 		if(serverFound == null)
+		{
+			response.sendRedirect(Index.URL);
+			return;
+		}
+		
+		TableTemp foundGameServer;
+		try
+		{
+			foundGameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+					   			   .filter(GameServerTable.NAME.cloneWithValue(serverName))
+					   			   .first();
+			if(foundGameServer == null)
+			{
+				response.sendRedirect(Index.URL);
+				return;
+			}
+		} catch (SQLException e)
 		{
 			response.sendRedirect(Index.URL);
 			return;
@@ -117,13 +138,6 @@ public class GameServerSettings extends HttpServlet
 		submitButton.addElement(submitIcon);
 		optionsItem.addElement(submitButton);
 		
-		List<models.GameServer> gameServerInfo = Model.getAll(models.GameServer.class, "name=?", serverName);
-		if(gameServerInfo.isEmpty())
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
 		CompoundElement optionsList = new CompoundElement("ul");
 		optionsList.addClasses("list-group", "list-group-flush", "float-right", "sticky-top");
 		optionsList.addElement(optionsItem);
@@ -133,42 +147,56 @@ public class GameServerSettings extends HttpServlet
 		settingsListItem.addElement(new CompoundElement("h1", "Settings"));
 		settingsList.addElement(settingsListItem);
 		
-		models.GameServer foundGameServer = gameServerInfo.get(0);
-		settingsList.addElement(BootstrapTemplates.settingsInput(TextField.class, "Executable Name", "execName", "Enter name of server executable", foundGameServer.getExecutableName(), null, true, true));
+		settingsList.addElement(BootstrapTemplates.settingsInput(TextField.class, "Executable Name", "execName", "Enter name of server executable", foundGameServer.getColumn(GameServerTable.EXECUTABLE_NAME).getValue(), null, true, true));
 		
 		if(serverFound.getFirst().equals(MinecraftServer.class))
 		{
-			List<models.MinecraftServer> minecraftServerInfo = Model.getAll(models.MinecraftServer.class, "id=?", foundGameServer.getSpecificID());
-			if(minecraftServerInfo.isEmpty())
+			TableTemp minecraftServerFound;
+			try
+			{
+				minecraftServerFound = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+											.filter(MinecraftServerTable.ID.cloneWithValue(foundGameServer.getColumnValue(GameServerTable.SPECIFIC_ID)))
+											.first();
+			} catch (SQLException e2)
 			{
 				response.sendRedirect(Index.URL);
 				return;
 			}
-			models.MinecraftServer minecraftServerFound = minecraftServerInfo.get(0);
-			CompoundElement heapGroup = BootstrapTemplates.settingsInput(forms.Number.class, "Maximum RAM (MB)", "ramAmount", "Enter maximum amount of ram to use in MB", String.valueOf(minecraftServerFound.getMaxHeapSize()), "RAM must be in 1024 increments", true, true);
+			
+			CompoundElement heapGroup = BootstrapTemplates.settingsInput(forms.Number.class, "Maximum RAM (MB)", "ramAmount", "Enter maximum amount of ram to use in MB", String.valueOf(minecraftServerFound.getColumn(MinecraftServerTable.MAX_HEAP_SIZE).getValue()), "RAM must be in 1024 increments", true, true);
 			forms.Number heapInput = (forms.Number) heapGroup.getElementById("ramAmount");
 			heapInput.setMin(MinecraftServer.MINIMUM_HEAP_SIZE);
 			heapInput.setStep(1024);
-			List<models.Node> nodes = Model.getAll(models.Node.class, "name=?", foundGameServer.getNodeOwner());
-			if(nodes.isEmpty())
+			
+			long totalRam;
+			long reservedRam;
+			
+			try
 			{
-				response.sendRedirect(Index.URL);
+				var node = Query.query(StartUpApplication.database, NodeTable.class)
+						 .filter(NodeTable.NAME.cloneWithValue(foundGameServer.getColumnValue(GameServerTable.NODE_OWNER)))
+						 .first();
+		
+				totalRam = node.getColumnValue(NodeTable.MAX_RAM_ALLOWED);
+				reservedRam = StartUpApplication.getNodeReservedRam(node.getColumnValue(NodeTable.NAME));
+			} catch (SQLException e1)
+			{
+				response.setStatus(500);
 				return;
 			}
-			long totalRam = nodes.get(0).getRAM();
-			long reservedRam = StartUpApplication.getNodeReservedRam(nodes.get(0).getName());
+			
 			CompoundElement nodeUsageSmall = new CompoundElement("small", String.format("This node has a total of %d MB of RAM. Memory Available: %d MB", totalRam, totalRam - reservedRam));
 			nodeUsageSmall.addClasses("form-text", "text-muted");
 			heapGroup.addElement(nodeUsageSmall);
 			settingsList.addElement(heapGroup);
 			
-			CompoundElement argumentsGroup = BootstrapTemplates.settingsInput(TextField.class, "Extra JVM Arguments", "arguments", "Enter optional arguments", minecraftServerFound.getArguments(), "These will be used when executing server start. Options -Xmx and -Xms are already set using the RAM given.", false, true);
+			CompoundElement argumentsGroup = BootstrapTemplates.settingsInput(TextField.class, "Extra JVM Arguments", "arguments", "Enter optional arguments", minecraftServerFound.getColumn(MinecraftServerTable.ARGUMENTS).getValue(), "These will be used when executing server start. Options -Xmx and -Xms are already set using the RAM given.", false, true);
 			TextField argumentInput = (TextField) argumentsGroup.getElementById("arguments");
 			argumentInput.removeClass("w-25");
 			argumentInput.addClass("w-100");
 			settingsList.addElement(argumentsGroup);
 			
-			boolean restarts = minecraftServerFound.getRestarts();
+			boolean restarts = minecraftServerFound.getColumn(MinecraftServerTable.AUTO_RESTARTS).getValue();
 			
 			CompoundElement restartGroup = BootstrapTemplates.settingsInput(forms.Checkbox.class, "Automatic Restart", "restartsUnexpected", null, String.valueOf(restarts), null, false, true);
 			settingsList.addElement(restartGroup);

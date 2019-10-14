@@ -1,6 +1,7 @@
 package api.minecraft;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,7 +10,11 @@ import java.util.Properties;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import model.Model;
+import main.StartUpApplication;
+import model.Query;
+import model.TableTemp;
+import models.GameServerTable;
+import models.MinecraftServerTable;
 import server.GameServer;
 import server.GameServerCommandHandler;
 
@@ -62,7 +67,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		}
 		else if(command.equals("serverCommand"))
 		{
-			String serverCommand = request.getParameter("serverCommand");
+			var serverCommand = request.getParameter("serverCommand");
 			if(serverCommand == null)
 			{
 				return false;
@@ -72,7 +77,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		}
 		else if(command.equals("properties"))
 		{
-			Properties currentProperties = ((MinecraftServer) server).getProperties();
+			var currentProperties = ((MinecraftServer) server).getProperties();
 			for(String name : currentProperties.stringPropertyNames())
 			{
 				response.getWriter().println(String.format("%s=%s", name, currentProperties.getProperty(name)));
@@ -98,27 +103,38 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 			return true;
 		}
 		
-		List<models.GameServer> gameServers = Model.getAll(models.GameServer.class, "name=?", server.getName());
-		if(gameServers.isEmpty())
-		{
-			return false;
-		}
-		models.GameServer gameServer = gameServers.get(0);
 		
-		List<models.MinecraftServer> minecraftServers = Model.getAll(models.MinecraftServer.class, "id=?", gameServer.getSpecificID());
-		if(minecraftServers.isEmpty())
+		TableTemp minecraftServer;
+		try
 		{
-			return false;
+			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+							   	  .filter(GameServerTable.NAME.cloneWithValue(server.getName()))
+							   	  .first();
+			
+			if(gameServer == null)
+			{
+				return false;
+			}
+			
+			minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+					   .filter(MinecraftServerTable.ID.cloneWithValue(gameServer.getColumnValue(GameServerTable.SPECIFIC_ID)))
+					   .first();
+			if(minecraftServer == null)
+			{
+				return false;
+			}
+		} catch (SQLException e)
+		{
+			throw new RuntimeException(e.getMessage());
 		}
-		models.MinecraftServer minecraftServer = minecraftServers.get(0);
 		
 		if(command.equals("properties"))
 		{
-			MinecraftServer minecraft = (MinecraftServer) server;
-			Properties props = new Properties();
-			for(String key : MinecraftServer.MINECRAFT_PROPERTIES.keySet())
+			var minecraft = (MinecraftServer) server;
+			var props = new Properties();
+			for(var key : MinecraftServer.MINECRAFT_PROPERTIES.keySet())
 			{
-				String property = request.getParameter(key);
+				var property = request.getParameter(key);
 				if(property == null)
 				{
 					property = String.valueOf(MinecraftServer.MINECRAFT_PROPERTIES.get(key));
@@ -133,28 +149,21 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		}
 		else if(command.equals("restarts"))
 		{
-			MinecraftServer minecraft = (MinecraftServer) server;
-			String restarts = request.getParameter("restartsUnexpected");;
+			var minecraft = (MinecraftServer) server;
+			var restarts = request.getParameter("restartsUnexpected");
 			minecraft.autoRestart(restarts != null);
-			
-			
-			if(minecraftServers.isEmpty())
-			{
-				return false;
-			}
-			
-			minecraftServer.setRestarts(minecraft.autoRestart());
-			
+			minecraftServer.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, minecraft.autoRestart());
 		}
 		else if(command.equals("arguments"))
 		{
-			MinecraftServer minecraft = (MinecraftServer) server;
-			String arguments = request.getParameter("arguments");
+			var minecraft = (MinecraftServer) server;
+			var arguments = request.getParameter("arguments");
 			if(arguments == null)
 			{
 				return false;
 			}
-			minecraftServer.setArguments(arguments);
+			
+			minecraftServer.setColumnValue(MinecraftServerTable.ARGUMENTS, arguments);
 			minecraft.setArguments(arguments);
 		}
 		else
@@ -162,7 +171,14 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 			return false;
 		}
 		
-		minecraftServer.commit();
+		try
+		{
+			minecraftServer.commit(StartUpApplication.database);
+		} catch (SQLException e)
+		{
+			throw new RuntimeException(e.getMessage());
+		}
+		
 		return true;
 	}
 }

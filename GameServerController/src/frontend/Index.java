@@ -37,15 +37,33 @@ public class Index extends HttpServlet
 		header.addClass("text-light");
 		
 		Anchor addServer = new Anchor();
-		addServer.addClasses("rounded-circle", "bg-light", "p-2", "float-right");
+		addServer.addClasses("rounded-circle", "bg-light", "p-3", "float-right", "addLink", "mr-3");
 		addServer.setHref(GameServerAdd.URL);
-		addServer.setID("addServerLink");
-		CompoundElement addServerIcon = new CompoundElement("i");
-		addServerIcon.addClasses("fas", "fa-plus");
-		addServerIcon.setAttribute("data-toggle", "tooltip");
-		addServerIcon.setAttribute("data-placement", "bottom");
-		addServerIcon.setTitle("Add game server");
+		addServer.setAttribute("data-toggle", "tooltip");
+		addServer.setAttribute("data-placement", "bottom");
+		addServer.setTitle("Add game server");
+		
+		CompoundElement addServerIcon = Templates.createIcon("plus");
+		addServerIcon.addClasses("mr-2");
+		
+		CompoundElement addServerIcon2 = Templates.createIcon("server");
+		
 		addServer.addElement(addServerIcon);
+		addServer.addElement(addServerIcon2);
+		
+		Anchor addGame = new Anchor();
+		addGame.addClasses("rounded-circle", "bg-light", "p-3", "float-right", "addLink");
+		addGame.setHref(GameTypeAdd.URL);
+		addGame.setAttribute("data-toggle", "tooltip");
+		addGame.setAttribute("data-placement", "bottom");
+		addGame.setTitle("Add game type");
+		
+		CompoundElement addGameIcon = Templates.createIcon("gamepad");
+		
+		addGame.addElement(addServerIcon);
+		addGame.addElement(addGameIcon);
+		
+		header.addElement(addGame);
 		header.addElement(addServer);
 		
 		innerContent.addElement(header);

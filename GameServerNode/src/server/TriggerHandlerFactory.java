@@ -5,43 +5,52 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import model.TableTemp;
+import models.TriggersTable;
 import server.TriggerHandlerCondition.TriggerHandlerConditionType;
 
 public class TriggerHandlerFactory
 {	
-	public static TriggerHandler getSpecificTriggerHandler(models.Triggers trigger, GameServer server)
+	public static TriggerHandler getSpecificTriggerHandler(TableTemp trigger, GameServer server)
 	{
 		Objects.requireNonNull(trigger);
+		Objects.requireNonNull(server);
 		TriggerHandler specificTrigger = null;
+		
+		var triggerType		= trigger.getColumnValue(TriggersTable.TYPE);
+		var triggerCommand	= trigger.getColumnValue(TriggersTable.COMMAND);
+		var triggerValue	= trigger.getColumnValue(TriggersTable.VALUE);
+		var triggerID		= trigger.getColumnValue(TriggersTable.ID);
+		var triggerExtra	= trigger.getColumnValue(TriggersTable.EXTRA);
 
 		try
 		{
-			if(trigger.getType().equals("time"))
+			if(triggerType.equals("time"))
 			{
-				specificTrigger = new TriggerHandlerTime(server, trigger.getCommand(), trigger.getExtra(), trigger.getID(), LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(trigger.getValue())));
+				specificTrigger = new TriggerHandlerTime(server, triggerCommand, triggerExtra, triggerID, LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(triggerValue)));
 			}
-			else if(trigger.getType().equals("output"))
+			else if(triggerType.equals("output"))
 			{
-				if(trigger.getValue().startsWith("r/") && trigger.getValue().endsWith("/"))
+				if(triggerValue.startsWith("r/") && triggerValue.endsWith("/"))
 				{
-					String regexValue = trigger.getValue().replaceFirst("r/", "");
+					String regexValue = triggerValue.replaceFirst("r/", "");
 					regexValue = regexValue.substring(0, regexValue.lastIndexOf("/"));
 					Pattern p = Pattern.compile(".*?" + regexValue + ".*");
-					specificTrigger = new TriggerHandlerCondition<String>(server, trigger.getCommand(), trigger.getExtra(), trigger.getID(), p.asPredicate(), TriggerHandlerConditionType.OUTPUT);
+					specificTrigger = new TriggerHandlerCondition<String>(server, triggerCommand, triggerExtra, triggerID, p.asPredicate(), TriggerHandlerConditionType.OUTPUT);
 				}
 				else
 				{
-					specificTrigger = new TriggerHandlerCondition<String>(server, trigger.getCommand(), trigger.getExtra(), trigger.getID(), new Predicate<String>() {
+					specificTrigger = new TriggerHandlerCondition<String>(server, triggerCommand, triggerExtra, triggerID, new Predicate<String>() {
 						public boolean test(String value)
 						{
-							return value != null && value.contains(trigger.getValue());
+							return value != null && value.contains(triggerValue);
 						}
 					}, TriggerHandlerConditionType.OUTPUT);
 				}
 			}
-			else if(trigger.getType().equals("recurring"))
+			else if(triggerType.equals("recurring"))
 			{
-				specificTrigger = new TriggerHandlerRecurring(server, trigger.getCommand(), trigger.getExtra(), trigger.getID(), Integer.parseInt(trigger.getValue()));
+				specificTrigger = new TriggerHandlerRecurring(server, triggerCommand, triggerExtra, triggerID, Integer.parseInt(triggerValue));
 			}
 		}
 		catch(Exception e)

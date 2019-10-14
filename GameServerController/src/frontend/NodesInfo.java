@@ -1,6 +1,7 @@
 package frontend;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -13,7 +14,8 @@ import backend.main.ControllerProperties;
 import backend.main.StartUpApplication;
 import html.CompoundElement;
 import html.Element;
-import model.Model;
+import model.TableTemp;
+import models.GameServerTable;
 import tags.Script;
 import util.Template;
 import utils.Utils;
@@ -94,21 +96,30 @@ public class NodesInfo extends HttpServlet
 			CompoundElement tableBody = new CompoundElement("tbody");
 			table.addElement(tableBody);
 			
-			
-			List<models.GameServer> servers = Model.getAll(models.GameServer.class, "nodeOwner=?", nodeName);
-			
-			for(models.GameServer server : servers)
+			List<TableTemp> servers;
+			try
 			{
-				var serverInfo = StartUpApplication.getServerInfo().get(server.getName());
+				servers = new GameServerTable().query(StartUpApplication.database)
+												   .filter(GameServerTable.NODE_OWNER.cloneWithValue(nodeName))
+												   .all();
+			} catch (SQLException e)
+			{
+				response.setStatus(500);
+				return;
+			}
+			
+			for(var server : servers)
+			{
+				var serverInfo = StartUpApplication.getServerInfo().get(server.getColumn(GameServerTable.NAME).getValue());
 				if(serverInfo != null)
 				{
 					Class<?> serverType = serverInfo.getFirst();
 					String nodeAddress = serverInfo.getSecond();
 					
-					nodeAddresses += String.format("'ws://%s/Output?name=%s&mode=running',", nodeAddress, Utils.encodeURL(server.getName()));
-					serverNames += String.format("'%s',", server.getName());
+					nodeAddresses += String.format("'ws://%s/Output?name=%s&mode=running',", nodeAddress, Utils.encodeURL((String) server.getColumn(GameServerTable.NAME).getValue()));
+					serverNames += String.format("'%s',", server.getColumn(GameServerTable.NAME).getValue());
 					
-					tableBody.addElement(Templates.createServerTableRow(server.getName(), serverType));
+					tableBody.addElement(Templates.createServerTableRow((String) server.getColumn(GameServerTable.NAME).getValue(), serverType));
 				}
 			}
 			

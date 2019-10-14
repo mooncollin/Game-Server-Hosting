@@ -4,24 +4,28 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.Objects;
 import java.util.Properties;
 
 import com.sun.management.OperatingSystemMXBean;
 
 public class NodeProperties
 {
-	public static final String PROPERTIES_LOCATION = System.getenv("GAME_SERVER_NODE_PROPERTIES");
+	public static final String PROPERTIES_LOCATION;
 	public static final String NAME;
 	public static final String DEPLOY_FOLDER;
 	public static final int MAX_RAM;
 	public static final String DATABASE_URL;
 	public static final String DATABASE_USERNAME;
 	public static final String DATABASE_PASSWORD;
+	public static final String JAVA8;
 	private static final Properties properties;
 	public static final long BYTES_IN_MEGABYTE = 1048576;
 	
 	static
 	{
+		PROPERTIES_LOCATION = System.getenv("GAME_SERVER_NODE_PROPERTIES");
+		JAVA8 = Objects.requireNonNull(System.getenv("JAVA8"), "Do you have the JAVA8 environment variable set?");
 		properties = new Properties();
 		FileReader fileIn;
 		try

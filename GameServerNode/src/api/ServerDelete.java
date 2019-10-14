@@ -1,7 +1,7 @@
 package api;
 
 import java.io.IOException;
-import java.util.List;
+import java.sql.SQLException;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -10,7 +10,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import main.StartUpApplication;
-import model.Model;
+import model.Query;
+import models.GameServerTable;
+import models.MinecraftServerTable;
+import models.TriggersTable;
 import server.GameServer;
 
 @WebServlet("/ServerDelete")
@@ -35,45 +38,39 @@ public class ServerDelete extends HttpServlet
 			return;
 		}
 		
-		List<models.GameServer> gameServers = Model.getAll(models.GameServer.class, "name=?", name);
-		if(gameServers.isEmpty())
+		try
 		{
-			response.setStatus(400);
-			return;
-		}
-		
-		models.GameServer gameServer = gameServers.get(0);
-		
-		if(gameServer.getServerType().equals("minecraft"))
-		{
-			List<models.MinecraftServer> minecraftServers = Model.getAll(models.MinecraftServer.class, "id=?", gameServer.getSpecificID());
-			if(minecraftServers.isEmpty())
+			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+								  .filter(GameServerTable.NAME.cloneWithValue(name))
+								  .first();
+			
+			if(gameServer.getColumn(GameServerTable.SERVER_TYPE).getValue().equals("minecraft"))
 			{
-				response.setStatus(400);
-				return;
+				var minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+										   .filter(MinecraftServerTable.ID.cloneWithValue(gameServer.getColumnValue(GameServerTable.SPECIFIC_ID)))
+										   .first();
+				
+				minecraftServer.delete(StartUpApplication.database);
+				
+				var triggers = Query.query(StartUpApplication.database, TriggersTable.class)
+									.filter(TriggersTable.SERVER_OWNER.cloneWithValue(gameServer.getColumnValue(GameServerTable.NAME)))
+									.all();
+				
+				for(var trigger : triggers)
+				{
+					trigger.delete(StartUpApplication.database);
+				}
 			}
 			
-			models.MinecraftServer minecraftServer = minecraftServers.get(0);
-			if(!minecraftServer.delete())
-			{
-				response.setStatus(400);
-				return;
-			}
+			gameServer.delete(StartUpApplication.database);
 			
-			List<models.Triggers> triggers = Model.getAll(models.Triggers.class, "serverowner=?", gameServer.getName());
-			for(models.Triggers trigger : triggers)
-			{
-				trigger.delete();
-			}
+			FileDelete.deleteDirectoryOrFile(serverFound.getFolderLocation());
+			StartUpApplication.removeServer(serverFound);
 		}
-		
-		if(!gameServer.delete())
+		catch(SQLException e)
 		{
-			response.setStatus(400);
+			response.setStatus(500);
 			return;
 		}
-		
-		FileDelete.deleteDirectoryOrFile(serverFound.getFolderLocation());
-		StartUpApplication.removeServer(serverFound);
 	}
 }

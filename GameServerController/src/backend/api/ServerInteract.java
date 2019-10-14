@@ -9,6 +9,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -45,6 +46,7 @@ public class ServerInteract extends HttpServlet
 		String[] extraCommands;
 		if(serverName == null || serverCommand == null)
 		{
+			StartUpApplication.LOGGER.log(Level.WARNING, "Invalid commands given: Missing server name or missing commands");
 			response.setStatus(400);
 			return;
 		}
@@ -52,6 +54,7 @@ public class ServerInteract extends HttpServlet
 		Pair<Class<? extends GameServer>, String> server = StartUpApplication.getServerInfo().get(serverName);
 		if(server == null)
 		{
+			StartUpApplication.LOGGER.log(Level.WARNING, "Invalid commands given: Cannot find server type");
 			response.setStatus(400);
 			return;
 		}
@@ -64,7 +67,8 @@ public class ServerInteract extends HttpServlet
 		
 		String[] commands = CommandHandler.getCommand(server.getFirst(), serverCommand);
 		if(commands == null)
-		{	
+		{
+			StartUpApplication.LOGGER.log(Level.WARNING, "Invalid commands given: Unknown commands");
 			response.setStatus(400);
 			return;
 		}
@@ -75,6 +79,7 @@ public class ServerInteract extends HttpServlet
 			String command = request.getParameter(commands[i]);
 			if(command == null)
 			{
+				StartUpApplication.LOGGER.log(Level.WARNING, "Invalid commands given: Invalid extra command");
 				response.setStatus(400);
 				return;
 			}

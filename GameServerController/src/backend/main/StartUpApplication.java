@@ -1,18 +1,25 @@
 package backend.main;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
-import model.Model;
+import model.Database;
+import model.Query;
+import model.TableTemp;
+import model.Filter.FilterType;
+import model.Filter.RelationType;
+import models.GameServerTable;
+import models.MinecraftServerTable;
 import server.GameServer;
 import utils.Pair;
 
@@ -26,6 +33,8 @@ public class StartUpApplication implements ServletContextListener
 	public static String[] NODE_NAMES;
 	public static String[] NODE_ADDRESSES;
 	public static String[] NODE_PORTS;
+	public static final Logger LOGGER = Logger.getGlobal();
+	public static Database database;
 	
 	public static Map<String, Pair<Class<? extends GameServer>, String>> getServerInfo()
 	{
@@ -34,35 +43,53 @@ public class StartUpApplication implements ServletContextListener
 
 	public void contextInitialized(ServletContextEvent sce)
 	{
-		Model.registerDriver();
-		Model.setURL(ControllerProperties.DATABASE_URL);
-		Model.setUsername(ControllerProperties.DATABASE_USERNAME);
-		Model.setPassword(ControllerProperties.DATABASE_PASSWORD);
+		try
+		{
+			Database.registerDriver("com.mysql.jdbc.Driver");
+		} catch (ClassNotFoundException e)
+		{
+			throw new RuntimeException(e.getMessage());
+		}
 		
-		Connection connection = Model.getConnection();
-		if(connection == null)
+		database = new Database(ControllerProperties.DATABASE_URL, ControllerProperties.DATABASE_USERNAME, ControllerProperties.DATABASE_PASSWORD);
+		
+		if(!database.canConnect())
 		{
 			throw new RuntimeException("Is the database up?");
 		}
-		try
+		
+		try(var connection = database.getConnection())
 		{
-			connection.close();
-		} catch (SQLException e)
+			GameServer.Setup(connection);
+		} catch (Exception e)
 		{
+			throw new RuntimeException("SQL Error when setting up GameServer: " + e.getMessage());
 		}
 		
 		NODE_NAMES = ControllerProperties.NODE_NAMES.split(",");
 		NODE_ADDRESSES = ControllerProperties.NODE_ADDRESSES.split(",");
 		NODE_PORTS = ControllerProperties.NODE_PORTS.split(",");
-		String extension = ControllerProperties.NODE_EXTENSION;
+		var extension = ControllerProperties.NODE_EXTENSION;
 		
 		for(int i = 0; i < NODE_NAMES.length; i++)
 		{
-			String url = createNodeURL(NODE_ADDRESSES[i], NODE_PORTS[i], extension);
-			List<models.GameServer> gameServers = Model.getAll(models.GameServer.class, "nodeOwner=?", NODE_NAMES[i]);
-			for(models.GameServer server : gameServers)
+			var url = createNodeURL(NODE_ADDRESSES[i], NODE_PORTS[i], extension);
+			List<TableTemp> gameServers;
+			try
 			{
-				serverNamesToAddresses.put(server.getName(), new Pair<Class<? extends GameServer>, String>(GameServer.PROPERTY_NAMES_TO_TYPE.get(server.getServerType()), url));
+				gameServers = new GameServerTable().query(StartUpApplication.database)
+													  .filter(GameServerTable.NODE_OWNER.cloneWithValue(NODE_NAMES[i]))
+													  .all();
+			} catch (SQLException e)
+			{
+				throw new RuntimeException(String.format("Error when starting up controller: %s", e.getMessage()));
+			}
+			
+			for(var server : gameServers)
+			{
+				serverNamesToAddresses.put(
+					server.getColumn(GameServerTable.NAME).getValue(),
+					Pair.of(GameServer.PROPERTY_NAMES_TO_TYPE.get(server.getColumn(GameServerTable.SERVER_TYPE).getValue()), url));
 			}
 		}
 	}
@@ -72,29 +99,33 @@ public class StartUpApplication implements ServletContextListener
 		return String.format("%s:%s/%s", address, port, extension);
 	}
 	
-	public static long getNodeReservedRam(String nodeName)
+	public static long getNodeReservedRam(String nodeName) throws SQLException
 	{
 		long reservedRam = 0;
-		List<models.GameServer> thisNodesServers = Model.getAll(models.GameServer.class, "nodeOwner=?", nodeName);
-		List<Integer> minecraftIDs = new LinkedList<Integer>();
-		for(models.GameServer gameServer : thisNodesServers)
+		var minecraftIDs = new LinkedList<Integer>();
+		try(var connection = database.getConnection())
 		{
-			if(gameServer.getServerType().equals("minecraft"))
+			var thisNodesServers = new GameServerTable().query(database)
+														.filter(GameServerTable.NODE_OWNER.cloneWithValue(nodeName), FilterType.EQUAL)
+														.all();
+			for(var gameServer : thisNodesServers)
 			{
-				minecraftIDs.add(gameServer.getSpecificID());
+				if(gameServer.getColumn("servertype").getValue().equals("minecraft"))
+				{
+					minecraftIDs.add(gameServer.getColumn(GameServerTable.SPECIFIC_ID).getValue());
+				}
 			}
 		}
-		String queryString = minecraftIDs.stream()
-				 .mapToInt(id -> id)
-				 .mapToObj(id -> "id=?")
-				 .reduce((first, second) -> first + " or " + second).orElseGet(() -> null);
-		if(queryString != null)
+		
+		var minecraftServersQuery = Query.query(StartUpApplication.database, MinecraftServerTable.class);
+		minecraftServersQuery.filter(RelationType.OR, 
+				minecraftIDs.stream().map(id -> MinecraftServerTable.ID.cloneWithValue(id)).collect(Collectors.toList()), 
+				minecraftIDs.stream().map(id -> FilterType.EQUAL).collect(Collectors.toList()));
+		
+		var minecraftServers = minecraftServersQuery.all();
+		for(var minecraft : minecraftServers)
 		{
-			List<models.MinecraftServer> minecrafts = Model.getAll(models.MinecraftServer.class, queryString, minecraftIDs.toArray());
-			for(models.MinecraftServer minecraft : minecrafts)
-			{
-				reservedRam += minecraft.getMaxHeapSize();
-			}
+			reservedRam += minecraft.getColumn(MinecraftServerTable.MAX_HEAP_SIZE).getValue().longValue();
 		}
 		
 		return reservedRam;

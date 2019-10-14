@@ -1,11 +1,13 @@
 package frontend;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -20,7 +22,9 @@ import forms.Form;
 import forms.TextField;
 import html.CompoundElement;
 import html.Element;
-import model.Model;
+import model.Query;
+import model.TableTemp;
+import models.TriggersTable;
 import server.GameServer;
 import tags.Anchor;
 import tags.Button;
@@ -167,7 +171,18 @@ public class GameServerConsole extends HttpServlet
 		outputTriggers.addElement(outputTriggersLink);
 		triggerTabs.addElement(outputTriggers);
 		
-		List<models.Triggers> triggers = Model.getAll(models.Triggers.class, "serverowner=?", serverName);
+		List<TableTemp> triggers;
+		try
+		{
+			triggers = Query.query(StartUpApplication.database, TriggersTable.class)
+								.filter(TriggersTable.SERVER_OWNER.cloneWithValue(serverName))
+								.all();
+		} catch (SQLException e)
+		{
+			response.setStatus(500);
+			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			return;
+		}
 		
 		CompoundElement tabContents = new CompoundElement("div");
 		tabContents.addClass("tab-content");
@@ -180,20 +195,13 @@ public class GameServerConsole extends HttpServlet
 		leftElements.addElement(triggerTabs);
 		leftElements.addElement(tabContents);
 		
-		List<models.GameServer> servers = Model.getAll(models.GameServer.class, "name=?", serverName);
-		if(servers.isEmpty())
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
 		content.addElement(leftElements);
 		content.addElement(optionsList);
 		response.setContentType("text/html");
 		response.getWriter().print(template);
 	}
 	
-	private CompoundElement getTriggers(List<models.Triggers> triggers, String filterType, String serverName)
+	private CompoundElement getTriggers(List<TableTemp> triggers, String filterType, String serverName)
 	{
 		CompoundElement allTriggers = new CompoundElement("div");
 		if(filterType.equals("allTriggers"))
@@ -233,18 +241,23 @@ public class GameServerConsole extends HttpServlet
 		
 		CompoundElement tableBody = new CompoundElement("tbody");
 		int index = 1;
-		for(models.Triggers trigger : triggers)
+		for(var trigger : triggers)
 		{
-			if(filterType.equals("allTriggers") || filterType.contains(trigger.getType()))
+			var triggerType 	= trigger.getColumnValue(TriggersTable.TYPE);
+			var triggerValue 	= trigger.getColumnValue(TriggersTable.VALUE);
+			var triggerID 		= trigger.getColumnValue(TriggersTable.ID);
+			var triggerCommand 	= trigger.getColumnValue(TriggersTable.COMMAND);
+			var triggerExtra	= trigger.getColumnValue(TriggersTable.EXTRA);
+			if(filterType.equals("allTriggers") || filterType.contains(triggerType))
 			{
 				String formID = filterType + index;
 				CompoundElement tableRow = new CompoundElement("tr");
-				CompoundElement type = new CompoundElement("td", StringUtils.capitalize(trigger.getType()));
+				CompoundElement type = new CompoundElement("td", StringUtils.capitalize(triggerType));
 				CompoundElement value = new CompoundElement("td");
-				String valueResult = trigger.getValue();
-				if(trigger.getType().equals("time"))
+				String valueResult = triggerValue;
+				if(trigger.getColumnValue(TriggersTable.TYPE).equals("time"))
 				{
-					LocalTime time = LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(trigger.getValue()));
+					LocalTime time = LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(triggerValue));
 					Calendar today = Calendar.getInstance();
 					today.set(Calendar.HOUR_OF_DAY, time.getHour());
 					today.set(Calendar.MINUTE, time.getMinute());
@@ -252,22 +265,22 @@ public class GameServerConsole extends HttpServlet
 					
 					valueResult = time.toString();
 				}
-				else if(trigger.getType().equals("recurring"))
+				else if(triggerType.equals("recurring"))
 				{
-					Duration dur = Duration.ofSeconds(Long.valueOf(trigger.getValue()));
+					Duration dur = Duration.ofSeconds(Long.valueOf(triggerValue));
 					valueResult = dur.toString().substring(2)
 				            .replaceAll("(\\d[HMS])(?!$)", "$1 ")
 				            .toLowerCase();
 				}
 				value.setData(valueResult);
-				CompoundElement command = new CompoundElement("td", trigger.getCommand());
-				CompoundElement action = new CompoundElement("td", Objects.requireNonNullElse(trigger.getExtra(), ""));
+				CompoundElement command = new CompoundElement("td", triggerCommand);
+				CompoundElement action = new CompoundElement("td", Objects.requireNonNullElse(triggerExtra, ""));
 				
 				CompoundElement options = new CompoundElement("td");
 				
 				Button deleteButton = new Button();
 				deleteButton.addClasses("btn-danger", "text-light", "btn", "float-right");
-				deleteButton.setAttribute("link", Utils.encodeURL(String.format("%s?name=%s&id=%s", GameServerTriggerDelete.URL, serverName, trigger.getID())));
+				deleteButton.setAttribute("link", Utils.encodeURL(String.format("%s?name=%s&id=%s", GameServerTriggerDelete.URL, serverName, triggerID)));
 				deleteButton.setOnClick("deleteRow(this)");
 				CompoundElement deleteIcon = new CompoundElement("i");
 				deleteIcon.addClasses("fas", "fa-trash");
@@ -292,7 +305,7 @@ public class GameServerConsole extends HttpServlet
 				
 				Form rowForm = new Form();
 				rowForm.setMethod("POST");
-				rowForm.setAction(Utils.encodeURL(String.format("%s?name=%s&id=%d", GameServerTriggerEdit.URL, serverName, trigger.getID())));
+				rowForm.setAction(Utils.encodeURL(String.format("%s?name=%s&id=%d", GameServerTriggerEdit.URL, serverName, triggerID)));
 				rowForm.setID(formID);
 				table.addEndElement(rowForm);
 				index++;
