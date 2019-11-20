@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import main.StartUpApplication;
 import model.Query;
 import model.Table;
+import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 import server.GameServer;
@@ -116,13 +117,19 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 				return false;
 			}
 			
-			minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-					   .filter(MinecraftServerTable.ID.cloneWithValue(gameServer.getColumnValue(GameServerTable.SPECIFIC_ID)))
+			var option = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+					   .join(new GameServerTable(), GameServerTable.ID, FilterType.EQUAL, new MinecraftServerTable(), MinecraftServerTable.SERVER_ID)
 					   .first();
-			if(minecraftServer == null)
+			
+			if(option.isEmpty())
 			{
 				return false;
 			}
+			else
+			{
+				minecraftServer = option.get();
+			}
+			
 		} catch (SQLException e)
 		{
 			throw new RuntimeException(e.getMessage());

@@ -10,14 +10,12 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
 
 import api.minecraft.MinecraftServer;
 import main.NodeProperties;
 import main.StartUpApplication;
 import models.GameServerTable;
 import models.MinecraftServerTable;
-import server.GameServer;
 import server.GameServerFactory;
 
 @WebServlet("/ServerAdd")
@@ -28,16 +26,16 @@ public class ServerAdd extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String execName = request.getParameter("execName");
-		String type = request.getParameter("type");
+		var serverName = request.getParameter("name");
+		var execName = request.getParameter("execName");
+		var type = request.getParameter("type");
 		if(serverName == null || execName == null || type == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		GameServer foundServer = StartUpApplication.getServer(serverName);
+		var foundServer = StartUpApplication.getServer(serverName);
 		if(foundServer != null)
 		{
 			response.setStatus(400);
@@ -46,15 +44,15 @@ public class ServerAdd extends HttpServlet
 		
 		if(type.equals("minecraft"))
 		{
-			String ramStr = request.getParameter("ram");
-			int ram;
-			String restart = request.getParameter("restart");
+			var ramStr = request.getParameter("ram");
+			var restart = request.getParameter("restart");
 			if(ramStr == null || restart == null)
 			{
 				response.setStatus(400);
 				return;
 			}
 			
+			int ram;
 			try
 			{
 				ram = Integer.parseInt(ramStr);
@@ -71,26 +69,13 @@ public class ServerAdd extends HttpServlet
 				return;
 			}
 			
-			var minecraft = new MinecraftServerTable();
-			minecraft.getColumn(MinecraftServerTable.MAX_HEAP_SIZE).setValue(ram);
-			minecraft.getColumn(MinecraftServerTable.AUTO_RESTARTS).setValue(restart.equals("yes"));
-			minecraft.getColumn(MinecraftServerTable.ARGUMENTS).setValue("");
 			
-			try
-			{
-				minecraft.commit(StartUpApplication.database);
-			} catch (SQLException e1)
-			{
-				response.setStatus(500);
-				return;
-			}
 			
 			var gameServer = new GameServerTable();
-			gameServer.getColumn(GameServerTable.NAME).setValue(serverName);
-			gameServer.getColumn(GameServerTable.NODE_OWNER).setValue(NodeProperties.NAME);
-			gameServer.getColumn(GameServerTable.SPECIFIC_ID).setValue(minecraft.getColumn(MinecraftServerTable.ID).getValue());
-			gameServer.getColumn(GameServerTable.SERVER_TYPE).setValue("minecraft");
-			gameServer.getColumn(GameServerTable.EXECUTABLE_NAME).setValue(execName);
+			gameServer.setColumnValue(GameServerTable.NAME, serverName);
+			gameServer.setColumnValue(GameServerTable.NODE_OWNER, NodeProperties.NAME);
+			gameServer.setColumnValue(GameServerTable.SERVER_TYPE, "minecraft");
+			gameServer.setColumnValue(GameServerTable.EXECUTABLE_NAME, execName);
 			
 			try
 			{
@@ -102,13 +87,28 @@ public class ServerAdd extends HttpServlet
 				return;
 			}
 			
-			GameServer generatedServer = GameServerFactory.getSpecificServer(gameServer);
+			var minecraft = new MinecraftServerTable();
+			minecraft.setColumnValue(MinecraftServerTable.MAX_HEAP_SIZE, ram);
+			minecraft.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, restart.equals("yes"));
+			minecraft.setColumnValue(MinecraftServerTable.ARGUMENTS, "");
+			minecraft.setColumnValue(MinecraftServerTable.SERVER_ID, gameServer.getColumnValue(GameServerTable.ID));
+			
+			try
+			{
+				minecraft.commit(StartUpApplication.database);
+			} catch (SQLException e1)
+			{
+				response.setStatus(500);
+				return;
+			}
+			
+			var generatedServer = GameServerFactory.getSpecificServer(gameServer);
 			StartUpApplication.addServer(generatedServer);
 			
-			for(Part p : request.getParts())
+			for(var p : request.getParts())
 			{
-				String header = p.getHeader("Content-Disposition");
-				String fileName = header.substring(header.indexOf("filename=") + "filename=".length() + 1);
+				var header = p.getHeader("Content-Disposition");
+				var fileName = header.substring(header.indexOf("filename=") + "filename=".length() + 1);
 				fileName = fileName.substring(0, fileName.length() - 1);
 				if(fileName.endsWith(".zip"))
 				{

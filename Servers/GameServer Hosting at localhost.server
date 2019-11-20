@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<server auto-publish-setting="2" auto-publish-time="1" configuration-id="/Servers/GameServer Hosting at localhost-config" hostname="localhost" id="GameServer Hosting at localhost" name="GameServer Hosting at localhost" runtime-id="GameServer Hosting at localhost" server-type="org.eclipse.jst.server.tomcat.90" server-type-id="org.eclipse.jst.server.tomcat.90" start-timeout="180" stop-timeout="15" testEnvironment="false" timestamp="19">
-  <list key="modules" value0="GameServerController::org.eclipse.jst.jee.server:GameServerController::jst.web::3.0" value1="GameServerNode::org.eclipse.jst.jee.server:GameServerNode::jst.web::3.0"/>
-</server>

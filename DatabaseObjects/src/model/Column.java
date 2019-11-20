@@ -2,6 +2,7 @@ package model;
 
 import java.sql.Types;
 import java.util.Map;
+import java.util.Objects;
 
 public class Column <T extends Comparable<T>> implements Comparable<Column<T>>
 {
@@ -77,9 +78,9 @@ public class Column <T extends Comparable<T>> implements Comparable<Column<T>>
 		int length, boolean primaryKey, boolean nullable, boolean autoIncrement,
 		ForeignKey<T> foreign)
 	{
-		this.valueClass = clazz;
+		this.valueClass = Objects.requireNonNull(clazz);
 		this.type = type;
-		this.name = name;
+		this.name = Objects.requireNonNull(name);
 		this.length = length;
 		this.primaryKey = primaryKey;
 		this.nullable = nullable;

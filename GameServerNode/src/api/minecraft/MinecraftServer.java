@@ -6,9 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.nio.file.Path;
-import java.util.LinkedList;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,9 +19,10 @@ import java.util.logging.Level;
 
 import main.NodeProperties;
 import main.StartUpApplication;
+import model.Database;
+import models.MinecraftServerTable;
 import server.CommandHandler;
 import server.GameServer;
-import server.TriggerHandler;
 import server.TriggerHandlerCondition;
 import server.TriggerHandlerCondition.TriggerHandlerConditionType;
 import utils.BoundedCircularList;
@@ -30,6 +30,7 @@ import utils.BoundedCircularList;
 public class MinecraftServer extends GameServer
 {
 	public static final int MINIMUM_HEAP_SIZE = 1024;
+	public static final int HEAP_STEP = 1024;
 	public static final int DEFAULT_LAST_READ_MAXIMUM_SIZE = 500;
 	public static final String SERVER_PROPERTIES_FILE_NAME = "server.properties";
 	public static final String MINIMUM_HEAP_ARGUMENT = "-Xms%dm";
@@ -90,9 +91,10 @@ public class MinecraftServer extends GameServer
 	private final ProcessBuilder processBuilder;
 	private final Runnable inputTask = new Runnable()
 	{
+		@SuppressWarnings("unchecked")
 		public void run()
 		{
-			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			var reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 			while(isRunning() && !Thread.currentThread().isInterrupted())
 			{
 				String lineRead;
@@ -104,27 +106,24 @@ public class MinecraftServer extends GameServer
 					StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Reading from '%s' caused an error:\n%s", getName(), e1.getMessage()));
 					break;
 				}
+				
 				if(lineRead == null || Thread.currentThread().isInterrupted())
 				{
 					break;
 				}
-				final String lineTerminated = lineRead + "\r\n";
-				List<TriggerHandler> triggers = getTriggerHandlers();
+				
+				final var lineTerminated = lineRead + "\r\n";
+				var triggers = getTriggerHandlers();
+				
 				synchronized(triggers)
 				{
-					for(TriggerHandler trigger : triggers)
-					{
-						if(trigger instanceof TriggerHandlerCondition)
-						{
-							@SuppressWarnings("unchecked")
-							TriggerHandlerCondition<String> condition = (TriggerHandlerCondition<String>) trigger;
-							if(condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
-							{
-								condition.trigger(lineTerminated);
-							}
-						}
-					}
+					triggers.stream()
+							.filter(trigger -> trigger instanceof TriggerHandlerCondition)
+							.map(trigger -> (TriggerHandlerCondition<String>) trigger)
+							.filter(condition -> condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
+							.forEach(condition -> condition.trigger(lineTerminated));
 				}
+				
 				getOutputConnectors().removeIf(stream -> {
 					try
 					{
@@ -139,10 +138,12 @@ public class MinecraftServer extends GameServer
 					}
 					return false;
 				});
+				
 				synchronized(lastReadBounded)
 				{
 					lastReadBounded.add(lineTerminated);
 				}
+				
 				log += lineTerminated;
 				if(log.length() > getLogSize())
 				{
@@ -151,6 +152,18 @@ public class MinecraftServer extends GameServer
 			}
 		}
 	};
+	
+	public static void setup(Database db)
+	{
+		try
+		{
+			new MinecraftServerTable().createTable(db);
+		}
+		catch(SQLException e)
+		{
+			throw new RuntimeException(String.format("Error Creating tables: %s", e.getMessage()));
+		}
+	}
 	
 	public MinecraftServer(String name, File folderLocation, File fileName, int maximumHeapSize, String arguments)
 	{
@@ -197,7 +210,7 @@ public class MinecraftServer extends GameServer
 		try
 		{
 			expectedShutdown = true;
-			boolean died = process.waitFor(7, TimeUnit.SECONDS);
+			var died = process.waitFor(7, TimeUnit.SECONDS);
 			if(!died)
 			{
 				forceStopServer();
@@ -224,35 +237,37 @@ public class MinecraftServer extends GameServer
 	{
 		if(!isRunning())
 		{
+			processBuilder.directory(getFolderLocation());
+			processBuilder.command(getRunCommand());
+			
 			try
 			{
-				processBuilder.directory(getFolderLocation());
-				processBuilder.command(getRunCommand());
-				process = processBuilder.start();
-				notifyRunningNotifiers();
-				expectedShutdown = false;
-				process.onExit().thenAcceptAsync(p -> {
-					notifyRunningNotifiers();
-					if(!expectedShutdown && autoRestart())
-					{
-						try
-						{
-							Thread.sleep(5000);
-							startServer();
-						} catch (InterruptedException e)
-						{
-						}
-					}
-				});
-				lastReadBounded.clear();
-				log = "";
-				execService.submit(inputTask);
+				process = processBuilder.start();				
 			}
 			catch(IOException e)
 			{
 				return false;
 			}
 			
+			notifyRunningNotifiers();
+			expectedShutdown = false;
+			process.onExit().thenAcceptAsync(p -> {
+				notifyRunningNotifiers();
+				if(!expectedShutdown && autoRestart())
+				{
+					try
+					{
+						Thread.sleep(5000);
+						startServer();
+					} catch (InterruptedException e)
+					{
+					}
+				}
+			});
+			
+			lastReadBounded.clear();
+			log = "";
+			execService.submit(inputTask);
 			return true;
 		}
 		
@@ -263,7 +278,7 @@ public class MinecraftServer extends GameServer
 	{
 		if(isRunning())
 		{
-			OutputStream outStream = process.getOutputStream();
+			var outStream = process.getOutputStream();
 			try
 			{
 				outStream.write(out.getBytes());
@@ -282,19 +297,19 @@ public class MinecraftServer extends GameServer
 	
 	public String[] getRunCommand()
 	{
-		List<String> command = new LinkedList<String>();
-		command.add(NodeProperties.JAVA8);
-		command.add(String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize));
-		command.add(String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE));
-		for(String extra : arguments.split(" "))
-		{
-			command.add(extra);
-		}
-		command.add("-jar");
-		command.add(String.format("\"%s\"", getExecutableName().getAbsolutePath()));
-		command.add("nogui");
-		String[] fullCommand = command.toArray(new String[] {});
-		System.out.printf("Running command: %s\n", String.join(" ", fullCommand));
+		var command = List.of
+		(
+			NodeProperties.JAVA8,
+			String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize),
+			String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE),
+			arguments.split(" "),
+			"-jar",
+			String.format("\"%s\"", getExecutableName().getAbsolutePath()),
+			"nogui"
+		);
+		
+		var fullCommand = command.toArray(String[]::new);
+		StartUpApplication.LOGGER.log(Level.INFO, String.format("Running command: %s\n", String.join(" ", fullCommand)));
 		return fullCommand;
 	}
 	
@@ -305,11 +320,11 @@ public class MinecraftServer extends GameServer
 	
 	public Properties getProperties()
 	{
-		Properties properties = new Properties();
-		File propertiesFile = getFolderLocation().toPath().resolve(Path.of(SERVER_PROPERTIES_FILE_NAME)).toFile();
+		var properties = new Properties();
+		var propertiesFile = getFolderLocation().toPath().resolve(Path.of(SERVER_PROPERTIES_FILE_NAME)).toFile();
 		if(propertiesFile.exists())
 		{
-			try(FileInputStream s = new FileInputStream(propertiesFile))
+			try(var s = new FileInputStream(propertiesFile))
 			{
 				properties.load(s);
 			} catch (IOException e)
@@ -324,22 +339,22 @@ public class MinecraftServer extends GameServer
 	
 	public boolean setProperties(Properties p)
 	{
-		File propertiesFile = getFolderLocation().toPath().resolve(Path.of(SERVER_PROPERTIES_FILE_NAME)).toFile();
-		Properties properties = new Properties();
-		for(String prop : MINECRAFT_PROPERTIES.keySet())
+		var propertiesFile = getFolderLocation().toPath().resolve(Path.of(SERVER_PROPERTIES_FILE_NAME)).toFile();
+		var properties = new Properties();
+		for(var prop : MINECRAFT_PROPERTIES.keySet())
 		{
 			properties.setProperty(prop, String.valueOf(MINECRAFT_PROPERTIES.get(prop)));
 		}
 		
 		if(p != null)
 		{
-			for(String name : p.stringPropertyNames())
+			for(var name : p.stringPropertyNames())
 			{
 				properties.setProperty(name, p.getProperty(name));
 			}
 		}
 		
-		try(FileOutputStream o = new FileOutputStream(propertiesFile))
+		try(var o = new FileOutputStream(propertiesFile))
 		{
 			properties.store(o, String.format("Minecraft server properties"));
 		} catch (IOException e)

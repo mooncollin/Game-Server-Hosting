@@ -15,7 +15,9 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
 import api.NodeUsage;
+import api.minecraft.MinecraftServer;
 import model.Database;
+import model.Filter.FilterType;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
@@ -64,10 +66,42 @@ public class StartUpApplication implements ServletContextListener
 			throw new RuntimeException("Is the database up?");
 		}
 		
+		GameServer.setup(database);
+		MinecraftServer.setup(database);
+		
+		try
+		{
+			var option = Query.query(StartUpApplication.database, NodeTable.class)
+						  .filter(NodeTable.NAME, NodeProperties.NAME)
+						  .first();
+			
+			Table me;
+			
+			if(option.isEmpty())
+			{
+				me = new NodeTable();
+				me.setColumnValue(NodeTable.NAME, NodeProperties.NAME);
+				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
+			}
+			else
+			{
+				me = option.get();
+				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
+			}
+			
+			me.commit(StartUpApplication.database);
+		}
+		catch(SQLException e)
+		{
+			throw new RuntimeException("Error starting up node: " + e.getMessage());
+		}
+		
+		GameServer.setup(database);
+		
 		try
 		{
 			var myGameServers = Query.query(database, GameServerTable.class)
-									 .filter(GameServerTable.NODE_OWNER.cloneWithValue(NodeProperties.NAME))
+									 .filter(GameServerTable.NODE_OWNER, NodeProperties.NAME)
 									 .all();
 			
 			for(var server : myGameServers)
@@ -83,36 +117,17 @@ public class StartUpApplication implements ServletContextListener
 		
 		try
 		{
-			var me = Query.query(StartUpApplication.database, NodeTable.class)
-						  .filter(NodeTable.NAME.cloneWithValue(NodeProperties.NAME))
-						  .first();
-			
-			if(me == null)
-			{
-				me = new NodeTable();
-				me.setColumnValue(NodeTable.NAME, NodeProperties.NAME);
-				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
-			}
-			else
-			{
-				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
-			}
-			
-			me.commit(StartUpApplication.database);
-		}
-		catch(SQLException e)
-		{
-			throw new RuntimeException("Error starting up node: " + e.getMessage());
-		}
-		
-		try
-		{
 			var triggers = Query.query(StartUpApplication.database, TriggersTable.class)
+								.join(new NodeTable(), NodeTable.NAME.cloneWithValue(NodeProperties.NAME), FilterType.EQUAL)
+								.join(new GameServerTable(), GameServerTable.ID, FilterType.EQUAL, new TriggersTable(), TriggersTable.SERVER_OWNER)
+								.join(new GameServerTable(), GameServerTable.NODE_OWNER, FilterType.EQUAL, new NodeTable(), NodeTable.NAME)
 								.all();
+			
 			for(var trigger : triggers)
 			{
 				addTrigger(trigger);
 			}
+			
 		} catch (SQLException e)
 		{
 			throw new RuntimeException(e.getMessage());
@@ -204,7 +219,7 @@ public class StartUpApplication implements ServletContextListener
 	{
 		synchronized(servers)
 		{
-			for(GameServer server : servers)
+			for(var server : servers)
 			{
 				if(server.getName().equals(name))
 				{
@@ -213,6 +228,40 @@ public class StartUpApplication implements ServletContextListener
 			}
 		}
 			
+		return null;
+	}
+	
+	public static GameServer getServer(int id)
+	{
+		Table table;
+		try
+		{
+			var server = Query.query(database, GameServerTable.class)
+							  .filter(GameServerTable.ID, id)
+							  .first();
+			
+			if(server.isEmpty())
+			{
+				return null;
+			}
+			
+			table = server.get();
+		} catch (SQLException e)
+		{
+			return null;
+		}
+		
+		synchronized(servers)
+		{
+			for(var server : servers)
+			{
+				if(server.getName().equals(table.getColumnValue(GameServerTable.NAME)))
+				{
+					return server;
+				}
+			}
+		}
+		
 		return null;
 	}
 	

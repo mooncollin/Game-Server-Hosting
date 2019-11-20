@@ -14,6 +14,8 @@ import api.minecraft.MinecraftServer;
 import main.NodeProperties;
 import main.StartUpApplication;
 import model.Query;
+import model.Table;
+import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 
@@ -42,9 +44,21 @@ public class ServerEdit extends HttpServlet
 		
 		try
 		{
-			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+			var option = Query.query(StartUpApplication.database, GameServerTable.class)
 								  .filter(GameServerTable.NAME.cloneWithValue(serverName))
 								  .first();
+			
+			Table gameServer;
+			
+			if(option.isEmpty())
+			{
+				response.setStatus(400);
+				return;
+			}
+			else
+			{
+				gameServer = option.get();
+			}
 			
 			gameServer.getColumn(GameServerTable.EXECUTABLE_NAME).setValue(execName);
 			gameServer.commit(StartUpApplication.database);
@@ -72,21 +86,33 @@ public class ServerEdit extends HttpServlet
 				
 				if(ramAmount < MinecraftServer.MINIMUM_HEAP_SIZE || ramAmount % 1024 != 0)
 				{
-					response.setStatus(404);
+					response.setStatus(400);
 					return;
 				}
 				
-				var minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-										   .filter(MinecraftServerTable.ID.cloneWithValue(gameServer.getColumnValue(GameServerTable.SPECIFIC_ID)))
+				var option2 = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+										   .join(gameServer, GameServerTable.ID, FilterType.EQUAL, new MinecraftServerTable(), MinecraftServerTable.ID)
 										   .first();
+				
+				Table minecraftServer;
+				
+				if(option2.isEmpty())
+				{
+					response.setStatus(400);
+					return;
+				}
+				else
+				{
+					minecraftServer = option2.get();
+				}
 
-				minecraftServer.getColumn(MinecraftServerTable.MAX_HEAP_SIZE).setValue(ramAmount);
+				minecraftServer.setColumnValue(MinecraftServerTable.MAX_HEAP_SIZE, ramAmount);
 				minecraftServer.commit(StartUpApplication.database);
 				((MinecraftServer) foundServer).setMaximumHeapSize(ramAmount);
 			}
 			else
 			{
-				response.setStatus(404);
+				response.setStatus(400);
 				return;
 			}
 			

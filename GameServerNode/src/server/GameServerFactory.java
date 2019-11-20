@@ -10,6 +10,7 @@ import main.NodeProperties;
 import main.StartUpApplication;
 import model.Query;
 import model.Table;
+import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 
@@ -26,9 +27,17 @@ public class GameServerFactory
 			Table minecraftServer;
 			try
 			{
-				minecraftServer = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-										   .filter(MinecraftServerTable.ID.cloneWithValue(server.getColumnValue(GameServerTable.SPECIFIC_ID)))
+				var option = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+										   .join(server, GameServerTable.ID, FilterType.EQUAL, new MinecraftServerTable(), MinecraftServerTable.SERVER_ID)
 										   .first();
+				if(option.isEmpty())
+				{
+					return null;
+				}
+				else
+				{
+					minecraftServer = option.get();
+				}
 			} catch (SQLException e)
 			{
 				return null;

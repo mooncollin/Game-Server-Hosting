@@ -3,28 +3,42 @@ package models;
 import java.sql.Types;
 
 import model.Column;
+import model.ColumnBuilder;
+import model.ForeignKeyBuilder;
 import model.Table;
 
 public class GameServerTable extends Table
 {
-	public static final Column<String> NAME =
-			new Column<String>(String.class, "name", Types.VARCHAR, 100, true, false, false, null);
+	public static final Column<Integer> ID = ColumnBuilder.start(Integer.class, Types.INTEGER)
+														  .setName("id")
+														  .isPrimaryKey(true)
+														  .isAutoIncremented(true)
+														  .build();
 	
-	public static final Column<String> NODE_OWNER =
-			new Column<String>(String.class, "nodeOwner", Types.VARCHAR, 45, false, false, false, null);
+	public static final Column<String> NAME = ColumnBuilder.start(String.class, Types.VARCHAR)
+														   .setName("name")
+														   .setLength(100)
+														   .build();
 	
-	public static final Column<Integer> SPECIFIC_ID =
-			new Column<Integer>(Integer.class, "specificid", Types.INTEGER, 0, false, true, false, null);
+	public static final Column<String> NODE_OWNER = ColumnBuilder.start(String.class, Types.VARCHAR)
+																 .setName("nodeOwner")
+																 .setLength(45)
+																 .setForeignKey(ForeignKeyBuilder.start(NodeTable.NAME)
+																		 						 .setTableReference(new NodeTable()))
+																 .build();
 	
-	public static final Column<String> SERVER_TYPE =
-			new Column<String>(String.class, "servertype", Types.VARCHAR, 45, false, false, false, null);
+	public static final Column<String> SERVER_TYPE = ColumnBuilder.start(String.class, Types.VARCHAR)
+																  .setName("servertype")
+																  .setLength(45)
+																  .build();
 	
-	public static final Column<String> EXECUTABLE_NAME =
-			new Column<String>(String.class, "executableName", Types.VARCHAR, 100, false, false, false, null);
+	public static final Column<String> EXECUTABLE_NAME = ColumnBuilder.start(String.class, Types.VARCHAR)
+																	  .setName("executableName")
+																	  .setLength(100)
+																	  .build();
 	
 	public GameServerTable()
-	{
-		super("gameserver", NAME.typeClone(), NODE_OWNER.typeClone(), SPECIFIC_ID.typeClone(),
-			SERVER_TYPE.typeClone(), EXECUTABLE_NAME.typeClone());
+	{	
+		super("gameserver", ID.typeClone(), NAME.typeClone(), NODE_OWNER.typeClone(), SERVER_TYPE.typeClone(), EXECUTABLE_NAME.typeClone());
 	}
 }

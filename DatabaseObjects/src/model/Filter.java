@@ -19,7 +19,7 @@ public class Filter
 	
 	public Filter filterColumn(Column<?> column, FilterType type)
 	{
-		if(columns.size() > 0)
+		if(!columns.isEmpty())
 		{
 			filterColumn(RelationType.AND, column, type);
 		}
@@ -34,7 +34,7 @@ public class Filter
 	
 	public Filter filterColumn(RelationType relation, Column<?> column, FilterType type)
 	{
-		if(columns.size() == 0)
+		if(columns.isEmpty())
 		{
 			throw new IllegalStateException("Must have at least one filtering column before adding a relation");
 		}
@@ -70,7 +70,7 @@ public class Filter
 		
 		var first = true;
 		
-		while(columnsIt.hasNext() && typesIt.hasNext())
+		while(columnsIt.hasNext())
 		{
 			if(!first)
 			{

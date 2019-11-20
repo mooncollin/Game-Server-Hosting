@@ -3,27 +3,40 @@ package models;
 import java.sql.Types;
 
 import model.Column;
+import model.ColumnBuilder;
+import model.ForeignKeyBuilder;
 import model.Table;
 
 public class TriggersTable extends Table
 {
-	public static final Column<Integer> ID =
-			new Column<Integer>(Integer.class, "id", Types.INTEGER, 0, true, false, true, null);
+	public static final Column<Integer> ID = ColumnBuilder.start(Integer.class, Types.INTEGER)
+														  .setName("id")
+														  .isPrimaryKey(true)
+														  .isAutoIncremented(true)
+														  .build();
 	
-	public static final Column<String> TYPE =
-			new Column<String>(String.class, "type", Column.TEXT, 0, false, false, false, null);
+	public static final Column<String> TYPE = ColumnBuilder.start(String.class, Column.TEXT)
+														   .setName("type")
+														   .build();
 	
-	public static final Column<String> COMMAND =
-			new Column<String>(String.class, "command", Column.TEXT, 0, false, false, false, null);
+	public static final Column<String> COMMAND = ColumnBuilder.start(String.class, Column.TEXT)
+															  .setName("command")
+															  .build();
 	
-	public static final Column<String> VALUE =
-			new Column<String>(String.class, "value", Column.TEXT, 0, false, false, false, null);
+	public static final Column<String> VALUE = ColumnBuilder.start(String.class, Column.TEXT)
+															.setName("value")
+															.build();
 	
-	public static final Column<String> SERVER_OWNER =
-			new Column<String>(String.class, "serverowner", Column.TEXT, 0, false, false, false, null);
+	public static final Column<Integer> SERVER_OWNER = ColumnBuilder.start(Integer.class, Types.INTEGER)
+																	.setName("serverowner")
+																	.setForeignKey(ForeignKeyBuilder.start(GameServerTable.ID)
+																									.setTableReference(new GameServerTable()))
+																	.build();
 	
-	public static final Column<String> EXTRA =
-			new Column<String>(String.class, "extra", Column.TEXT, 0, false, true, false, null);
+	public static final Column<String> EXTRA = ColumnBuilder.start(String.class, Column.TEXT)
+															.setName("extra")
+															.isNullable(true)
+															.build();
 	
 	public TriggersTable()
 	{

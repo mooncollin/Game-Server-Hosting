@@ -30,11 +30,12 @@ import backend.api.ServerInteract;
 import backend.main.StartUpApplication;
 import forms.Form;
 import forms.TextField;
+import frontend.templates.Templates;
 import html.CompoundElement;
 import html.Element;
 import tags.Anchor;
-import tags.Script;
 import tags.Button;
+import tags.Script;
 import util.Template;
 import utils.Utils;
 

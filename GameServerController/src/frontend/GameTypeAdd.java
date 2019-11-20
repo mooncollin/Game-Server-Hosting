@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import frontend.templates.Templates;
 import util.Template;
 
 @WebServlet("/GameTypeAdd")

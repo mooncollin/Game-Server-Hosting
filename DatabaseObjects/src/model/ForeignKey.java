@@ -1,21 +1,23 @@
 package model;
 
+import java.util.Objects;
+
 public class ForeignKey <T extends Comparable<T>>
 {
-	private final String name;
+	private final String thisColumnName;
 	private final Table tableReference;
 	private final Column<T> columnReference;
 	
-	public ForeignKey(String name, Table table, Column<T> column)
+	public ForeignKey(String thisColumnName, Table table, Column<T> otherColumn)
 	{
-		this.name = name;
-		this.tableReference = table;
-		this.columnReference = column;
+		this.thisColumnName = Objects.requireNonNull(thisColumnName);
+		this.tableReference = Objects.requireNonNull(table);
+		this.columnReference = Objects.requireNonNull(otherColumn);
 	}
 	
 	public String getName()
 	{
-		return name;
+		return thisColumnName;
 	}
 	
 	public Table getTableReference()

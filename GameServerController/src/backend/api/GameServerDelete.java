@@ -3,7 +3,6 @@ package backend.api;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import javax.servlet.ServletException;
@@ -25,7 +24,7 @@ public class GameServerDelete extends HttpServlet
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String name = request.getParameter("name");
+		var name = request.getParameter("name");
 		if(name == null)
 		{
 			response.sendRedirect(Index.URL);
@@ -39,12 +38,12 @@ public class GameServerDelete extends HttpServlet
 			return;
 		}
 		
-		final String url = Utils.encodeURL(String.format("http://%s/ServerDelete?name=%s", serverFound.getSecond(), name));
+		final var url = Utils.encodeURL(String.format("http://%s/ServerDelete?name=%s", serverFound.getSecond(), name));
 		
 		try
 		{
-			HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
-			HttpResponse<Void> httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
+			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 			if(httpResponse.statusCode() == 200)
 			{
 				StartUpApplication.getServerInfo().remove(name);

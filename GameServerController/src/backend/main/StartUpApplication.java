@@ -3,7 +3,6 @@ package backend.main;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -13,6 +12,7 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
+import api.minecraft.MinecraftServer;
 import model.Database;
 import model.Query;
 import model.Table;
@@ -58,20 +58,15 @@ public class StartUpApplication implements ServletContextListener
 			throw new RuntimeException("Is the database up?");
 		}
 		
-		try(var connection = database.getConnection())
-		{
-			GameServer.Setup(connection);
-		} catch (Exception e)
-		{
-			throw new RuntimeException("SQL Error when setting up GameServer: " + e.getMessage());
-		}
+		GameServer.setup(database);
+		MinecraftServer.setup(database);
 		
 		NODE_NAMES = ControllerProperties.NODE_NAMES.split(",");
 		NODE_ADDRESSES = ControllerProperties.NODE_ADDRESSES.split(",");
 		NODE_PORTS = ControllerProperties.NODE_PORTS.split(",");
 		var extension = ControllerProperties.NODE_EXTENSION;
 		
-		for(int i = 0; i < NODE_NAMES.length; i++)
+		for(var i = 0; i < NODE_NAMES.length; i++)
 		{
 			var url = createNodeURL(NODE_ADDRESSES[i], NODE_PORTS[i], extension);
 			List<Table> gameServers;
@@ -101,20 +96,15 @@ public class StartUpApplication implements ServletContextListener
 	
 	public static long getNodeReservedRam(String nodeName) throws SQLException
 	{
-		long reservedRam = 0;
-		var minecraftIDs = new LinkedList<Integer>();
+		List<Integer> minecraftIDs;
 		try(var connection = database.getConnection())
-		{
-			var thisNodesServers = new GameServerTable().query(database)
-														.filter(GameServerTable.NODE_OWNER.cloneWithValue(nodeName), FilterType.EQUAL)
-														.all();
-			for(var gameServer : thisNodesServers)
-			{
-				if(gameServer.getColumn("servertype").getValue().equals("minecraft"))
-				{
-					minecraftIDs.add(gameServer.getColumn(GameServerTable.SPECIFIC_ID).getValue());
-				}
-			}
+		{	
+			minecraftIDs = Query.query(database, MinecraftServerTable.class)
+								.join(new GameServerTable(), GameServerTable.ID, FilterType.EQUAL, new MinecraftServerTable(), MinecraftServerTable.ID)
+								.all()
+								.stream()
+								.map(server -> server.getColumnValue(MinecraftServerTable.ID))
+								.collect(Collectors.toList());
 		}
 		
 		var minecraftServersQuery = Query.query(StartUpApplication.database, MinecraftServerTable.class);
@@ -123,12 +113,10 @@ public class StartUpApplication implements ServletContextListener
 				minecraftIDs.stream().map(id -> FilterType.EQUAL).collect(Collectors.toList()));
 		
 		var minecraftServers = minecraftServersQuery.all();
-		for(var minecraft : minecraftServers)
-		{
-			reservedRam += minecraft.getColumn(MinecraftServerTable.MAX_HEAP_SIZE).getValue().longValue();
-		}
 		
-		return reservedRam;
+		return minecraftServers.stream()
+							   .mapToLong(server -> server.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE).longValue())
+							   .sum();
 	}
 
 	public void contextDestroyed(ServletContextEvent sce)

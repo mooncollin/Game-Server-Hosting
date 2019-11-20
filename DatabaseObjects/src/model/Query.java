@@ -4,9 +4,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import model.Filter.FilterType;
 import model.Filter.RelationType;
@@ -16,6 +19,7 @@ public class Query
 	private final Table model;
 	private final Column<?>[] modelColumns;
 	private List<Filter> filters;
+	private Map<String, Join> joins;
 	private final Database database;
 	
 	public static <T extends Table> Query query(Database database, Class<T> tableClass)
@@ -33,9 +37,20 @@ public class Query
 	public Query(Database database, Table model)
 	{
 		filters 		= new LinkedList<Filter>();
+		joins			= new HashMap<String, Join>();
 		this.model 		= Objects.requireNonNull(model);
 		this.database 	= Objects.requireNonNull(database);
 		modelColumns 	= model.getColumns().stream().toArray(Column<?>[]::new);
+	}
+	
+	public <F extends Comparable<F>> Query filter(Column<F> column, F value)
+	{
+		return filter(column.cloneWithValue(value));
+	}
+	
+	public <F extends Comparable<F>> Query filter(Column<F> column, F value, FilterType type)
+	{
+		return filter(column.cloneWithValue(value), type);
 	}
 	
 	public Query filter(Column<?> column)
@@ -75,17 +90,47 @@ public class Query
 	
 	public Query filter(Filter filter)
 	{
-		filters.add(filter);
+		filters.add(Objects.requireNonNull(filter));
 		return this;
+	}
+	
+	public Query join(Join join)
+	{
+		var key = Objects.requireNonNull(join).getTable().getName();
+		var value =  joins.putIfAbsent(key, join);
+		if(value != null)
+		{
+			value.merge(join);
+		}
+		return this;
+	}
+	
+	
+	public <T extends Comparable<T>> Query join(Table table, Column<T> column, FilterType type)
+	{
+		Join j = new Join(table);
+		j.joinOnValue(new Filter().filterColumn(column, type));
+		return join(j);
+	}
+	
+	public <T extends Comparable<T>> Query join(Table table, Column<T> column, FilterType type, Table otherTable, Column<?> otherColumn)
+	{
+		Join j = new Join(table);
+		j.joinOnColumn(new Filter().filterColumn(column, type), otherTable, otherColumn);
+		return join(j);
 	}
 	
 	public String toString()
 	{
 		var sqlString = String.format("SELECT * from %s", model.getName());
+		for(var key : joins.keySet())
+		{
+			sqlString += String.format("\nJOIN %s", joins.get(key));
+		}
 		
 		if(!filters.isEmpty())
 		{
-			sqlString += " WHERE ";
+			sqlString += "\nWHERE ";
 			
 			sqlString += String.join(" AND ", 
 					filters.stream().map(Filter::toString).toArray(String[]::new));
@@ -94,7 +139,7 @@ public class Query
 		return sqlString;
 	}
 	
-	public Table first() throws SQLException
+	public Optional<Table> first() throws SQLException
 	{
 		var sqlString = toString();
 		
@@ -107,9 +152,9 @@ public class Query
 			var resultSet = statement.executeQuery();
 			if(!resultSet.next())
 			{
-				return null;
+				return Optional.empty();
 			}
-			return generateRow(resultSet);
+			return Optional.of(generateRow(resultSet));
 		}
 	}
 	
@@ -138,6 +183,17 @@ public class Query
 	private void fillStatement(PreparedStatement s) throws SQLException
 	{
 		var index = 1;
+		
+		for(var entry : joins.entrySet())
+		{
+			for(var filter : entry.getValue().getValueFilters())
+			{
+				for(var column : filter.getColumns())
+				{
+					s.setObject(index++, column.getValue());
+				}
+			}
+		}
 
 		for(var filter : filters)
 		{

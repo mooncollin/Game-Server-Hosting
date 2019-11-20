@@ -5,8 +5,10 @@ import java.util.Random;
 public class Assets
 {
 	public static final String MINECRAFT_BACKGROUNDS_URI = "images/minecraft/";
+	private static final Random random = new Random();
 	
-	public static final String[] MINECRAFT_BACKGROUNDS = {
+	public static final String[] MINECRAFT_BACKGROUNDS =
+	{
 			"background1.jpg",
 			"background2.jpg",
 			"background3.jpg",
@@ -18,10 +20,11 @@ public class Assets
 			"background9.jpg"
 	};
 	
+	public static final String MATERIAL_BACKGROUND = "images/material-back.jpeg";
+	public static final String BLACK_BACKGROUND = "images/backdots.jpg";
+	
 	public static String getRandomMinecraftBackground()
 	{
-		Random r = new Random();
-		
-		return MINECRAFT_BACKGROUNDS_URI + MINECRAFT_BACKGROUNDS[r.nextInt(MINECRAFT_BACKGROUNDS.length)];
+		return MINECRAFT_BACKGROUNDS_URI + MINECRAFT_BACKGROUNDS[random.nextInt(MINECRAFT_BACKGROUNDS.length)];
 	}
 }

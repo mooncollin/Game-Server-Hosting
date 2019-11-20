@@ -20,6 +20,7 @@ import backend.api.GameServerTriggerEdit;
 import backend.main.StartUpApplication;
 import forms.Form;
 import forms.TextField;
+import frontend.templates.Templates;
 import html.CompoundElement;
 import html.Element;
 import model.Query;

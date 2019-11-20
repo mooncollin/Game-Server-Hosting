@@ -10,7 +10,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
@@ -24,6 +23,7 @@ import frontend.GameServerConsole;
 import frontend.Index;
 import model.Query;
 import model.Table;
+import models.GameServerTable;
 import models.TriggersTable;
 import utils.Utils;
 
@@ -82,9 +82,41 @@ public class GameServerTriggerEdit extends HttpServlet
 		Table trigger;
 		try
 		{
-			trigger = Query.query(StartUpApplication.database, TriggersTable.class)
-							   .filter(TriggersTable.ID.cloneWithValue(id))
+			var option = Query.query(StartUpApplication.database, TriggersTable.class)
+							   .filter(TriggersTable.ID, id)
 							   .first();
+			
+			if(option.isEmpty())
+			{
+				var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+									  .filter(GameServerTable.NAME, serverName)
+									  .first();
+				
+				Table server;
+				
+				if(gameServer.isEmpty())
+				{
+					StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Game server: %s doesn't exist!", serverName));
+					response.setStatus(500);
+					return;
+				}
+				else
+				{
+					server = gameServer.get();
+				}
+				
+				trigger = new TriggersTable();
+				trigger.setColumnValue(TriggersTable.TYPE, type.toLowerCase());
+				trigger.setColumnValue(TriggersTable.COMMAND, "");
+				trigger.setColumnValue(TriggersTable.VALUE, "");
+				trigger.setColumnValue(TriggersTable.SERVER_OWNER, server.getColumnValue(GameServerTable.ID));
+				trigger.setColumnValue(TriggersTable.EXTRA, "");
+			}
+			else
+			{
+				trigger = option.get();
+			}
+			
 		} catch (SQLException e)
 		{
 			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
@@ -92,27 +124,17 @@ public class GameServerTriggerEdit extends HttpServlet
 			return;
 		}
 		
-		if(trigger == null)
-		{
-			trigger = new TriggersTable();
-			trigger.setColumnValue(TriggersTable.TYPE, type.toLowerCase());
-			trigger.setColumnValue(TriggersTable.COMMAND, "");
-			trigger.setColumnValue(TriggersTable.VALUE, "");
-			trigger.setColumnValue(TriggersTable.SERVER_OWNER, serverName);
-			trigger.setColumnValue(TriggersTable.EXTRA, "");
-		}
-		
 		var parsedValue = value;
 		var triggerValue = trigger.getColumnValue(TriggersTable.TYPE);
 		
 		if(triggerValue.equals("recurring"))
 		{
-			Matcher hourMatcher = TIME_HOUR.matcher(value);
-			Matcher minuteMatcher = TIME_MINUTE.matcher(value);
-			Matcher secondMatcher = TIME_SECOND.matcher(value);
-			String hour = hourMatcher.matches() ? hourMatcher.group("hour") + "H" : "";
-			String minute = minuteMatcher.matches() ? minuteMatcher.group("minute") + "M" : "";
-			String second = secondMatcher.matches() ? secondMatcher.group("second") + "S" : "";
+			var hourMatcher = TIME_HOUR.matcher(value);
+			var minuteMatcher = TIME_MINUTE.matcher(value);
+			var secondMatcher = TIME_SECOND.matcher(value);
+			var hour = hourMatcher.matches() ? hourMatcher.group("hour") + "H" : "";
+			var minute = minuteMatcher.matches() ? minuteMatcher.group("minute") + "M" : "";
+			var second = secondMatcher.matches() ? secondMatcher.group("second") + "S" : "";
 			
 			if(hour.isEmpty() && minute.isEmpty() && second.isEmpty())
 			{
@@ -122,7 +144,7 @@ public class GameServerTriggerEdit extends HttpServlet
 			
 			try
 			{
-				Duration dur = Duration.parse(String.format("PT%s%s%s", hour, minute, second));
+				var dur = Duration.parse(String.format("PT%s%s%s", hour, minute, second));
 				parsedValue = String.valueOf(dur.getSeconds());
 			}
 			catch(DateTimeParseException e)
@@ -135,7 +157,7 @@ public class GameServerTriggerEdit extends HttpServlet
 		{
 			try
 			{
-				LocalTime t = LocalTime.parse(value);
+				var t = LocalTime.parse(value);
 				parsedValue = String.valueOf(t.toSecondOfDay());
 			}
 			catch(DateTimeParseException e)
@@ -159,11 +181,11 @@ public class GameServerTriggerEdit extends HttpServlet
 		}
 		
 		
-		final String url = Utils.encodeURL(String.format("http://%s/TriggerEdit?id=%s", foundServer.getSecond(), trigger.getColumnValue(TriggersTable.ID)));
+		final var url = Utils.encodeURL(String.format("http://%s/TriggerEdit?id=%s", foundServer.getSecond(), trigger.getColumnValue(TriggersTable.ID)));
 		
 		try
 		{
-			HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
 			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)

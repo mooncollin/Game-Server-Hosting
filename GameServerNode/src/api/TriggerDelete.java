@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import main.StartUpApplication;
 import model.Query;
+import model.Table;
 import models.TriggersTable;
 
 @WebServlet("/TriggerDelete")
@@ -42,9 +43,21 @@ public class TriggerDelete extends HttpServlet
 		
 		try
 		{
-			var trigger = Query.query(StartUpApplication.database, TriggersTable.class)
+			var option = Query.query(StartUpApplication.database, TriggersTable.class)
 							   .filter(TriggersTable.ID.cloneWithValue(id))
 							   .first();
+			
+			Table trigger;
+			if(option.isEmpty())
+			{
+				response.setStatus(400);
+				return;
+			}
+			else
+			{
+				trigger = option.get();
+			}
+			
 			StartUpApplication.removeTrigger(trigger);
 			
 			trigger.delete(StartUpApplication.database);

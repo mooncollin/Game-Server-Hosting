@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import backend.main.ControllerProperties;
 import backend.main.StartUpApplication;
+import frontend.templates.Templates;
 import html.CompoundElement;
 import html.Element;
 import model.Table;

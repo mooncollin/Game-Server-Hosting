@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +20,10 @@ import javax.websocket.Session;
 
 import api.minecraft.MinecraftServer;
 import main.StartUpApplication;
+import model.Database;
+import models.GameServerTable;
+import models.NodeTable;
+import models.TriggersTable;
 
 import java.util.Collections;
 
@@ -31,11 +35,6 @@ abstract public class GameServer
 		Map.ofEntries(
 				Map.entry("minecraft", MinecraftServer.class)
 		);
-	
-	public static void Setup(Connection connection)
-	{
-		
-	}
 	
 	public static final int WAIT_TIME = 500;
 	public static final String SERVER_ON_MESSAGE = "<on>";
@@ -53,6 +52,23 @@ abstract public class GameServer
 	private final Timer timer;
 	private final List<TimerTask> timerTasks;
 	private final List<OutputStream> outputConnectors;
+	
+	public static void setup(Database db)
+	{
+		var triggersTable = new TriggersTable();
+		var nodeTable = new NodeTable();
+		var gameserverTable = new GameServerTable();
+		
+		try
+		{
+			triggersTable.createTable(db);
+			nodeTable.createTable(db);
+			gameserverTable.createTable(db);
+		} catch (SQLException e)
+		{
+			throw new RuntimeException(String.format("Error Creating tables: %s", e.getMessage()));
+		}
+	}
 
 	public GameServer(String name, File folderLocation, File fileName)
 	{

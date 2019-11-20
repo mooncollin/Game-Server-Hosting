@@ -1,4 +1,4 @@
-package frontend;
+package frontend.templates;
 
 import java.lang.reflect.InvocationTargetException;
 
