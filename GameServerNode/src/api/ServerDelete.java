@@ -18,18 +18,37 @@ import models.GameServerTable;
 public class ServerDelete extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
+	
+	public static final String URL = "/ServerDelete";
+	
+	public static String getEndpoint(int id)
+	{
+		return String.format("%s?id=%d", URL, id);
+	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var name = request.getParameter("name");
+		var serverIDStr = request.getParameter("id");
 		
-		if(name == null)
+		if(serverIDStr == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverFound = StartUpApplication.getServer(name);
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.setStatus(400);
+			return;
+		}
+		
+		
+		var serverFound = StartUpApplication.getServer(serverID);
 		if(serverFound == null)
 		{
 			response.setStatus(400);
@@ -39,7 +58,7 @@ public class ServerDelete extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-								  .filter(GameServerTable.NAME.cloneWithValue(name))
+								  .filter(GameServerTable.ID.cloneWithValue(serverID))
 								  .first();
 			
 			Table gameServer;
@@ -63,6 +82,6 @@ public class ServerDelete extends HttpServlet
 		}
 		
 		FileDelete.deleteDirectoryOrFile(serverFound.getFolderLocation());
-		StartUpApplication.removeServer(serverFound);
+		StartUpApplication.removeServer(serverID);
 	}
 }

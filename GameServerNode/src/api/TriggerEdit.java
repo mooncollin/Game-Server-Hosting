@@ -20,10 +20,16 @@ public class TriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
+	public static final String URL = "/TriggerEdit";
+	
+	public static String getEndpoint(int triggerID)
+	{
+		return String.format("%s?id=%d", URL, triggerID);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String idStr = request.getParameter("id");
-		int id;
+		var idStr = request.getParameter("id");
 		
 		if(idStr == null)
 		{
@@ -31,6 +37,7 @@ public class TriggerEdit extends HttpServlet
 			return;
 		}
 		
+		int id;
 		try
 		{
 			id = Integer.valueOf(idStr);
@@ -66,7 +73,5 @@ public class TriggerEdit extends HttpServlet
 			response.setStatus(500);
 			return;
 		}
-		
-		
 	}
 }

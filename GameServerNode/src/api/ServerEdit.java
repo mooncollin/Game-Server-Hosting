@@ -24,17 +24,35 @@ public class ServerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	public static final String URL = "/ServerEdit";
+	
+	public static String getEndpoint(int id, String execName)
 	{
-		var serverName = request.getParameter("name");
+		return String.format("%s?id=%d&execName=%s", URL, id, execName);
+	}
+	
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	{
+		var serverIDStr = request.getParameter("id");
 		var execName = request.getParameter("execName");
-		if(serverName == null || execName == null)
+		if(serverIDStr == null || execName == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var foundServer = StartUpApplication.getServer(serverName);
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.setStatus(400);
+			return;
+		}
+		
+		var foundServer = StartUpApplication.getServer(serverID);
 		
 		if(foundServer == null)
 		{
@@ -45,7 +63,7 @@ public class ServerEdit extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-								  .filter(GameServerTable.NAME.cloneWithValue(serverName))
+								  .filter(GameServerTable.ID.cloneWithValue(serverID))
 								  .first();
 			
 			Table gameServer;
@@ -116,7 +134,7 @@ public class ServerEdit extends HttpServlet
 				return;
 			}
 			
-			var folderLocation = Paths.get(NodeProperties.DEPLOY_FOLDER, serverName);
+			var folderLocation = Paths.get(NodeProperties.DEPLOY_FOLDER, gameServer.getColumnValue(GameServerTable.NAME));
 			var executableFile = folderLocation.resolve(execName).toFile();
 			foundServer.setExecutableName(executableFile);
 		}

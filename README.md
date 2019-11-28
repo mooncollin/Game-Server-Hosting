@@ -45,3 +45,23 @@ All installation instructions are located in the "Backend Installation Instructi
 The installation instructions require a .war file of both the GameServerController and GameServerNode Eclipse projects. This can be done by using the Eclipse IDE to export a project into a war file. These .war file will then need to be deployed onto Tomcat through the admin console.
 
 Network factors such as firewalls, port forwarding, and static IPs are not managed by this application and will need to be done by the user manually.
+
+# Changelog
+
+## Version 1.1
+Various back-end improvements and bug fixes.
+
+Minor front-end features:
+* Cannot make a server name with symbols, except for underscore (_)
+* Fixed a bug where node resources were not showing on the website when no servers are added
+
+Major back-end features:
+* Database will clear table entries associated with a game server when that game server gets deleted
+* Changed database to use integer IDs that are auto-generated instead of the server names
+* The application will now auto-generate the gameserver, minecraftserver, node, and triggers tables if they are not already created. Both the controller and node will attempt to do this if either one is started first (recommend doing this since it will do it correctly everytime).
+* Enhanced database ORM library to support joins
+* Updated htmlrenderingtool library to no longer use reflection and massively simplified implementing from html attributes
+* Html rendering is now in its own separate package along with using a different style in creating web pages
+* Uploads and downloads of files and folders are now pushing its data directly to the requesting server/computer. It is no longer buffering and sending all at once (Transfers are much faster now).
+* More logging as been put in place in situations where the application has no other option but to send a 500 status error
+* All api endpoints (Controller and Node) now have a way to generate those endpoints given their query parameters

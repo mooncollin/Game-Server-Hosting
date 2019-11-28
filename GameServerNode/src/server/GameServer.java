@@ -41,7 +41,6 @@ abstract public class GameServer
 	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
 	private List<Object> runningStateChangeNotifiers;
-	private String name;
 	protected Process process;
 	protected String log;
 	private int logSize;
@@ -70,19 +69,18 @@ abstract public class GameServer
 		}
 	}
 
-	public GameServer(String name, File folderLocation, File fileName)
+	public GameServer(File folderLocation, File fileName)
 	{
-		this(name, folderLocation, fileName, DEFAULT_LOG_MAXIMUM_LENGTH);
+		this(folderLocation, fileName, DEFAULT_LOG_MAXIMUM_LENGTH);
 	}
 	
-	public GameServer(String name, File folderLocation, File fileName, int logSize)
+	public GameServer(File folderLocation, File fileName, int logSize)
 	{
 		runningStateChangeNotifiers = Collections.synchronizedList(new LinkedList<Object>());;
 		triggerHandlers = Collections.synchronizedList(new LinkedList<TriggerHandler>());
 		timerTasks = Collections.synchronizedList(new LinkedList<TimerTask>());
 		outputConnectors = new LinkedList<OutputStream>();
 		timer = new Timer();
-		setName(name);
 		setLogSize(logSize);
 		setFolderLocation(folderLocation);
 		setExecutableName(fileName);
@@ -137,11 +135,6 @@ abstract public class GameServer
 		this.executableName = Objects.requireNonNull(fileName, "File name cannot be null");
 	}
 	
-	public void setName(String name)
-	{	
-		this.name = Objects.requireNonNull(name, "Name cannot be null");
-	}
-	
 	public void setLogSize(int logSize)
 	{
 		if(logSize < 1)
@@ -160,11 +153,6 @@ abstract public class GameServer
 	public File getExecutableName()
 	{
 		return executableName;
-	}
-	
-	public String getName()
-	{
-		return name;
 	}
 	
 	public int getLogSize()
@@ -192,7 +180,7 @@ abstract public class GameServer
 		{
 		}
 		
-		StartUpApplication.LOGGER.log(Level.WARNING, String.format("Server '%s' forced to stop", getName()));
+		StartUpApplication.LOGGER.log(Level.WARNING, "Server forced to stop");
 		return !process.isAlive();
 	}
 	
@@ -325,7 +313,7 @@ abstract public class GameServer
 					Thread.sleep(WAIT_TIME);
 				} catch (IOException | IllegalStateException | InterruptedException e)
 				{
-					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send output data to server '%s':\n%s", server.getName(), e.getMessage()));
+					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send output data to server:\n%s", e.getMessage()));
 					break;
 				}
 			}
@@ -336,7 +324,7 @@ abstract public class GameServer
 			{
 				if(!serverConnectors.remove(serverOut))
 				{
-					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Unable to remove output connector from server '%s'", server.getName()));
+					StartUpApplication.LOGGER.log(Level.WARNING, "Unable to remove output connector from server");
 				}
 			}
 			server.removeRunningStateNotifier(notifier);
@@ -400,7 +388,7 @@ abstract public class GameServer
 					session.getBasicRemote().sendText(text);
 				} catch (IOException e)
 				{
-					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send running data from server '%s':\n%s", server.getName(), e.getMessage()));
+					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send running data from server:\n%s", e.getMessage()));
 					break;
 				}
 			}

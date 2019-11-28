@@ -119,8 +119,8 @@ public class GameServerAddTemplate extends Template
 		TextField.class.cast(content.getElementById("name")).setPattern(serverNamePattern.pattern());
 		
 		var heapInput = forms.Number.class.cast(content.getElementById("ramAmount"));
-		heapInput.setMin(MinecraftServer.MINIMUM_HEAP_SIZE);
-		heapInput.setStep(1024);
+		heapInput.setMin((double) MinecraftServer.MINIMUM_HEAP_SIZE);
+		heapInput.setStep((double) 1024);
 		
 		var fileInput = forms.File.class.cast(content.getElementById("files"));
 		fileInput.removeClass("form-control");

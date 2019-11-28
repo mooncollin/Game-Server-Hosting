@@ -4,8 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -15,7 +15,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
 
 import main.NodeProperties;
 
@@ -24,6 +23,19 @@ import main.NodeProperties;
 public class FileUpload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
+	
+	public static final String URL = "/FileUpload";
+	
+	public static String getEndpoint(String directory, boolean isFolder)
+	{
+		var folderString = "";
+		if(isFolder)
+		{
+			folderString = "&folder=true";
+		}
+		
+		return String.format("%s?directory=%s%s", URL, directory, folderString);
+	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -32,32 +44,38 @@ public class FileUpload extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String directory = request.getParameter("directory");
+		var directory = request.getParameter("directory");
+		var folder = request.getParameter("folder");
+		
 		if(directory == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		String[] directories = directory.split(",");
+		var directories = directory.split(",");
 		
-		for(Part p : request.getParts())
+		var fileParts = request.getParts()
+							   .parallelStream()
+							   .filter(p -> p.getSubmittedFileName() != null)
+							   .collect(Collectors.toList());
+		
+		for(var p : fileParts)
 		{
-			String header = p.getHeader("Content-Disposition");
-			String fileName = header.substring(header.indexOf("filename=") + "filename=".length() + 1);
-			fileName = fileName.substring(0, fileName.length() - 1);
-			Path directoryPath = Paths.get(NodeProperties.DEPLOY_FOLDER, directories);
+			var fileName = p.getSubmittedFileName();
 			
-			if(request.getParameter("folder") != null && fileName.endsWith(".zip"))
+			var directoryPath = Paths.get(NodeProperties.DEPLOY_FOLDER, directories);
+			
+			if(folder != null && fileName.endsWith(".zip"))
 			{
 				uploadFolder(directoryPath.toFile(), p.getInputStream());
 			}
 			else
 			{
-				File newFile = directoryPath.resolve(fileName).toFile();
+				var newFile = directoryPath.resolve(fileName).toFile();
 				if(!newFile.exists())
 				{
-					try(FileOutputStream s = new FileOutputStream(newFile))
+					try(var s = new FileOutputStream(newFile))
 					{
 						p.getInputStream().transferTo(s);
 					}
@@ -68,19 +86,19 @@ public class FileUpload extends HttpServlet
 	
 	public static void uploadFolder(File directory, InputStream data) throws IOException
 	{
-		try(ZipInputStream zippy = new ZipInputStream(data))
+		try(var zippy = new ZipInputStream(data))
 		{
 			ZipEntry entry;
 			while((entry = zippy.getNextEntry()) != null)
 			{
-				File currentFile = directory.toPath().resolve(entry.getName()).toFile();
+				var currentFile = directory.toPath().resolve(entry.getName()).toFile();
 				if(!currentFile.getParentFile().exists())
 				{
 					currentFile.getParentFile().mkdirs();
 				}
 				if(!entry.isDirectory())
 				{
-					try(FileOutputStream s = new FileOutputStream(currentFile))
+					try(var s = new FileOutputStream(currentFile))
 					{
 						zippy.transferTo(s);
 					}

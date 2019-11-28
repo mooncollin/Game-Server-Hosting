@@ -6,8 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -26,25 +26,41 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 	
 	public static final String URL = "/GameServerController/GameServerFileDeleteMultiple";
 	
+	public static String getEndpoint(int serverID, String directory, String files)
+	{
+		return String.format("%s?id=%d&directory=%s&files=%s", URL, serverID, directory, files);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String directory = request.getParameter("directory");
-		String files = request.getParameter("files");
-		if(serverName == null || directory == null || files == null)
+		var serverIDStr = request.getParameter("id");
+		var directory = request.getParameter("directory");
+		var files = request.getParameter("files");
+		if(serverIDStr == null || directory == null || files == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverFound = StartUpApplication.getServerInfo().get(serverName);
-		if(serverFound == null || directory.isEmpty())
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.setStatus(400);
+			return;
+		}
+		
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		if(serverAddress == null || directory.isEmpty() || files.isEmpty())
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		for(String d : directory.split(","))
+		for(var d : directory.split(","))
 		{
 			if(d.contains(".."))
 			{
@@ -53,26 +69,24 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 			}
 		}
 		
+		var redirectURL = Utils.encodeURL(GameServerFiles.getEndpoint(serverID, directory));
 		
+		var futures = new LinkedList<CompletableFuture<HttpResponse<Void>>>();
 		
-		final String redirectURL = Utils.encodeURL(GameServerFiles.URL + "?name=" + serverName + "&directory=" + directory);
-		
-		List<CompletableFuture<HttpResponse<Void>>> futures = new LinkedList<CompletableFuture<HttpResponse<Void>>>();
-		
-		for(String file : files.split(","))
+		for(var file : files.split(","))
 		{
-			final String url = Utils.encodeURL(String.format("http://%s/FileDelete?directory=%s,%s", serverFound.getSecond(), directory, file));
-			HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.FileDelete.getEndpoint(String.format("%s,%s", directory, file))));
+			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
 			futures.add(ServerInteract.client.sendAsync(httpRequest, BodyHandlers.discarding()));
 		}
 		
 		try
 		{
-			CompletableFuture.allOf(futures.toArray(new CompletableFuture[] {}));
+			CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
 		}
 		catch(Exception e)
 		{
-			
+			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
 		}
 		
 		response.sendRedirect(redirectURL);

@@ -5,7 +5,6 @@ import java.util.Random;
 public class Assets
 {
 	public static final String MINECRAFT_BACKGROUNDS_URI = "images/minecraft/";
-	private static final Random random = new Random();
 	
 	public static final String[] MINECRAFT_BACKGROUNDS =
 	{
@@ -22,6 +21,8 @@ public class Assets
 	
 	public static final String MATERIAL_BACKGROUND = "images/material-back.jpeg";
 	public static final String BLACK_BACKGROUND = "images/backdots.jpg";
+	
+	private static final Random random = new Random();
 	
 	public static String getRandomMinecraftBackground()
 	{

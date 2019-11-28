@@ -11,7 +11,9 @@ import frontend.GameServerFiles;
 import frontend.GameServerSettings;
 import frontend.Index;
 import frontend.NodesInfo;
+import frontend.javascript.JavaScriptUtils;
 import html.CompoundElement;
+import server.GameServer;
 import tags.Anchor;
 import tags.Button;
 import tags.Canvas;
@@ -24,7 +26,6 @@ import tags.Span;
 import tags.TableData;
 import tags.TableRow;
 import util.Template;
-import utils.JavaScriptUtils;
 import utils.Utils;
 
 public class Templates
@@ -130,12 +131,12 @@ public class Templates
 			);
 	}
 	
-	public static Anchor generateConsoleLink(String serverName)
+	public static Anchor generateConsoleLink(int serverID)
 	{
 		return new Anchor
 		(
 			Map.ofEntries(
-				Map.entry(Attributes.Href.ATTRIBUTE_NAME, Utils.encodeURL(String.format("%s?name=%s", GameServerConsole.URL, serverName))),
+				Map.entry(Attributes.Href.ATTRIBUTE_NAME, GameServerConsole.getEndpoint(serverID)),
 				Map.entry("data-toggle", "tooltip"),
 				Map.entry("data-placement", "bottom"),
 				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "Open server console")
@@ -147,16 +148,15 @@ public class Templates
 		);
 	}
 	
-	public static Anchor generateFilesLink(String serverName)
+	public static Anchor generateFilesLink(int serverID, String serverName)
 	{
 		return new Anchor
 		(
-			Map.ofEntries(
-				Map.entry(Attributes.Href.ATTRIBUTE_NAME, Utils.encodeURL(String.format("%s?name=%s&directory=%s", GameServerFiles.URL, serverName, serverName))),
-				Map.entry("data-toggle", "tooltip"),
-				Map.entry("data-placement", "bottom"),
-				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "View server files")
-		))
+			Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName)),
+			Attributes.makeAttribute("data-toggle", "tooltip"),
+			Attributes.makeAttribute("data-placement", "bottom"),
+			Attributes.Title.makeAttribute("View server files")
+		)
 		.addClasses("rounded-circle", "bg-light", "p-2")
 		.addElements
 		(
@@ -164,12 +164,12 @@ public class Templates
 		);
 	}
 	
-	public static Anchor generateSettingsLink(String serverName)
+	public static Anchor generateSettingsLink(int serverID)
 	{
 		return new Anchor
 		(
 			Map.ofEntries(
-				Map.entry(Attributes.Href.ATTRIBUTE_NAME, Utils.encodeURL(String.format("%s?name=%s", GameServerSettings.URL, serverName))),
+				Map.entry(Attributes.Href.ATTRIBUTE_NAME, GameServerSettings.getEndpoint(serverID)),
 				Map.entry("data-toggle", "tooltip"),
 				Map.entry("data-placement", "bottom"),
 				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "Edit server settings")
@@ -181,7 +181,7 @@ public class Templates
 		);
 	}
 	
-	public static Anchor generateDeleteLink(String serverName)
+	public static Anchor generateDeleteLink(int serverID, String serverName)
 	{
 		return new Anchor
 		(
@@ -190,7 +190,7 @@ public class Templates
 				Map.entry("data-toggle", "tooltip"),
 				Map.entry("data-placement", "bottom"),
 				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "Delete server"),
-				Map.entry("link", Utils.encodeURL(String.format("%s?name=%s", GameServerDelete.URL, serverName))),
+				Map.entry("link", Utils.encodeURL(GameServerDelete.getEndpoint(serverID))),
 				Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, String.format("deleteServer(this, '%s')", serverName))
 		))
 		.addClasses("rounded-circle", "bg-light", "p-2")
@@ -220,11 +220,8 @@ public class Templates
 		return new Script(JavaScriptUtils.getNodeNames() + JavaScriptUtils.getNodeUsageAddresses());
 	}
 	
-	public static CompoundElement createServerTableRow(String serverName, Class<?> type)
+	public static CompoundElement createServerTableRow(Integer serverID, String serverName, Class<? extends GameServer> type)
 	{
-		var tableRow = new TableRow();
-		var nameColumn = new TableData(serverName);
-		
 		var typeName = "Unknown";
 		
 		if(type.equals(MinecraftServer.class))
@@ -232,62 +229,55 @@ public class Templates
 			typeName = "Minecraft";
 		}
 		
-		var typeColumn = new TableData(typeName);
 		
-		var statusIcon = Templates.createIcon("circle");
-		statusIcon.addClasses("mr-2");
 		
-		var statusColumn = new TableData();
-		statusColumn.setID("status-" + serverName);
-		var statusSpan = new Span("Unknown");
-		var fixCircleColor = new Span();
-		fixCircleColor.addElement(statusIcon);
-		statusColumn.addElement(fixCircleColor);
-		statusColumn.addElement(statusSpan);
-		
-		var optionsColumn = new TableData();
-		optionsColumn.addClasses("pb-3");
-		
-		var consoleLink = Templates.generateConsoleLink(serverName);
-		consoleLink.addClass("mr-4");
-		
-		optionsColumn.addElement(consoleLink);
-		
-		var filesLink = Templates.generateFilesLink(serverName);
-		filesLink.addClass("mr-4");
-		optionsColumn.addElement(filesLink);
-		
-		var editLink = Templates.generateSettingsLink(serverName);
-		editLink.addClass("mr-4");
-		optionsColumn.addElement(editLink);
-		
-		var deleteButton = Templates.generateDeleteLink(serverName);
-		optionsColumn.addElement(deleteButton);
-	
-		var startStopColumn = new TableData();
-		startStopColumn.addClass("float-right");
-		
-		var start = generateStartButton();
-		start.setOnClick(String.format("startServer('%s')", serverName));
-		start.addClass("mr-4");
-		start.setID(String.format("start-%s", serverName));
-		start.setDisabled(true);
-		var stop = generateStopButton();
-		stop.setOnClick(String.format("stopServer('%s')", serverName));
-		stop.addClass("mr-4");
-		stop.setDisabled(true);
-		stop.setID(String.format("stop-%s", serverName));
-		
-		startStopColumn.addElement(start);
-		startStopColumn.addElement(stop);
-		
-		tableRow.addElement(nameColumn);
-		tableRow.addElement(typeColumn);
-		tableRow.addElement(statusColumn);
-		tableRow.addElement(optionsColumn);
-		tableRow.addElement(startStopColumn);
-		
-		return tableRow;
+		return new TableRow()
+		.addElements
+		(
+			new TableData(serverName),
+			new TableData(typeName),
+			new TableData(
+					Map.ofEntries(
+						Map.entry(Attributes.ID.ATTRIBUTE_NAME, "status-" + serverID)
+					))
+					.addElements
+					(
+						new Span()
+							.addElements
+							(
+								Templates.createIcon("circle").addClasses("mr-2")
+							),
+						new Span("Unknown")
+					),
+			new TableData()
+				.addClasses("pb-3")
+				.addElements
+				(
+					Templates.generateConsoleLink(serverID).addClasses("mr-4"),
+					Templates.generateFilesLink(serverID, serverName).addClasses("mr-4"),
+					Templates.generateSettingsLink(serverID).addClasses("mr-4"),
+					Templates.generateDeleteLink(serverID, serverName)
+				),
+			new TableData()
+				.addClasses("float-right")
+				.addElements
+				(
+					generateStartButton()
+						.addAttributes(Map.ofEntries(
+							Map.entry(Attributes.ID.ATTRIBUTE_NAME, String.format("start-%d", serverID)),
+							Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, String.format("startServer(%d)", serverID)),
+							Map.entry(Attributes.Disabled.ATTRIBUTE_NAME, true)
+						))
+						.addClasses("mr-4"),
+					generateStopButton()
+						.addAttributes(Map.ofEntries(
+							Map.entry(Attributes.ID.ATTRIBUTE_NAME, String.format("stop-%d", serverID)),
+							Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, String.format("stopServer(%d)", serverID)),
+							Map.entry(Attributes.Disabled.ATTRIBUTE_NAME, true)
+						))
+						.addClasses("mr-4")
+				)
+		);
 	}
 	
 	public static Button generateStartButton()

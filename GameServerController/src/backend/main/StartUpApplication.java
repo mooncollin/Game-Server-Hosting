@@ -21,13 +21,14 @@ import model.Filter.RelationType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 import server.GameServer;
-import utils.Pair;
+
 
 @WebListener
 public class StartUpApplication implements ServletContextListener
 {
-	
-	private static final Map<String, Pair<Class<? extends GameServer>, String>> serverNamesToAddresses = Collections.synchronizedMap(new HashMap<String, Pair<Class<? extends GameServer>, String>>());
+	public static final Map<Integer, Class<? extends GameServer>> serverTypes = Collections.synchronizedMap(new HashMap<Integer, Class<? extends GameServer>>());
+	public static final Map<Integer, String> serverAddresses = Collections.synchronizedMap(new HashMap<Integer, String>());
+	public static final Map<String, String> nodeAddresses = new HashMap<String, String>();
 	
 	public static final String NODE_OUTPUT_URL = "/Output";
 	public static String[] NODE_NAMES;
@@ -36,10 +37,6 @@ public class StartUpApplication implements ServletContextListener
 	public static final Logger LOGGER = Logger.getGlobal();
 	public static Database database;
 	
-	public static Map<String, Pair<Class<? extends GameServer>, String>> getServerInfo()
-	{
-		return serverNamesToAddresses;
-	}
 
 	public void contextInitialized(ServletContextEvent sce)
 	{
@@ -69,6 +66,7 @@ public class StartUpApplication implements ServletContextListener
 		for(var i = 0; i < NODE_NAMES.length; i++)
 		{
 			var url = createNodeURL(NODE_ADDRESSES[i], NODE_PORTS[i], extension);
+			nodeAddresses.put(NODE_NAMES[i], url);
 			List<Table> gameServers;
 			try
 			{
@@ -82,9 +80,9 @@ public class StartUpApplication implements ServletContextListener
 			
 			for(var server : gameServers)
 			{
-				serverNamesToAddresses.put(
-					server.getColumn(GameServerTable.NAME).getValue(),
-					Pair.of(GameServer.PROPERTY_NAMES_TO_TYPE.get(server.getColumn(GameServerTable.SERVER_TYPE).getValue()), url));
+				var id = server.getColumnValue(GameServerTable.ID);
+				serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(server.getColumnValue(GameServerTable.SERVER_TYPE)));
+				serverAddresses.put(id, url);
 			}
 		}
 	}

@@ -3,7 +3,6 @@ package backend.api;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import javax.servlet.ServletException;
@@ -22,31 +21,42 @@ public class GameServerFileDownload extends HttpServlet
 
 	public static final String URL = "/GameServerController/GameServerFile";
 	
+	public static String getEndpoint(int serverID, String directory)
+	{
+		return String.format("%s?id=%d&directory=%s", URL, serverID, directory);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
+		String serverIDStr = request.getParameter("id");
 		String directory = request.getParameter("directory");
-		if(serverName == null || directory == null)
+		if(serverIDStr == null || directory == null || directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverFound = StartUpApplication.getServerInfo().get(serverName);
-		if(serverFound == null)
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.setStatus(400);
+			return;
+		}
+		
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		if(directory.isEmpty())
-		{
-			directory = serverName;
-		}
+		var directories = directory.split(",");
 		
-		String[] directories = directory.split(",");
-		
-		for(String d : directories)
+		for(var d : directories)
 		{
 			if(d.contains(".."))
 			{
@@ -55,35 +65,32 @@ public class GameServerFileDownload extends HttpServlet
 			}
 		}
 		
-		byte[] data;
+		var fileName = directories[directories.length - 1];
+		if(fileName.indexOf('.') == -1)
+		{
+			fileName += ".zip";
+		}
+		
+		response.setHeader("Content-disposition", "attachment; filename=\"" + fileName + "\"");
 		
 		try
 		{
-			final String url = Utils.encodeURL("http://" + serverFound.getSecond() + "/FileDownload?directory=" + directory);
-			HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
-			HttpResponse<byte[]> httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofByteArray());
+			var url = String.format("http://%s%s", serverAddress, Utils.encodeURL(api.FileDownload.getEndpoint(directory)));
+			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofInputStream());
 			if(httpResponse.statusCode() != 200)
 			{
 				response.setStatus(400);
 				return;
 			}
 			
-			data = httpResponse.body();
+			httpResponse.body().transferTo(response.getOutputStream());
 		}
 		catch(InterruptedException e)
 		{
 			response.setStatus(500);
 			return;
 		}
-		
-		String fileName = directories[directories.length - 1];
-		if(fileName.indexOf('.') == -1)
-		{
-			fileName += ".zip";
-		}
-
-		response.setHeader("Content-disposition","attachment; filename=\"" + fileName + "\"");
-		response.getOutputStream().write(data);
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException

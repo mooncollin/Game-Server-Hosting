@@ -1,6 +1,5 @@
 package api;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 
@@ -12,22 +11,23 @@ import javax.servlet.http.HttpServletResponse;
 
 import main.NodeProperties;
 
-@WebServlet("/FileDelete")
-public class FileDelete extends HttpServlet
+@WebServlet("/ServerFiles")
+public class ServerFiles extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/FileDelete";
+	public static final String URL = "/ServerFiles";
 	
 	public static String getEndpoint(String directory)
 	{
 		return String.format("%s?directory=%s", URL, directory);
 	}
-
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var directory = request.getParameter("directory");
-		if(directory == null)
+		
+		if(directory == null || directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
@@ -35,26 +35,17 @@ public class FileDelete extends HttpServlet
 		
 		var directories = directory.split(",");
 		
-		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
-		if(!currentFile.exists() || currentFile.equals(Paths.get(NodeProperties.DEPLOY_FOLDER).toFile()))
+		var currentDirectory = Paths.get(NodeProperties.getProperties().getProperty("deploy_folder"), directories).toFile();
+		
+		if(!currentDirectory.isDirectory())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		deleteDirectoryOrFile(currentFile);
-	}
-	
-	public static void deleteDirectoryOrFile(File directory)
-	{
-		if(directory.isDirectory())
+		for(var file : currentDirectory.listFiles())
 		{
-			for(var f : directory.listFiles())
-			{
-				deleteDirectoryOrFile(f);
-			}
+			response.getWriter().println(String.format("%s,%s", file.getName(), file.isDirectory()));
 		}
-		
-		directory.delete();
 	}
 }

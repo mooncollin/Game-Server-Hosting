@@ -20,6 +20,13 @@ public class TriggerDelete extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
+	public static final String URL = "/TriggerDelete";
+	
+	public static String getEndpoint(int triggerID)
+	{
+		return String.format("%s?id=%d", URL, triggerID);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var idStr = request.getParameter("id");
@@ -58,9 +65,8 @@ public class TriggerDelete extends HttpServlet
 				trigger = option.get();
 			}
 			
-			StartUpApplication.removeTrigger(trigger);
-			
 			trigger.delete(StartUpApplication.database);
+			StartUpApplication.removeTrigger(trigger);
 		} catch (SQLException e)
 		{
 			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());

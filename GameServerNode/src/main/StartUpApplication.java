@@ -3,8 +3,8 @@ package main;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -15,6 +15,7 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
 import api.NodeUsage;
+import api.Output;
 import api.minecraft.MinecraftServer;
 import model.Database;
 import model.Filter.FilterType;
@@ -25,7 +26,6 @@ import models.NodeTable;
 import models.TriggersTable;
 import server.GameServer;
 import server.GameServerFactory;
-import server.Output;
 import server.TriggerHandlerFactory;
 import server.TriggerHandlerRecurring;
 import server.TriggerHandlerTime;
@@ -37,17 +37,13 @@ import utils.TimerTaskID;
 public class StartUpApplication implements ServletContextListener
 {
 	
-	private static final List<GameServer> servers;
+	private static final Map<Integer, GameServer> servers = Collections.synchronizedMap(new HashMap<Integer, GameServer>());;
+	private static final Map<GameServer, Integer> serverToID = Collections.synchronizedMap(new HashMap<GameServer, Integer>());
 	public static final BoundedCircularList<Pair<Integer, Long>> nodeUsage = new BoundedCircularList<Pair<Integer, Long>>(500);
 	public static final long NODE_USAGE_WAIT_TIME = 900;
 	public static final Logger LOGGER = Logger.getGlobal();
 	
 	public static Database database;
-	
-	static
-	{
-		servers = Collections.synchronizedList(new LinkedList<GameServer>());
-	}
 	
 	public void contextInitialized(ServletContextEvent event)
 	{	
@@ -106,7 +102,10 @@ public class StartUpApplication implements ServletContextListener
 			
 			for(var server : myGameServers)
 			{
-				servers.add(GameServerFactory.getSpecificServer(server));
+				var specificServer = GameServerFactory.getSpecificServer(server);
+				var id = server.getColumnValue(GameServerTable.ID);
+				servers.put(id, specificServer);
+				serverToID.put(specificServer, id);
 			}
 		}
 		catch(SQLException e)
@@ -199,7 +198,7 @@ public class StartUpApplication implements ServletContextListener
 	
 	public void contextDestroyed(ServletContextEvent event)
 	{
-		for(GameServer server : servers)
+		for(GameServer server : servers.values())
 		{
 			server.stopServer();
 			server.getTriggerTimer().cancel();
@@ -215,68 +214,29 @@ public class StartUpApplication implements ServletContextListener
 		}
 	}
 	
-	public static GameServer getServer(String name)
-	{
-		synchronized(servers)
-		{
-			for(var server : servers)
-			{
-				if(server.getName().equals(name))
-				{
-					return server;
-				}
-			}
-		}
-			
-		return null;
-	}
-	
 	public static GameServer getServer(int id)
 	{
-		Table table;
-		try
-		{
-			var server = Query.query(database, GameServerTable.class)
-							  .filter(GameServerTable.ID, id)
-							  .first();
-			
-			if(server.isEmpty())
-			{
-				return null;
-			}
-			
-			table = server.get();
-		} catch (SQLException e)
-		{
-			return null;
-		}
-		
-		synchronized(servers)
-		{
-			for(var server : servers)
-			{
-				if(server.getName().equals(table.getColumnValue(GameServerTable.NAME)))
-				{
-					return server;
-				}
-			}
-		}
-		
-		return null;
+		return servers.get(id);
 	}
 	
-	public static List<GameServer> getServers()
+	public static Integer getID(GameServer server)
 	{
-		return Collections.unmodifiableList(servers);
+		return serverToID.get(server);
 	}
 	
-	public static void addServer(GameServer server)
+	public static Map<Integer, GameServer> getServers()
 	{
-		servers.add(Objects.requireNonNull(server));
+		return Collections.unmodifiableMap(servers);
 	}
 	
-	public static void removeServer(GameServer server)
+	public static void addServer(int id, GameServer server)
 	{
-		servers.remove(Objects.requireNonNull(server));
+		servers.put(id, Objects.requireNonNull(server));
+		serverToID.put(server, id);
+	}
+	
+	public static void removeServer(int id)
+	{
+		serverToID.remove(servers.remove(id));
 	}
 }

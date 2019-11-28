@@ -1,6 +1,5 @@
 package frontend;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -29,7 +28,7 @@ import model.Table;
 import models.GameServerTable;
 import models.NodeTable;
 import server.GameServer;
-import utils.Pair;
+import utils.MultipartInputStream;
 
 @WebServlet("/GameServerAdd")
 @MultipartConfig
@@ -43,8 +42,8 @@ public class GameServerAdd extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		final List<Table> nodes;
-		final Map<String, Long> ramAmounts;
+		List<Table> nodes;
+		Map<String, Long> ramAmounts;
 		try
 		{
 			nodes = Query.query(StartUpApplication.database, NodeTable.class)
@@ -70,7 +69,7 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		final var template = new frontend.templates.GameServerAddTemplate(
+		var template = new frontend.templates.GameServerAddTemplate(
 				SERVER_NAME_PATTERN,
 				ControllerProperties.NODE_NAMES.split(","),
 				nodes,
@@ -83,10 +82,10 @@ public class GameServerAdd extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		final var serverName = request.getParameter("name");
-		final var executableName = request.getParameter("execName");
-		final var nodeName = request.getParameter("node");
-		final var type = request.getParameter("type");
+		var serverName = request.getParameter("name");
+		var executableName = request.getParameter("execName");
+		var nodeName = request.getParameter("node");
+		var type = request.getParameter("type");
 		
 		if(serverName == null || executableName == null || nodeName == null || type == null)
 		{
@@ -100,15 +99,7 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		String serverAddress = null;
-		for(int i = 0; i < StartUpApplication.NODE_NAMES.length; i++)
-		{
-			if(nodeName.equals(StartUpApplication.NODE_NAMES[i]))
-			{
-				serverAddress = String.format("%s:%s/%s", StartUpApplication.NODE_ADDRESSES[i], StartUpApplication.NODE_PORTS[i], ControllerProperties.NODE_EXTENSION);
-				break;
-			}
-		}
+		var serverAddress = StartUpApplication.nodeAddresses.get(nodeName);
 		
 		if(serverAddress == null)
 		{
@@ -118,7 +109,7 @@ public class GameServerAdd extends HttpServlet
 		
 		try
 		{
-			final var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
+			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
 								  .filter(GameServerTable.NAME.cloneWithValue(serverName))
 								  .first();
 			
@@ -135,11 +126,11 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		var url = String.format("http://%s/ServerAdd?name=%s&execName=%s&type=%s", serverAddress, serverName, executableName, type);
+		var url = String.format("http://%s%s", serverAddress, api.ServerAdd.getEndpoint(serverName, executableName, type));
 		
 		if(type.equals("minecraft"))
 		{
-			final var ramStr = request.getParameter("ramAmount");
+			var ramStr = request.getParameter("ramAmount");
 			if(ramStr == null)
 			{
 				doGet(request, response);
@@ -163,46 +154,38 @@ public class GameServerAdd extends HttpServlet
 				return;
 			}
 			
-			final var restart = request.getParameter("restartsUnexpected") == null ? "no" : "yes";
+			var restart = request.getParameter("restartsUnexpected") == null ? "no" : "yes";
 			
 			url += String.format("&ram=%s&restart=%s", ramStr, restart);
 		}
 		
-		final var boundary = "===" + System.currentTimeMillis() + "===";
+		var fileParts = request.getParts()
+							   .parallelStream()
+							   .filter(p -> p.getSubmittedFileName() != null)
+							   .collect(Collectors.toList());
 		
-		var zipRequest = new ByteArrayOutputStream();
-		for(final var p : request.getParts())
+		try(var multiInputStream = new MultipartInputStream(fileParts))
 		{
-			final var header = p.getHeader("Content-Disposition");
-			var fileName = header.substring(header.indexOf("filename=") + "filename=".length() + 1);
-			fileName = fileName.substring(0, fileName.length() - 1);
-			if(fileName.endsWith(".zip"))
+			var httpRequest = HttpRequest.newBuilder(URI.create(url))
+					.header("Content-type", "multipart/form-data; boundary=" + multiInputStream.getBoundary())
+					.POST(BodyPublishers.ofInputStream(() -> multiInputStream))
+					.build();
+			
+			try
 			{
-				zipRequest.writeBytes(String.format("\r\n--%s\r\nContent-Disposition: %s\r\n\r\n", boundary, p.getHeader("Content-Disposition")).getBytes());
-				p.getInputStream().transferTo(zipRequest);
+				var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofString());
+				if(httpResponse.statusCode() == 200)
+				{
+					var id = Integer.parseInt(httpResponse.body());
+					StartUpApplication.serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(type));
+					StartUpApplication.serverAddresses.put(id, serverAddress);
+					response.sendRedirect(Index.URL);
+					return;
+				}
 			}
-		}
-		
-		zipRequest.writeBytes(String.format("\r\n--%s--", boundary).getBytes());
-		url = url.replace(" ", "+");
-		final var httpRequest = HttpRequest.newBuilder(URI.create(url))
-				.header("Content-type", "multipart/form-data; boundary=" + boundary)
-				.POST(BodyPublishers.ofByteArray(zipRequest.toByteArray()))
-				.build();
-		zipRequest.reset();
-		zipRequest.close();
-		try
-		{
-			final var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
-			if(httpResponse.statusCode() == 200)
+			catch(InterruptedException e)
 			{
-				StartUpApplication.getServerInfo().put(serverName, new Pair<Class<? extends GameServer>, String>(MinecraftServer.class, serverAddress));
-				response.sendRedirect(Index.URL);
-				return;
 			}
-		}
-		catch(InterruptedException e)
-		{
 		}
 		
 		doGet(request, response);

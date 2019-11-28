@@ -23,42 +23,49 @@ public class GameServerTriggerDelete extends HttpServlet
 	
 	public static final String URL = "/GameServerController/GameServerTriggerDelete";
 	
+	public static String getEndpoint(int serverID, int triggerID)
+	{
+		return String.format("%s?id=%d&triggerID=%d", URL, serverID, triggerID);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String idStr = request.getParameter("id");
-		int id;
+		String serverIDStr = request.getParameter("id");
+		String idStr = request.getParameter("triggerID");
 		
-		final String redirectUrl = Utils.encodeURL(String.format("%s?name=%s", GameServerConsole.URL, serverName));
-		
-		if(idStr == null || serverName == null)
+		if(idStr == null || serverIDStr == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
+		int triggerID;
+		int serverID;
 		try
 		{
-			id = Integer.valueOf(idStr);
+			serverID = Integer.valueOf(serverIDStr);
+			triggerID = Integer.valueOf(idStr);
 		}
 		catch(NumberFormatException e)
 		{
-			response.sendRedirect(redirectUrl);
+			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		var foundServer = StartUpApplication.getServerInfo().get(serverName);
-		if(foundServer == null)
+		var redirectUrl = Utils.encodeURL(GameServerConsole.getEndpoint(serverID));
+		
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		if(serverAddress == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		final String url = Utils.encodeURL(String.format("http://%s/TriggerDelete?id=%s", foundServer.getSecond(), id));
+		var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.TriggerDelete.getEndpoint(triggerID)));
 		
 		try
 		{
-			HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
 			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)

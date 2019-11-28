@@ -1,6 +1,7 @@
 package utils;
 
 import java.lang.reflect.Array;
+import java.util.function.IntFunction;
 
 public class BoundedCircularList<T>
 {
@@ -52,6 +53,11 @@ public class BoundedCircularList<T>
 		}
 		
 		return copiedData;
+	}
+	
+	public T[] toArray(IntFunction<T[]> sup)
+	{
+		return toArray(sup.apply(0));
 	}
 	
 	@SuppressWarnings("unchecked")

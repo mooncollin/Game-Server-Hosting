@@ -21,24 +21,40 @@ public class GameServerDelete extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	
 	public static final String URL = "/GameServerController/GameServerDelete";
+	
+	public static String getEndpoint(int id)
+	{
+		return String.format("%s?id=%d", URL, id);
+	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var name = request.getParameter("name");
-		if(name == null)
+		var serverIDStr = request.getParameter("id");
+		if(serverIDStr == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		var serverFound = StartUpApplication.getServerInfo().get(name);
-		if(serverFound == null)
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		final var url = Utils.encodeURL(String.format("http://%s/ServerDelete?name=%s", serverFound.getSecond(), name));
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		if(serverAddress == null)
+		{
+			response.sendRedirect(Index.URL);
+			return;
+		}
+		
+		final var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerDelete.getEndpoint(serverID)));
 		
 		try
 		{
@@ -46,7 +62,8 @@ public class GameServerDelete extends HttpServlet
 			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 			if(httpResponse.statusCode() == 200)
 			{
-				StartUpApplication.getServerInfo().remove(name);
+				StartUpApplication.serverTypes.remove(serverID);
+				StartUpApplication.serverAddresses.remove(serverID);
 			}
 		}
 		catch(InterruptedException e)

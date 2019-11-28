@@ -16,6 +16,13 @@ public class NodeInfo extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
+	public static final String URL = "/NodeInfo";
+	
+	public static String getEndpoint(String property)
+	{
+		return String.format("%s?property=%s", URL, property);
+	}
+	
 	public static final Map<String, String> PROPERTY_COMMANDS = Map.ofEntries
 	(
 			Map.entry("deploy_folder", NodeProperties.getProperties().getProperty("deploy_folder"))
@@ -23,27 +30,21 @@ public class NodeInfo extends HttpServlet
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String property = request.getParameter("property");
+		var property = request.getParameter("property");
 		
-		if(serverName == null || property == null)
+		if(property == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		String responseValue = PROPERTY_COMMANDS.get(property);
+		var responseValue = PROPERTY_COMMANDS.get(property);
 		if(responseValue == null)
 		{
-			response.setStatus(404);
+			response.setStatus(400);
 			return;
 		}
 		
 		response.getWriter().print(responseValue);
-	}
-	
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		doGet(request, response);
 	}
 }

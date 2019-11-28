@@ -38,42 +38,59 @@ public class GameServerTriggerEdit extends HttpServlet
 	
 	public static final String URL = "/GameServerController/GameServerTriggerEdit";
 	
+	public static String getEndpoint(int serverID, int triggerID, String value, String command, String action, String type)
+	{
+		var commandString = "";
+		var actionString = "";
+		if(command != null && !command.isEmpty())
+		{
+			commandString = String.format("&command=%s", command);
+		}
+		
+		if(action != null && !action.isEmpty())
+		{
+			actionString = String.format("&action=%s", action);
+		}
+		
+		return String.format("%s?id=%d&triggerID=%d&value=%s&type=%s%s%s", 
+			URL, serverID, triggerID, value, type, commandString, actionString);
+	}
+	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = request.getParameter("name");
+		var serverIDStr = request.getParameter("id");
 		var value = request.getParameter("value");
-		var idStr = request.getParameter("id");
+		var triggerIDStr = request.getParameter("triggerID");
 		var command = Objects.requireNonNullElse(request.getParameter("command"), "");
 		var action = Objects.requireNonNullElse(request.getParameter("action"), "");
 		var type = request.getParameter("type");
-		int id;
 		
-		final String redirectUrl = Utils.encodeURL(String.format("%s?name=%s", GameServerConsole.URL, serverName));
 		
-		if(serverName == null || value == null || idStr == null)
+		if(serverIDStr == null || value == null || triggerIDStr == null || type == null || type.isBlank() || value.isBlank())
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		if(type != null && type.isBlank() || value.isBlank())
-		{
-			response.sendRedirect(redirectUrl);
-			return;
-		}
-		
+
+		int triggerID;
+		int serverID;
 		try
 		{
-			id = Integer.valueOf(idStr);
+			triggerID = Integer.parseInt(triggerIDStr);
+			serverID = Integer.parseInt(serverIDStr);
 		}
 		catch(NumberFormatException e)
 		{
-			response.sendRedirect(redirectUrl);
+			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		var foundServer = StartUpApplication.getServerInfo().get(serverName);
-		if(foundServer == null)
+		var redirectUrl = Utils.encodeURL(GameServerConsole.getEndpoint(serverID));
+		
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		
+		if(serverAddress == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
@@ -83,33 +100,26 @@ public class GameServerTriggerEdit extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, TriggersTable.class)
-							   .filter(TriggersTable.ID, id)
+							   .filter(TriggersTable.ID, triggerID)
 							   .first();
 			
 			if(option.isEmpty())
 			{
 				var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
-									  .filter(GameServerTable.NAME, serverName)
+									  .filter(GameServerTable.ID, serverID)
 									  .first();
 				
-				Table server;
-				
-				if(gameServer.isEmpty())
+				if(gameServer.isEmpty()) // Just checking if the server actually exists
 				{
-					StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Game server: %s doesn't exist!", serverName));
-					response.setStatus(500);
+					response.sendRedirect(Index.URL);
 					return;
-				}
-				else
-				{
-					server = gameServer.get();
 				}
 				
 				trigger = new TriggersTable();
 				trigger.setColumnValue(TriggersTable.TYPE, type.toLowerCase());
 				trigger.setColumnValue(TriggersTable.COMMAND, "");
 				trigger.setColumnValue(TriggersTable.VALUE, "");
-				trigger.setColumnValue(TriggersTable.SERVER_OWNER, server.getColumnValue(GameServerTable.ID));
+				trigger.setColumnValue(TriggersTable.SERVER_OWNER, serverID);
 				trigger.setColumnValue(TriggersTable.EXTRA, "");
 			}
 			else
@@ -181,7 +191,7 @@ public class GameServerTriggerEdit extends HttpServlet
 		}
 		
 		
-		final var url = Utils.encodeURL(String.format("http://%s/TriggerEdit?id=%s", foundServer.getSecond(), trigger.getColumnValue(TriggersTable.ID)));
+		var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, trigger.getColumnValue(TriggersTable.ID)));
 		
 		try
 		{

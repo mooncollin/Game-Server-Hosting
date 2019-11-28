@@ -19,19 +19,26 @@ import main.NodeProperties;
 public class FileDownload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
+	
+	public static final String URL = "/FileDownload";
+	
+	public static String getEndpoint(String directory)
+	{
+		return String.format("%s?directory=%s", URL, directory);
+	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String directory = request.getParameter("directory");
-		if(directory == null)
+		var directory = request.getParameter("directory");
+		if(directory == null || directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		String[] directories = directory.split(",");
+		var directories = directory.split(",");
 		
-		File currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
+		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
 		if(!currentFile.exists())
 		{
 			response.setStatus(400);
@@ -40,16 +47,16 @@ public class FileDownload extends HttpServlet
 		
 		if(currentFile.isFile())
 		{
-			try(FileInputStream s = new FileInputStream(currentFile))
+			try(var s = new FileInputStream(currentFile))
 			{
 				s.transferTo(response.getOutputStream());
 			}
 		}
 		else if(currentFile.isDirectory())
 		{
-			try(ZipOutputStream s = new ZipOutputStream(response.getOutputStream()))
+			try(var s = new ZipOutputStream(response.getOutputStream()))
 			{
-				for(File deeperFile : currentFile.listFiles())
+				for(var deeperFile : currentFile.listFiles())
 				{
 					zipDirectory(currentFile.getName(), deeperFile, s);
 				}
@@ -61,9 +68,9 @@ public class FileDownload extends HttpServlet
 	{
 		if(currentFile.isFile())
 		{
-			String fileName = String.format("%s%s%s", currentDirectory, File.separator, currentFile.getName());
+			var fileName = String.format("%s%s%s", currentDirectory, File.separator, currentFile.getName());
 			zipOut.putNextEntry(new ZipEntry(fileName));
-			try(FileInputStream fileIn = new FileInputStream(currentFile))
+			try(var fileIn = new FileInputStream(currentFile))
 			{
 				fileIn.transferTo(zipOut);
 			}
@@ -71,9 +78,9 @@ public class FileDownload extends HttpServlet
 		}
 		else if(currentFile.isDirectory())
 		{
-			for(File deeperFile : currentFile.listFiles())
+			for(var deeperFile : currentFile.listFiles())
 			{
-				String directoryName = currentFile.getName();
+				var directoryName = currentFile.getName();
 				if(!deeperFile.getName().equals(currentDirectory))
 				{
 					directoryName = String.format("%s%s%s", currentDirectory, File.separator, currentFile.getName());

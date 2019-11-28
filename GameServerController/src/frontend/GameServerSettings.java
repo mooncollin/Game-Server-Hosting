@@ -36,17 +36,34 @@ public class GameServerSettings extends HttpServlet
 	
 	public static final String URL = "/GameServerController/GameServerSettings";
 	
+	public static String getEndpoint(int id)
+	{
+		return String.format("%s?id=%d", URL, id);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = request.getParameter("name");
-		if(serverName == null)
+		var serverIDStr = request.getParameter("id");
+		if(serverIDStr == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		var serverFound = StartUpApplication.getServerInfo().get(serverName);
-		if(serverFound == null)
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.sendRedirect(Index.URL);
+			return;
+		}
+		
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverType = StartUpApplication.serverTypes.get(serverID);
+		if(serverAddress == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
@@ -56,7 +73,7 @@ public class GameServerSettings extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-					   			   .filter(GameServerTable.NAME.cloneWithValue(serverName))
+					   			   .filter(GameServerTable.ID.cloneWithValue(serverID))
 					   			   .first();
 			if(option.isEmpty())
 			{
@@ -77,6 +94,7 @@ public class GameServerSettings extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, MinecraftServerTable.class)
+										.join(foundGameServer, GameServerTable.ID, FilterType.EQUAL, new MinecraftServerTable(), MinecraftServerTable.ID)
 										.join(foundGameServer, foundGameServer.getColumn(GameServerTable.ID), FilterType.EQUAL)
 										.first();
 			if(option.isEmpty())
@@ -127,7 +145,7 @@ public class GameServerSettings extends HttpServlet
 		String nodeResponse;
 		try
 		{
-			var url = String.format("http://%s/ServerInteract?name=%s&command=properties", serverFound.getSecond(), serverName.replace(' ', '+'));
+			var url = String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "properties"));
 			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
 			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofString());
 			nodeResponse = httpResponse.body();
@@ -148,8 +166,7 @@ public class GameServerSettings extends HttpServlet
 				  .collect(Collectors.toMap(key -> key[0], value -> value[1]))
 		);
 		
-		var template = new GameServerSettingsTemplate(serverName, 
-				serverFound.getFirst(), foundGameServer, 
+		var template = new GameServerSettingsTemplate(serverType, foundGameServer, 
 				minecraftServerFound, totalRam, reservedRam, defaultProperties);
 		
 		response.getWriter().print(template);
@@ -157,22 +174,35 @@ public class GameServerSettings extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		final var serverName = request.getParameter("name");
-		if(serverName == null)
+		var serverIDStr = request.getParameter("id");
+		if(serverIDStr == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		final var serverFound = StartUpApplication.getServerInfo().get(serverName);
-		if(serverFound == null)
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		final var redirectURL = String.format("%s?name=%s", GameServerSettings.URL, serverName.replace(' ', '+'));
-		final var execName = request.getParameter("execName");
+		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverType = StartUpApplication.serverTypes.get(serverID);
+		if(serverAddress == null)
+		{
+			response.sendRedirect(Index.URL);
+			return;
+		}
+		
+		var redirectURL = getEndpoint(serverID);
+		
+		var execName = request.getParameter("execName");
 		if(execName == null || execName.isBlank())
 		{
 			response.sendRedirect(redirectURL);
@@ -180,12 +210,12 @@ public class GameServerSettings extends HttpServlet
 		}
 		
 		
-		var sendURL = String.format("http://%s/ServerEdit?name=%s&execName=%s", serverFound.getSecond(), serverName.replace(' ', '+'), execName.replace(' ', '+'));
+		var sendURL = String.format("http://%s%s", serverAddress, api.ServerEdit.getEndpoint(serverID, execName.replace(' ', '+')));
 		
-		if(serverFound.getFirst().equals(MinecraftServer.class))
+		if(serverType.equals(MinecraftServer.class))
 		{
 			
-			final var ramAmountStr = request.getParameter("ramAmount");
+			var ramAmountStr = request.getParameter("ramAmount");
 			int ramAmount;
 			if(ramAmountStr == null || ramAmountStr.isBlank())
 			{
@@ -212,7 +242,7 @@ public class GameServerSettings extends HttpServlet
 			sendURL += String.format("&ramAmount=%s", ramAmount);
 			
 			// Server Properties
-			final var propertiesPost = MinecraftServer.MINECRAFT_PROPERTIES.keySet()
+			var propertiesPost = MinecraftServer.MINECRAFT_PROPERTIES.keySet()
 					.stream()
 					.map(key -> {
 						var property = Objects.requireNonNullElse(request.getParameter(key), "");
@@ -223,7 +253,7 @@ public class GameServerSettings extends HttpServlet
 
 			try
 			{
-				final var url = Utils.encodeURL(String.format("http://%s/ServerInteract?name=%s&command=properties", serverFound.getSecond(), serverName));
+				var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "properties")));
 				var httpRequest = HttpRequest.newBuilder(URI.create(url))
 						.header("content-type", "application/x-www-form-urlencoded")
 						.POST(BodyPublishers.ofString(propertiesPost))
@@ -238,8 +268,8 @@ public class GameServerSettings extends HttpServlet
 			
 			try
 			{
-				final var restartPost = request.getParameter("restartsUnexpected") == null ? "" : "restartsUnexpected=on";
-				final var url = Utils.encodeURL(String.format("http://%s/ServerInteract?name=%s&command=restarts", serverFound.getSecond(), serverName));
+				var restartPost = request.getParameter("restartsUnexpected") == null ? "" : "restartsUnexpected=on";
+				var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "restarts")));
 				var httpRequest = HttpRequest.newBuilder(URI.create(url))
 						.header("content-type", "application/x-www-form-urlencoded")
 						.POST(BodyPublishers.ofString(restartPost))
@@ -253,8 +283,8 @@ public class GameServerSettings extends HttpServlet
 			
 			try
 			{
-				final var argumentsPost = ("arguments=" + Objects.requireNonNullElse(request.getParameter("arguments"), "").replace("+", "%2B")).strip();
-				final var url = Utils.encodeURL(String.format("http://%s/ServerInteract?name=%s&command=arguments", serverFound.getSecond(), serverName));
+				var argumentsPost = ("arguments=" + Objects.requireNonNullElse(request.getParameter("arguments"), "").replace("+", "%2B")).strip();
+				var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "arguments")));
 				var httpRequest = HttpRequest.newBuilder(URI.create(url))
 						.header("content-type", "application/x-www-form-urlencoded")
 						.POST(BodyPublishers.ofString(argumentsPost))
@@ -269,7 +299,10 @@ public class GameServerSettings extends HttpServlet
 		
 		try
 		{
-			var httpRequest = HttpRequest.newBuilder(URI.create(sendURL)).build();
+			var httpRequest = HttpRequest.newBuilder(URI.create(sendURL))
+										 .POST(BodyPublishers.noBody())
+										 .build();
+			
 			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)

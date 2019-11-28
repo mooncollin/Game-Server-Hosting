@@ -8,7 +8,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.util.List;
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -103,7 +104,7 @@ public class MinecraftServer extends GameServer
 					lineRead = reader.readLine();
 				} catch (IOException e1)
 				{
-					StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Reading from '%s' caused an error:\n%s", getName(), e1.getMessage()));
+					StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Reading from MinecraftServer caused an error:\n%s", e1.getMessage()));
 					break;
 				}
 				
@@ -165,14 +166,14 @@ public class MinecraftServer extends GameServer
 		}
 	}
 	
-	public MinecraftServer(String name, File folderLocation, File fileName, int maximumHeapSize, String arguments)
+	public MinecraftServer(File folderLocation, File fileName, int maximumHeapSize, String arguments)
 	{
-		this(name, folderLocation, fileName, maximumHeapSize, GameServer.DEFAULT_LOG_MAXIMUM_LENGTH, arguments);
+		this(folderLocation, fileName, maximumHeapSize, GameServer.DEFAULT_LOG_MAXIMUM_LENGTH, arguments);
 	}
 	
-	public MinecraftServer(String name, File folderLocation, File fileName, int maximumHeapSize, int logSize, String arguments)
+	public MinecraftServer(File folderLocation, File fileName, int maximumHeapSize, int logSize, String arguments)
 	{
-		super(name, folderLocation, fileName, logSize);
+		super(folderLocation, fileName, logSize);
 		setMaximumHeapSize(maximumHeapSize);
 		setArguments(arguments);
 		execService = Executors.newSingleThreadExecutor();
@@ -288,7 +289,7 @@ public class MinecraftServer extends GameServer
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to write to server '%s':\n%s", getName(), e.getMessage()));
+				StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to write to server MinecraftServer:\n%s", e.getMessage()));
 			}
 		}
 		
@@ -297,16 +298,15 @@ public class MinecraftServer extends GameServer
 	
 	public String[] getRunCommand()
 	{
-		var command = List.of
-		(
-			NodeProperties.JAVA8,
-			String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize),
-			String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE),
-			arguments.split(" "),
-			"-jar",
-			String.format("\"%s\"", getExecutableName().getAbsolutePath()),
-			"nogui"
-		);
+		var command = new LinkedList<String>();
+		
+		command.add(NodeProperties.JAVA8);
+		command.add(String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize));
+		command.add(String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE));
+		command.addAll(Arrays.asList(arguments));
+		command.add("-jar");
+		command.add(String.format("\"%s\"", getExecutableName().getAbsolutePath()));
+		command.add("nogui");
 		
 		var fullCommand = command.toArray(String[]::new);
 		StartUpApplication.LOGGER.log(Level.INFO, String.format("Running command: %s\n", String.join(" ", fullCommand)));
@@ -359,7 +359,7 @@ public class MinecraftServer extends GameServer
 			properties.store(o, String.format("Minecraft server properties"));
 		} catch (IOException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Unable to write to server '%s' properties file:\n%s", getName(), e.getMessage()));
+			StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Unable to write to MinecraftServer properties file:\n%s", e.getMessage()));
 			return false;
 		}
 		

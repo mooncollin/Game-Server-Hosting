@@ -52,7 +52,7 @@ function updateStatus() {
 
 function initializeSocket() {
 	if(socket === undefined || socket.readyState === socket.CLOSED) {
-		let url = socketAddress + "?name=" + serverName;
+		let url = socketAddress + "?id=" + serverID;
 		socket = new WebSocket('ws://' + url);
 		socket.onmessage = function(event){
 			if(event.data === "<on>") {
@@ -120,7 +120,6 @@ logBox.value = '';
 var currentLineAmount = 0;
 
 const MAX_LINE_AMOUNT = 700;
-const serverLocation = "/GameServerController/ServerInteract?name=" + serverName;
 
 const serverOutputRequest = serverLocation + "&command=output";
 const serverStartRequest = serverLocation + "&command=start";

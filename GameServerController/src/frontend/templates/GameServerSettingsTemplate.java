@@ -24,8 +24,10 @@ import util.Template;
 
 public class GameServerSettingsTemplate extends Template
 {
-	public GameServerSettingsTemplate(String serverName, Class<? extends GameServer> serverClass, Table gameServer, Table minecraftServer, long totalRam, long reservedRam, Map<String, Object> properties)
+	public GameServerSettingsTemplate(Class<? extends GameServer> serverClass, Table gameServer, Table minecraftServer, long totalRam, long reservedRam, Map<String, Object> properties)
 	{
+		var serverName = gameServer.getColumnValue(GameServerTable.NAME);
+		var serverID = gameServer.getColumnValue(GameServerTable.ID);
 		var main = Templates.getMainTemplate();
 		var content = Div.class.cast(main.getBody().getElementById("content"));
 		
@@ -41,9 +43,9 @@ public class GameServerSettingsTemplate extends Template
 				.addClasses("float-right", "mt-5", "mr-5")
 				.addElements
 				(
-					Templates.generateConsoleLink(serverName).addClasses("mr-4"),
-					Templates.generateFilesLink(serverName).addClasses("mr-4"),
-					Templates.generateSettingsLink(serverName)
+					Templates.generateConsoleLink(serverID).addClasses("mr-4"),
+					Templates.generateFilesLink(serverID, serverName).addClasses("mr-4"),
+					Templates.generateSettingsLink(serverID)
 				),
 			new HR(),
 			new UL() // Options List
@@ -129,8 +131,8 @@ public class GameServerSettingsTemplate extends Template
 		);
 		
 		var heapInput = forms.Number.class.cast(content.getElementById("ramAmount"));
-		heapInput.setMin(MinecraftServer.MINIMUM_HEAP_SIZE);
-		heapInput.setStep(MinecraftServer.HEAP_STEP);
+		heapInput.setMin((double) MinecraftServer.MINIMUM_HEAP_SIZE);
+		heapInput.setStep((double) MinecraftServer.HEAP_STEP);
 		
 		var argumentInput = TextField.class.cast(content.getElementById("arguments"));
 		argumentInput.removeClass("w-25");

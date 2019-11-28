@@ -1,41 +1,39 @@
 var sockets = [];
-var serverLocations = [];
 
-for(let i = 0; i < nodeAddresses.length; i++) {
-	serverLocations[serverNames[i]] = "/GameServerController/ServerInteract?name=" + serverNames[i]
-	let newSocket = new WebSocket(nodeAddresses[i]);
+Object.entries(nodeOutputAddresses).forEach(([serverID, address]) => {
+	let newSocket = new WebSocket(address);
 	newSocket.onmessage = function(event) {
-		let statusRow = document.getElementById('status-' + serverNames[i]);
+		let statusRow = document.getElementById('status-' + serverID);
 		let circle = statusRow.children[0];
 		let text = statusRow.children[1];
 		if(event.data === "<on>") {
 			circle.classList.remove('text-danger');
 			circle.classList.add('text-success');
 			text.innerHTML = 'Running';
-			document.getElementById('start-' + serverNames[i]).disabled = true;
-			document.getElementById('stop-' + serverNames[i]).disabled = false;
+			document.getElementById('start-' + serverID).disabled = true;
+			document.getElementById('stop-' + serverID).disabled = false;
 		}
 		else if(event.data === "<off>") {
 			circle.classList.remove('text-success');
 			circle.classList.add('text-danger');
 			text.innerHTML = 'Stopped';
-			document.getElementById('start-' + serverNames[i]).disabled = false;
-			document.getElementById('stop-' + serverNames[i]).disabled = true;
+			document.getElementById('start-' + serverID).disabled = false;
+			document.getElementById('stop-' + serverID).disabled = true;
 		}
 	}
-}
+});
 
-function startServer(serverName) {
-	let location = serverLocations[serverName];
+function startServer(serverID) {
+	let location = startServerAddresses[serverID];
 	if(location != null && location != undefined) {
-		fetch(location + "&command=start");
+		fetch(location);
 	}
 }
 
-function stopServer(serverName) {
-	let location = serverLocations[serverName];
+function stopServer(serverID) {
+	let location = stopServerAddresses[serverID];
 	if(location != null && location != undefined) {
-		fetch(location + "&command=stop");
+		fetch(location);
 	}
 }
 

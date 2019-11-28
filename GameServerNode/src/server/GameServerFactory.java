@@ -48,8 +48,7 @@ public class GameServerFactory
 				folderLocation.mkdir();
 			}
 			
-			specificServer = new MinecraftServer(server.getColumnValue(GameServerTable.NAME), 
-					folderLocation, fileName, minecraftServer.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE), 
+			specificServer = new MinecraftServer(folderLocation, fileName, minecraftServer.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE), 
 					minecraftServer.getColumnValue(MinecraftServerTable.ARGUMENTS));
 			
 			((MinecraftServer) specificServer).autoRestart(minecraftServer.getColumnValue(MinecraftServerTable.AUTO_RESTARTS));

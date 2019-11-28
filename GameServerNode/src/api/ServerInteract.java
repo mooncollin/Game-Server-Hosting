@@ -1,7 +1,6 @@
 package api;
 
 import java.io.IOException;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -9,40 +8,52 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.NodeProperties;
 import main.StartUpApplication;
-import server.GameServer;
 
 @WebServlet("/ServerInteract")
 public class ServerInteract extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
+	public static final String URL = "/ServerInteract";
+	
+	public static String getEndpoint(int id, String command)
+	{
+		return String.format("%s?id=%d&command=%s", URL, id, command);
+	}
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String command = request.getParameter("command");
+		var serverIDStr = request.getParameter("id");
+		var command = request.getParameter("command");
 		
-		
-		if(serverName == null || command == null)
+		if(serverIDStr == null || command == null)
 		{
-			StartUpApplication.LOGGER.log(Level.WARNING, String.format("Node: %s, ServerInteract: Invalid server name or command", NodeProperties.NAME));
 			response.setStatus(400);
 			return;
 		}
 		
-		GameServer foundServer = StartUpApplication.getServer(serverName);
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.setStatus(400);
+			return;
+		}
+		
+		var foundServer = StartUpApplication.getServer(serverID);
 		
 		if(foundServer == null)
 		{
-			StartUpApplication.LOGGER.log(Level.WARNING, String.format("Node: %s, ServerInteract: Invalid server", NodeProperties.NAME));
 			response.setStatus(400);
 			return;
 		}
 		
 		if(!foundServer.getCommandHandler().commandGET(command, request, response))
 		{
-			StartUpApplication.LOGGER.log(Level.WARNING, String.format("Node: %s, ServerInteract: Invalid command", NodeProperties.NAME));
 			response.setStatus(400);
 		}
 		
@@ -51,16 +62,27 @@ public class ServerInteract extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverName = request.getParameter("name");
-		String command = request.getParameter("command");
+		var serverIDStr = request.getParameter("id");
+		var command = request.getParameter("command");
 		
-		if(serverName == null || command == null)
+		if(serverIDStr == null || command == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		GameServer foundServer = StartUpApplication.getServer(serverName);
+		int serverID;
+		try
+		{
+			serverID = Integer.parseInt(serverIDStr);
+		}
+		catch(NumberFormatException e)
+		{
+			response.setStatus(400);
+			return;
+		}
+		
+		var foundServer = StartUpApplication.getServer(serverID);
 		
 		if(foundServer == null)
 		{

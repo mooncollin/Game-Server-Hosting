@@ -1,6 +1,5 @@
 package api;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 
@@ -16,21 +15,29 @@ import main.NodeProperties;
 public class FileRename extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
+	
+	public static final String URL = "/FileRename";
+	
+	public static String getEndpoint(String directory, String rename, boolean newFolder)
+	{
+		return String.format("%s?directory=%s&%s=%s", URL, directory, 
+			newFolder ? "newFolder" : "rename", rename);
+	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String directory = request.getParameter("directory");
-		String rename = request.getParameter("rename");
-		String newFolder = request.getParameter("newFolder");
+		var directory = request.getParameter("directory");
+		var rename = request.getParameter("rename");
+		var newFolder = request.getParameter("newFolder");
 		if((directory == null || (rename == null && newFolder == null)) && !newFolder.isBlank())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		String[] directories = directory.split(",");
+		var directories = directory.split(",");
 		
-		File currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
+		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
 		if(currentFile.equals(Paths.get(NodeProperties.DEPLOY_FOLDER).toFile()))
 		{
 			response.setStatus(400);

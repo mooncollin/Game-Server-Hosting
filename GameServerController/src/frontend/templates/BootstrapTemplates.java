@@ -21,7 +21,7 @@ public class BootstrapTemplates
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e)
 		{
-			return null;
+			throw new RuntimeException(e.getMessage());
 		}
 		
 		field.setName(id);

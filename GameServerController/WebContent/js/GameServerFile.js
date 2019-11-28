@@ -123,7 +123,7 @@ function submitDeleteMultiple(button) {
 				confirmText += "\n\t" + checkedFiles[i]; 
 			}
 			if(confirm(confirmText)) {
-				let location = button.getAttribute('link') + "&files=" + checkedFiles.join(',');
+				let location = button.getAttribute('link') + checkedFiles.join(',');
 				window.location.href = location;
 			}
 		}

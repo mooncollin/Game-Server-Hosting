@@ -55,7 +55,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 			String[] lastReadCopy;
 			synchronized(lastRead)
 			{
-				lastReadCopy = lastRead.toArray(new String[] {});
+				lastReadCopy = lastRead.toArray(String[]::new);
 			}
 			
 			for(String line : lastReadCopy)
@@ -109,10 +109,10 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		try
 		{
 			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
-							   	  .filter(GameServerTable.NAME.cloneWithValue(server.getName()))
+							   	  .filter(GameServerTable.ID.cloneWithValue(StartUpApplication.getID(server)))
 							   	  .first();
 			
-			if(gameServer == null)
+			if(gameServer.isEmpty())
 			{
 				return false;
 			}
