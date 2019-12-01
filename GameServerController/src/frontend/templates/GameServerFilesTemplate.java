@@ -22,7 +22,6 @@ import tags.Button;
 import tags.Div;
 import tags.H1;
 import tags.HR;
-import tags.Icon;
 import tags.LI;
 import tags.Nav;
 import tags.OL;
@@ -134,7 +133,7 @@ public class GameServerFilesTemplate extends Template
 					.addClasses("btn", "bg-light", "rounded", "ml-3")
 					.addElements
 					(
-						new Icon().addClasses("fas", "fa-file-upload")
+						Templates.createIcon("file-upload")
 					),
 				new Button
 					(
@@ -146,7 +145,7 @@ public class GameServerFilesTemplate extends Template
 					.addClasses("btn", "bg-light", "rounded", "ml-3")
 					.addElements
 					(
-						new Icon().addClasses("fas", "fa-upload")
+						Templates.createIcon("upload")
 					),
 				new Anchor
 					(
@@ -158,7 +157,7 @@ public class GameServerFilesTemplate extends Template
 					.addClasses("btn", "bg-light", "rounded", "ml-3")
 					.addElements
 					(
-						new Icon().addClasses("fas", "fa-download")
+						Templates.createIcon("download")
 					),
 				new Button
 					(
@@ -170,7 +169,7 @@ public class GameServerFilesTemplate extends Template
 					.addClasses("btn", "bg-light", "rounded", "ml-3")
 					.addElements
 					(
-						new Icon().addClasses("fas", "fa-fire")
+						Templates.createIcon("fire")
 					),
 				new Button
 					(
@@ -186,7 +185,7 @@ public class GameServerFilesTemplate extends Template
 					.addClasses("btn", "bg-success", "rounded", "ml-3")
 					.addElements
 					(
-						new Icon().addClasses("fas", "fa-check")
+						Templates.createIcon("check")
 					),
 				new Button
 					(
@@ -198,7 +197,7 @@ public class GameServerFilesTemplate extends Template
 					.addClasses("btn", "bg-light", "rounded", "ml-3")
 					.addElements
 					(
-						new Icon().addClasses("fas", "fa-folder-plus")
+						Templates.createIcon("folder-plus")
 					),
 				new Div()
 					.addClasses("form-inline")
@@ -248,10 +247,9 @@ public class GameServerFilesTemplate extends Template
 					 					.addClasses("list-group-item", "list-group-item-action", "bg-dark", "text-light", "form-inline", "input-group", "input-group-sm", "col-lg-11")
 					 					.addElements
 					 					(
-					 						new Icon().addClasses("mr-2")
-					 							.addClasses(isDirectory ? new String[] { "fas", "fa-folder"} 
-					 													: iconType.equals("file") ? new String[] {"far", "fa-file"}
-					 																			  : new String[] {"far", "fa-file-" + iconType}),
+					 						(isDirectory ? Templates.createIcon("folder")   : iconType.equals("file")
+					 									 ? Templates.createIcon("far", "file") : Templates.createIcon("far", "file-" + iconType))
+					 							.addClasses("mr-2"),
 					 						new Span(name)
 					 					),
 					 				new Button
@@ -264,7 +262,7 @@ public class GameServerFilesTemplate extends Template
 						 				.addClasses("list-group-item", "list-group-item-action", "bg-warning", "text-light")
 						 				.addElements
 						 				(
-						 					new Icon().addClasses("fas", "fa-edit")
+						 					Templates.createIcon("edit")
 						 				),
 						 			new Button
 						 			(
@@ -276,7 +274,7 @@ public class GameServerFilesTemplate extends Template
 						 			.addClasses("list-group-item", "list-group-item-action", "bg-danger", "text-light")
 						 			.addElements
 						 			(
-						 				new Icon().addClasses("fas", "fa-trash")
+						 				Templates.createIcon("trash")
 						 			)
 					 			);
 					 	 }).toArray(Element[]::new)

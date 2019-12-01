@@ -60,23 +60,30 @@ public class JavascriptMap <K, V> extends JavascriptVariable<Map<K, V>>
 	}
 	
 	@Override
-	public String toString()
+	public String valueString()
 	{
-		return String.format("var %s = {%s};", getName(),
-			String.join(", ", getValue().entrySet().stream().map(entry -> {
-				var keyString = String.valueOf(entry.getKey());
-				var valueString = String.valueOf(entry.getValue());
-				
-				if(entry.getKey() instanceof String)
-				{
-					keyString = '"' + keyString.replace("\"", "\\\"") + '"';
-				}
-				if(entry.getValue() instanceof String)
-				{
-					valueString = '"' + valueString.replace("\"", "\\\"") + '"';
-				}
-				
-				return String.format("%s : %s", keyString, valueString);
-			}).toArray(String[]::new)));
+		return String.format("{%s}", String.join(", ", getValue().entrySet().stream().map(entry -> {
+			var keyString = String.valueOf(entry.getKey());
+			var valueString = String.valueOf(entry.getValue());
+			
+			if(entry.getKey() instanceof String)
+			{
+				keyString = escapeString(keyString);
+			}
+			else if(entry.getKey() instanceof JavascriptVariable)
+			{
+				valueString = ((JavascriptVariable<?>) entry.getKey()).valueString();
+			}
+			if(entry.getValue() instanceof String)
+			{
+				valueString = escapeString(valueString);
+			}
+			else if(entry.getValue() instanceof JavascriptVariable)
+			{
+				valueString = ((JavascriptVariable<?>) entry.getValue()).valueString();
+			}
+			
+			return String.format("%s : %s", keyString, valueString);
+		}).toArray(String[]::new)));
 	}
 }

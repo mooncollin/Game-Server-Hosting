@@ -2,6 +2,8 @@ package frontend.javascript;
 
 import backend.api.ServerInteract;
 import backend.main.StartUpApplication;
+import server.TriggerHandler;
+import utils.StringUtils;
 
 public class JavaScriptUtils
 {	
@@ -66,5 +68,31 @@ public class JavaScriptUtils
 		}
 		
 		return nodeOutputAddresses;
+	}
+	
+	public static JavascriptVariable<String> createSocketAddress(String name, String serverAddress, int serverID)
+	{
+		return new JavascriptVariable<String>(name, String.format("%s%s%s", api.Output.PROTOCOL, serverAddress, api.Output.getEndpoint(serverID)));
+	}
+	
+	public static JavascriptVariable<String> createInteractAddress(String name, int serverID, String command)
+	{
+		return new JavascriptVariable<String>(name, ServerInteract.getEndpoint(serverID, command));
+	}
+	
+	public static JavascriptArray<String> triggerTypes(String name)
+	{
+		return new JavascriptArray<String>(name, 
+			StringUtils.capitalize(TriggerHandler.RECURRING_TYPE), 
+			StringUtils.capitalize(TriggerHandler.TIME_TYPE),
+			StringUtils.capitalize(TriggerHandler.OUTPUT_TYPE));
+	}
+	
+	public static JavascriptArray<String> actionTypes(String name)
+	{
+		return new JavascriptArray<String>(name,
+			TriggerHandler.START_SERVER,
+			TriggerHandler.STOP_SERVER,
+			TriggerHandler.RESTART_SERVER);
 	}
 }

@@ -4,6 +4,14 @@ import java.util.Objects;
 
 abstract public class TriggerHandler
 {
+	public static final String START_SERVER = "Start Server";
+	public static final String STOP_SERVER = "Stop Server";
+	public static final String RESTART_SERVER = "Restart Server";
+	
+	public static final String RECURRING_TYPE = "recurring";
+	public static final String TIME_TYPE = "time";
+	public static final String OUTPUT_TYPE = "output";
+	
 	private GameServer server;
 	private String command;
 	private String action;
@@ -60,15 +68,15 @@ abstract public class TriggerHandler
 	public void trigger()
 	{
 		server.writeToServer(command);
-		if(getAction().equals("Start Server"))
+		if(getAction().equals(START_SERVER))
 		{
 			server.startServer();
 		}
-		else if(getAction().equals("Stop Server"))
+		else if(getAction().equals(STOP_SERVER))
 		{
 			server.stopServer();
 		}
-		else if(getAction().equals("Restart Server"))
+		else if(getAction().equals(RESTART_SERVER))
 		{
 			server.stopServer();
 			server.startServer();

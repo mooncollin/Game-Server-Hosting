@@ -6,17 +6,22 @@ import utils.TimerTaskID;
 
 public class TriggerHandlerRecurring extends TriggerHandler
 {
-	private int seconds;
-	
-	public TriggerHandlerRecurring(GameServer server, String command, String action, long id, int minutes)
+	public static String convertSecondsToFormat(long seconds)
 	{
-		super(server, command, action, id);
-		setRecurringPeriod(minutes);
+		return String.format("%02d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
 	}
 	
-	public void setRecurringPeriod(int minutes)
+	private int seconds;
+	
+	public TriggerHandlerRecurring(GameServer server, String command, String action, long id, int seconds)
 	{
-		this.seconds = minutes;
+		super(server, command, action, id);
+		setRecurringPeriod(seconds);
+	}
+	
+	public void setRecurringPeriod(int seconds)
+	{
+		this.seconds = seconds;
 	}
 	
 	public int getRecurringPeriod()

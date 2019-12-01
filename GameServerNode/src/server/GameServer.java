@@ -1,12 +1,9 @@
 package server;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,17 +37,17 @@ abstract public class GameServer
 	public static final String SERVER_ON_MESSAGE = "<on>";
 	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
-	private List<Object> runningStateChangeNotifiers;
 	protected Process process;
 	protected String log;
 	private int logSize;
 	private File folderLocation;
 	private File executableName;
-	private final CommandHandler commandHandler;
 	private final List<TriggerHandler> triggerHandlers;
 	private final Timer timer;
 	private final List<TimerTask> timerTasks;
 	private final List<OutputStream> outputConnectors;
+	private final List<Object> runningStateChangeNotifiers;
+	private final List<Object> outputNotifiers;
 	
 	public static void setup(Database db)
 	{
@@ -76,15 +73,15 @@ abstract public class GameServer
 	
 	public GameServer(File folderLocation, File fileName, int logSize)
 	{
-		runningStateChangeNotifiers = Collections.synchronizedList(new LinkedList<Object>());;
+		runningStateChangeNotifiers = new LinkedList<Object>();
+		outputNotifiers = new LinkedList<Object>();
+		outputConnectors = new LinkedList<OutputStream>();
 		triggerHandlers = Collections.synchronizedList(new LinkedList<TriggerHandler>());
 		timerTasks = Collections.synchronizedList(new LinkedList<TimerTask>());
-		outputConnectors = new LinkedList<OutputStream>();
 		timer = new Timer();
 		setLogSize(logSize);
 		setFolderLocation(folderLocation);
 		setExecutableName(fileName);
-		commandHandler = generateCommandHandler();
 	}
 	
 	public Timer getTriggerTimer()
@@ -102,27 +99,63 @@ abstract public class GameServer
 		return triggerHandlers;
 	}
 	
-	protected CommandHandler generateCommandHandler()
+	public CommandHandler<? extends GameServer> getCommandHandler()
 	{
-		return new GameServerCommandHandler(this);
+		return new GameServerCommandHandler<GameServer>(this);
 	}
 	
-	public CommandHandler getCommandHandler()
+	public Object getOutputNotifier()
 	{
-		return commandHandler;
+		var notifier = new Object();
+		synchronized(outputNotifiers)
+		{
+			outputNotifiers.add(notifier);
+		}
+		
+		return notifier;
+	}
+	
+	public boolean removeOutputNotifier(Object n)
+	{
+		synchronized(outputNotifiers)
+		{
+			return outputNotifiers.remove(n);
+		}
 	}
 	
 	public Object getRunningStateNotifier()
 	{
-		Object stateN = new Object();
-		runningStateChangeNotifiers.add(stateN);			
+		var stateN = new Object();
+		synchronized(runningStateChangeNotifiers)
+		{
+			runningStateChangeNotifiers.add(stateN);
+		}
 
 		return stateN;
 	}
 	
+	public void addOutputConnector(OutputStream s)
+	{
+		synchronized (outputConnectors)
+		{
+			outputConnectors.add(s);
+		}
+	}
+	
+	public boolean removeOutputConnector(OutputStream s)
+	{
+		synchronized (outputConnectors)
+		{
+			return outputConnectors.remove(s);
+		}
+	}
+	
 	public boolean removeRunningStateNotifier(Object n)
 	{
-		return runningStateChangeNotifiers.remove(n);
+		synchronized(runningStateChangeNotifiers)
+		{
+			return runningStateChangeNotifiers.remove(n);
+		}
 	}
 	
 	public void setFolderLocation(File folderLocation)
@@ -191,24 +224,28 @@ abstract public class GameServer
 	
 	protected void notifyRunningNotifiers()
 	{
-		synchronized (runningStateChangeNotifiers)
+		synchronized(runningStateChangeNotifiers)
 		{
-			for(Object notifier : runningStateChangeNotifiers)
-			{
-				if(notifier != null)
-				{
-					synchronized (notifier)
-					{
-						notifier.notifyAll();
-					}
-				}
-			}			
+			runningStateChangeNotifiers.parallelStream()
+			   .forEach(notifier -> {
+				   synchronized (notifier) {
+					   notifier.notifyAll();
+				   }
+			   });
 		}
 	}
 	
-	public List<OutputStream> getOutputConnectors()
+	protected void notifyOutputNotifiers()
 	{
-		return outputConnectors;
+		synchronized (outputNotifiers)
+		{
+			outputNotifiers.parallelStream()
+				.forEach(notifier -> {
+					synchronized (notifier) {
+						notifier.notifyAll();
+					}
+				});
+		}
 	}
 	
 	public Runnable getOutputRunnable(Session s)
@@ -225,114 +262,82 @@ abstract public class GameServer
 	abstract public boolean startServer();
 	abstract public boolean writeToServer(String out);
 	
+	protected List<OutputStream> getOutputConnectors()
+	{
+		return outputConnectors;
+	}
+	
+	protected List<Object> getRunningStateChangeNotifiers()
+	{
+		return runningStateChangeNotifiers;
+	}
+	
+	protected List<Object> getOutputNotifiers()
+	{
+		return outputNotifiers;
+	}
+	
 	private class OutputRunnable implements Runnable
 	{
 		private Session session;
 		private GameServer server;
-		private PipedOutputStream serverOut;
-		private PipedInputStream pipedIn;
-		private BufferedReader clientIn;
 		private Object notifier;
+		private ByteArrayOutputStream intermediateOut;
 		
 		public OutputRunnable(Session s, GameServer server)
 		{
 			this.session = s;
 			this.server = server;
-			resetPipes();
-			server.getOutputConnectors().add(serverOut);
-			notifier = server.getRunningStateNotifier();
-		}
-		
-		private void resetPipes()
-		{
-			if(serverOut != null)
-			{
-				try
-				{
-					serverOut.close();
-					server.getOutputConnectors().remove(serverOut);
-				} catch (IOException e)
-				{
-					e.printStackTrace();
-					return;
-				}
-			}
-			if(pipedIn != null)
-			{
-				try
-				{
-					pipedIn.close();
-					clientIn.close();
-				} catch (IOException e)
-				{
-					e.printStackTrace();
-					return;
-				}
-			}
-			serverOut = new PipedOutputStream();
-			pipedIn = new PipedInputStream();
-			try
-			{
-				serverOut.connect(pipedIn);
-			} catch (IOException e)
-			{
-				e.printStackTrace();
-				return;
-			}
-			clientIn = new BufferedReader(new InputStreamReader(pipedIn));
-			server.getOutputConnectors().add(serverOut);
+			notifier = server.getOutputNotifier();
+			intermediateOut = new ByteArrayOutputStream();
+			server.addOutputConnector(intermediateOut);
 		}
 		
 		public void run()
 		{
-			String lastLine = null;
 			while(session.isOpen() && !Thread.currentThread().isInterrupted())
 			{
 				try
 				{
-					String output;
-					if(!session.isOpen() || Thread.currentThread().isInterrupted())
+					synchronized (notifier)
 					{
-						break;
+						notifier.wait(WAIT_TIME);
 					}
 					
-					while(clientIn.ready())
+					if(session.isOpen() && intermediateOut.size() > 0)
 					{
-						synchronized(clientIn)
+						synchronized (intermediateOut)
 						{
-							output = clientIn.readLine();
+							synchronized (session)
+							{
+								try(var sessionOutput = session.getBasicRemote().getSendStream())
+								{
+									intermediateOut.writeTo(sessionOutput);
+									intermediateOut.reset();
+								}
+							}
 						}
-						if(output == null || lastLine != null && lastLine.equals(output))
-						{
-							continue;
-						}
-						lastLine = output;
-						session.getBasicRemote().sendText(output + "\r\n");
 					}
-					
-					Thread.sleep(WAIT_TIME);
-				} catch (IOException | IllegalStateException | InterruptedException e)
+				}
+				catch(InterruptedException e)
+				{
+					break;
+				}
+				catch (IOException e)
 				{
 					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send output data to server:\n%s", e.getMessage()));
 					break;
 				}
 			}
 			
-			List<OutputStream> serverConnectors = server.getOutputConnectors();
+			StartUpApplication.LOGGER.log(Level.INFO, "Server output disconnected");
 			
-			synchronized(serverConnectors)
-			{
-				if(!serverConnectors.remove(serverOut))
-				{
-					StartUpApplication.LOGGER.log(Level.WARNING, "Unable to remove output connector from server");
-				}
-			}
-			server.removeRunningStateNotifier(notifier);
+			server.removeOutputNotifier(notifier);
+			server.removeOutputConnector(intermediateOut);
 			
 			try
 			{
-				serverOut.close();
-				clientIn.close();
+				intermediateOut.close();
 			} catch (IOException e)
 			{
 			}
@@ -361,16 +366,17 @@ abstract public class GameServer
 				{
 					if(lastSent != null)
 					{
-						if(lastSent.booleanValue() == server.isRunning())
-						{
-							Thread.sleep(500);
-							continue;
-						}
 						synchronized (notifier)
 						{
 							notifier.wait(WAIT_TIME);
 						}
-						if(!session.isOpen() || Thread.currentThread().isInterrupted())
+						
+						if(lastSent.booleanValue() == server.isRunning())
+						{
+							continue;
+						}
+						
+						if(!session.isOpen())
 						{
 							break;
 						}
@@ -382,18 +388,23 @@ abstract public class GameServer
 				}
 				
 				lastSent = server.isRunning();
-				String text = lastSent ? SERVER_ON_MESSAGE : SERVER_OFF_MESSAGE;
+				var text = lastSent ? SERVER_ON_MESSAGE : SERVER_OFF_MESSAGE;
+				
 				try
 				{
-					session.getBasicRemote().sendText(text);
-				} catch (IOException e)
-				{
-					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send running data from server:\n%s", e.getMessage()));
-					break;
+					synchronized(session)
+					{
+						session.getBasicRemote().sendText(text);				
+					}
 				}
+				catch (IOException e)
+				{
+					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send %s to server:\n%s", text, e.getMessage()));
+					break;
+				}	
 			}
 			
-			server.removeRunningStateNotifier(this.notifier);
+			server.removeRunningStateNotifier(notifier);
 		}
 	}
 }

@@ -11,7 +11,8 @@ public class JavascriptArray <T> extends JavascriptVariable<ArrayList<T>>
 		addElements(startingElements);
 	}
 	
-	public void addElements(@SuppressWarnings("unchecked") T... elements)
+	@SuppressWarnings("unchecked")
+	public void addElements(T... elements)
 	{
 		for(var element : elements)
 		{
@@ -41,17 +42,19 @@ public class JavascriptArray <T> extends JavascriptVariable<ArrayList<T>>
 	}
 	
 	@Override
-	public String toString()
+	public String valueString()
 	{
-		return String.format("var %s = [%s];", getName(), 
-			String.join(", ", getValue().stream().map(element -> {
-				if(element instanceof String)
-				{
-					return String.format("\"%s\"", String.valueOf(element).replace("\"", "\\\""));
-				}
-				
-				return String.valueOf(element);
-			}).toArray(String[]::new))
-		);
+		return String.format("[%s]", String.join(", ", getValue().stream().map(element -> {
+			if(element instanceof String)
+			{
+				return escapeString((String) element);
+			}
+			else if(element instanceof JavascriptVariable)
+			{
+				return ((JavascriptVariable<?>) element).valueString();
+			}
+			
+			return String.valueOf(element);
+		}).toArray(String[]::new)));
 	}
 }

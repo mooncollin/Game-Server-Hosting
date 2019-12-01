@@ -62,8 +62,8 @@ public class NodeProperties
 		
 		if(ramAmount < 0)
 		{
-			OperatingSystemMXBean system = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-			long totalRamMB = system.getTotalPhysicalMemorySize() / NodeProperties.BYTES_IN_MEGABYTE;
+			var system = OperatingSystemMXBean.class.cast(ManagementFactory.getOperatingSystemMXBean());
+			var totalRamMB = system.getTotalPhysicalMemorySize() / NodeProperties.BYTES_IN_MEGABYTE;
 			ramAmount = (int) totalRamMB;
 		}
 		

@@ -74,7 +74,7 @@ public class MultipartInputStream extends InputStream
 		if(b.length == 0)
 			return 0;
 		
-		int globalBytesRead = 0;
+		int totalBytesRead = 0;
 		
 		while(len > 0 && currentPart != null)
 		{
@@ -83,14 +83,14 @@ public class MultipartInputStream extends InputStream
 				int bytesRead = currentPartHeader.read(b, off, len);
 				len -= bytesRead;
 				off += bytesRead;
-				globalBytesRead += bytesRead;
+				totalBytesRead += bytesRead;
 			}
 			if(len > 0 && currentPartInput.available() > 0)
 			{
 				int bytesRead = currentPartInput.read(b, off, len);
 				len -= bytesRead;
 				off += bytesRead;
-				globalBytesRead += bytesRead;
+				totalBytesRead += bytesRead;
 			}
 			if(len > 0)
 			{
@@ -100,10 +100,10 @@ public class MultipartInputStream extends InputStream
 		
 		if(len > 0 && footer.available() > 0)
 		{
-			globalBytesRead += footer.read(b, off, len);
+			totalBytesRead += footer.read(b, off, len);
 		}
 		
-		return globalBytesRead == 0 ? -1 : globalBytesRead;
+		return totalBytesRead == 0 ? -1 : totalBytesRead;
 	}
 	
 	public void close() throws IOException
@@ -151,7 +151,7 @@ public class MultipartInputStream extends InputStream
 		{
 			return String.format("\r\n--%s\r\nContent-Disposition: %s\r\n\r\n", boundary, currentPart.getHeader("Content-Disposition")).getBytes();
 		}
-		
+
 		return new byte[] {};
 	}
 	

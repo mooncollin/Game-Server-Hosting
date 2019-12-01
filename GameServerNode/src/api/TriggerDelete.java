@@ -65,8 +65,8 @@ public class TriggerDelete extends HttpServlet
 				trigger = option.get();
 			}
 			
-			trigger.delete(StartUpApplication.database);
 			StartUpApplication.removeTrigger(trigger);
+			trigger.delete(StartUpApplication.database);
 		} catch (SQLException e)
 		{
 			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());

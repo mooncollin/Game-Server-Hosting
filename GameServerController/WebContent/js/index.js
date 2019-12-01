@@ -1,5 +1,3 @@
-var sockets = [];
-
 Object.entries(nodeOutputAddresses).forEach(([serverID, address]) => {
 	let newSocket = new WebSocket(address);
 	newSocket.onmessage = function(event) {
@@ -12,6 +10,7 @@ Object.entries(nodeOutputAddresses).forEach(([serverID, address]) => {
 			text.innerHTML = 'Running';
 			document.getElementById('start-' + serverID).disabled = true;
 			document.getElementById('stop-' + serverID).disabled = false;
+			document.getElementById('start-' + serverID).children[0].hidden = true;
 		}
 		else if(event.data === "<off>") {
 			circle.classList.remove('text-success');
@@ -19,21 +18,30 @@ Object.entries(nodeOutputAddresses).forEach(([serverID, address]) => {
 			text.innerHTML = 'Stopped';
 			document.getElementById('start-' + serverID).disabled = false;
 			document.getElementById('stop-' + serverID).disabled = true;
+			document.getElementById('stop-' + serverID).children[0].hidden = true;
 		}
 	}
 });
 
 function startServer(serverID) {
-	let location = startServerAddresses[serverID];
-	if(location != null && location != undefined) {
-		fetch(location);
+	let startSpinner = document.getElementById('start-' + serverID).children[0];
+	if(startSpinner.hidden) {
+		startSpinner.hidden = false;
+		let location = startServerAddresses[serverID];
+		if(location != null && location != undefined) {
+			fetch(location);
+		}
 	}
 }
 
 function stopServer(serverID) {
-	let location = stopServerAddresses[serverID];
-	if(location != null && location != undefined) {
-		fetch(location);
+	let stopSpinner = document.getElementById('stop-' + serverID).children[0];
+	if(stopSpinner.hidden) {
+		stopSpinner.hidden = false;
+		let location = stopServerAddresses[serverID];
+		if(location != null && location != undefined) {
+			fetch(location);
+		}
 	}
 }
 

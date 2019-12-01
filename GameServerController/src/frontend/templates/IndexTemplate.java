@@ -71,26 +71,10 @@ public class IndexTemplate extends Template
 					(
 						new TableRow().addElements
 						(
-							new TableHead("Name",
-								Map.ofEntries(
-									Map.entry("scope", "col")
-								)
-							),
-							new TableHead("Type",
-								Map.ofEntries(
-									Map.entry("scope", "col")
-								)
-							),
-							new TableHead("Status",
-								Map.ofEntries(
-									Map.entry("scope", "col")
-								)
-							),
-							new TableHead("Options",
-								Map.ofEntries(
-									Map.entry("scope", "col")
-								)
-							)
+							new TableHead("Name", Attributes.makeAttribute("scope", "col")),
+							new TableHead("Type", Attributes.makeAttribute("scope", "col")),
+							new TableHead("Status", Attributes.makeAttribute("scope", "col")),
+							new TableHead("Options", Attributes.makeAttribute("scope", "col"))
 						)
 					),
 					new TableBody().addElements

@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,10 +17,9 @@ import model.Table;
 import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
-import server.GameServer;
 import server.GameServerCommandHandler;
 
-public class MinecraftServerCommandHandler extends GameServerCommandHandler
+public class MinecraftServerCommandHandler extends GameServerCommandHandler<MinecraftServer>
 {
 	public static final List<String[]> COMMANDS;
 	
@@ -34,10 +34,9 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		COMMANDS = Collections.unmodifiableList(temp);
 	}
 	
-	public MinecraftServerCommandHandler(GameServer server)
+	public MinecraftServerCommandHandler(MinecraftServer server)
 	{
 		super(server);
-		assert(server instanceof MinecraftServer);
 		commands = new LinkedList<String[]>(COMMANDS);
 	}
 	
@@ -51,20 +50,16 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		
 		if(command.equals("last"))
 		{
-			var lastRead = ((MinecraftServer) server).getLastRead();
+			var lastRead = server.getLastRead();
 			String[] lastReadCopy;
 			synchronized(lastRead)
 			{
 				lastReadCopy = lastRead.toArray(String[]::new);
 			}
 			
-			for(String line : lastReadCopy)
-			{
-				if(line != null)
-				{
-					response.getWriter().print(line);
-				}
-			}
+			Stream.of(lastReadCopy)
+				  .filter(line -> line != null)
+				  .forEach(response.getWriter()::print);
 		}
 		else if(command.equals("serverCommand"))
 		{
@@ -78,21 +73,22 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		}
 		else if(command.equals("properties"))
 		{
-			var currentProperties = ((MinecraftServer) server).getProperties();
-			for(String name : currentProperties.stringPropertyNames())
+			var currentProperties = server.getProperties();
+			for(var name : currentProperties.stringPropertyNames())
 			{
 				response.getWriter().println(String.format("%s=%s", name, currentProperties.getProperty(name)));
 			}
 		}
 		else if(command.equals("restarts"))
 		{
-			response.getWriter().print(((MinecraftServer) server).autoRestart() ? "yes" : "no");
+			response.getWriter().print(server.autoRestart() ? "yes" : "no");
 		}
 		else
 		{
 			return false;
 		}
 		
+		response.setContentType("text/plain");
 		return true;
 	}
 	
@@ -137,7 +133,6 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 		
 		if(command.equals("properties"))
 		{
-			var minecraft = (MinecraftServer) server;
 			var props = new Properties();
 			for(var key : MinecraftServer.MINECRAFT_PROPERTIES.keySet())
 			{
@@ -152,18 +147,16 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 				}
 				props.setProperty(key, property);
 			}
-			minecraft.setProperties(props);
+			server.setProperties(props);
 		}
 		else if(command.equals("restarts"))
 		{
-			var minecraft = (MinecraftServer) server;
 			var restarts = request.getParameter("restartsUnexpected");
-			minecraft.autoRestart(restarts != null);
-			minecraftServer.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, minecraft.autoRestart());
+			server.autoRestart(restarts != null);
+			minecraftServer.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, server.autoRestart());
 		}
 		else if(command.equals("arguments"))
 		{
-			var minecraft = (MinecraftServer) server;
 			var arguments = request.getParameter("arguments");
 			if(arguments == null)
 			{
@@ -171,7 +164,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler
 			}
 			
 			minecraftServer.setColumnValue(MinecraftServerTable.ARGUMENTS, arguments);
-			minecraft.setArguments(arguments);
+			server.setArguments(arguments);
 		}
 		else
 		{

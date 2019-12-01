@@ -52,19 +52,8 @@ public class ServerInteract extends HttpServlet
 	{
 		var serverIDStr = request.getParameter("id");
 		var serverCommand = request.getParameter("command");
-		String[] extraCommands;
-		if(serverIDStr == null || serverCommand == null)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
+		var serverID = Utils.fromString(Integer.class, serverIDStr);
+		if(serverIDStr == null || serverCommand == null || serverID == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
@@ -91,7 +80,7 @@ public class ServerInteract extends HttpServlet
 			return;
 		}
 		
-		extraCommands = new String[commands.length - 1];
+		var extraCommands = new String[commands.length - 1];
 		for(var i = 1; i < commands.length; i++)
 		{
 			var command = request.getParameter(commands[i]);

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -11,23 +12,19 @@ import javax.servlet.http.HttpServletResponse;
 import api.minecraft.MinecraftServer;
 import api.minecraft.MinecraftServerCommandHandler;
 
-abstract public class CommandHandler
+abstract public class CommandHandler <T>
 {
 	protected List<String[]> commands;
-	protected GameServer server;
+	protected T server;
 	
-	public CommandHandler(GameServer server)
+	public CommandHandler(T server)
 	{
 		commands = new LinkedList<String[]>();
-		if(server == null)
-		{
-			throw new NullPointerException();
-		}
 		
-		this.server = server;
+		this.server = Objects.requireNonNull(server);
 	}
 	
-	public static String[] getCommand(Class<? extends GameServer> server, String command)
+	public static String[] getCommand(Class<?> server, String command)
 	{
 		if(server == null || command == null)
 		{
@@ -50,7 +47,7 @@ abstract public class CommandHandler
 			return null;
 		}
 		
-		for(String[] c : commands)
+		for(var c : commands)
 		{
 			if(c.length > 0)
 			{

@@ -1,17 +1,23 @@
 function startServer() {
-	initializeSocket();
-	logBox.value = "";
-	fetch(serverStartRequest);
+	if(startSpinner.hidden) {
+		startSpinner.hidden = false;
+		initializeSocket();
+		logBox.value = "";
+		fetch(serverStartRequest);
+	}
 }
 
 function stopServer() {
-	initializeSocket();
-	fetch(serverStopRequest);
+	if(stopSpinner.hidden) {
+		stopSpinner.hidden = false;
+		initializeSocket();
+		fetch(serverStopRequest);
+	}
 }
 
 function command(event) {
-	if(event.key === "Enter" && commandBox.value != "" && document.getElementById("stop").disabled === false) {
-		fetch(serverLocation + "&command=serverCommand&serverCommand=" + commandBox.value);
+	if(event.key === "Enter" && commandBox.value != "" && !stopButton.disabled) {
+		fetch(serverCommandRequest + commandBox.value);
 		previousCommands.splice(previousCommands.length - 1, 0, commandBox.value);
 		if(previousCommands.length >= 50)
 		{
@@ -41,43 +47,50 @@ function history(event) {
 
 function updateStatus() {
 	if(isRunning) {
-		document.getElementById("start").disabled = true;
-		document.getElementById("stop").disabled = false;
+		startButton.disabled = true;
+		stopButton.disabled = false;
+		startSpinner.hidden = true;
 	}
 	else {
-		document.getElementById("stop").disabled = true;
-		document.getElementById("start").disabled = false;
+		stopButton.disabled = true;
+		startButton.disabled = false;
+		stopSpinner.hidden = true;
 	}
 }
 
 function initializeSocket() {
 	if(socket === undefined || socket.readyState === socket.CLOSED) {
-		let url = socketAddress + "?id=" + serverID;
-		socket = new WebSocket('ws://' + url);
-		socket.onmessage = function(event){
-			if(event.data === "<on>") {
-				isRunning = true;
-				updateStatus();
-			}
-			else if(event.data === "<off>") {
-				isRunning = false;
-				updateStatus();
-			}
-			else {
-				updateScroll();
-				let currentScrolledUp = scrolledUp;
-				if(currentLineAmount >= MAX_LINE_AMOUNT) {
-					logBox.value = logBox.value.substring(nthIndex(logBox.value, "\n", 1));
-					currentLineAmount -= 1;
+		socket = new WebSocket(socketAddress);
+		socket.onmessage = function(event) {
+			serverData = event.data;
+			if(serverData instanceof Blob) {
+				serverData.text().then(function(text) {
+					updateScroll();
+					let currentScrolledUp = scrolledUp;
+					if(currentLineAmount >= MAX_LINE_AMOUNT) {
+						logBox.value = logBox.value.substring(nthIndex(logBox.value, "\n", 1));
+						currentLineAmount -= 1;
+						if(!currentScrolledUp) {
+							logBox.scrollTop = logBox.scrollHeight;
+						}
+					}
+					
+					logBox.value += text;
+					currentLineAmount++;
+					updateScroll();
 					if(!currentScrolledUp) {
 						logBox.scrollTop = logBox.scrollHeight;
 					}
+				})
+			}
+			else {
+				if(serverData === "<on>") {
+					isRunning = true;
+					updateStatus();
 				}
-				logBox.value += event.data;
-				currentLineAmount++;
-				updateScroll();
-				if(!currentScrolledUp) {
-					logBox.scrollTop = logBox.scrollHeight;
+				else if(serverData === "<off>") {
+					isRunning = false;
+					updateStatus();
 				}
 			}
 		};
@@ -106,161 +119,63 @@ function updateScroll() {
 	lastScrollUp = logBox.scrollTop;
 }
 
-var isRunning = false;
-var scrolledUp = false;
-var previousCommands = [""];
-var previousCommandsIndex = 0;
-var logBox = document.getElementById("log");
-logBox.onscroll = updateScroll;
-var commandBox = document.getElementById("command");
-document.getElementById("start").disabled = true;
-document.getElementById("stop").disabled = true;
-var lastScrollUp = logBox.scrollTop;
-logBox.value = '';
-var currentLineAmount = 0;
-
-const MAX_LINE_AMOUNT = 700;
-
-const serverOutputRequest = serverLocation + "&command=output";
-const serverStartRequest = serverLocation + "&command=start";
-const serverStopRequest = serverLocation + "&command=stop";
-const serverLastRequest = serverLocation + "&command=last";
-
-var socket;
-var socketAddress;
-
-fetch(serverLastRequest).then(response => {
-	if(response.status === 200) {
-		response.text().then(text => {
-			logBox.value += text;
-			currentLineAmount += logBox.value.split("\n").length;
-			if(currentLineAmount >= MAX_LINE_AMOUNT) {
-				updateScroll();
-				logBox.value = logBox.value.substring(nthIndex(logBox.value, "\n", 1));
-				currentLineAmount -= 1;
-			}
-			updateScroll();
-			fetch(serverOutputRequest).then(response => {
-				if(response.status === 200) {
-					response.text().then(text => {
-						socketAddress = text;
-						initializeSocket();
-					});
-				}
-			});
-		});
-	}
-});
-
-var tabs = document.getElementById("tab-contents");
-var tables = [];
-var tableContents = [];
-for(let i = 0; i < tabs.children.length; i++) {
-	tables[tabs.children[i].id] = tabs.children[i].getElementsByTagName("table")[0];
-	tableContents[tabs.children[i].id] = [];
-	for(let j = 1; j < tables[tabs.children[i].id].rows.length; j++) {
-		tableContents[tabs.children[i].id].push([]);
-		for(let h = 0; h < tables[tabs.children[i].id].rows[j].cells.length - 1; h++) {
-			tableContents[tabs.children[i].id][j-1].push(tables[tabs.children[i].id].rows[j].cells[h].textContent);
-		}
-	}
-}
-
-const editIcon = document.createElement("i");
-editIcon.classList.add("fas", "fa-edit");
-
-const editIconClose = document.createElement("i");
-editIconClose.classList.add("fas", "fa-times");
-
-const triggerTypes = ["Recurring", "Time", "Output"];
-const actionTypes = ["", "Start Server", "Stop Server", "Restart Server"];
-
-const typeSelect = document.createElement("select");
-typeSelect.required = true;
-typeSelect.classList.add("form-control");
-typeSelect.name = "type";
-for(let i = 0; i < triggerTypes.length; i++) {
-	let option = document.createElement("option");
-	option.text = triggerTypes[i];
-	typeSelect.add(option.cloneNode(true));
-}
-
-const newTriggerFormID = "newTrigger";
-
-const valueTime = document.createElement("input");
-valueTime.type = "time";
-valueTime.classList.add("form-control");
-valueTime.required = true;
-valueTime.name = "value";
-
-const valueText = document.createElement("input");
-valueText.type = "text";
-valueText.classList.add("form-control");
-valueText.required = true;
-valueText.name = "value";
-
-const commandText = document.createElement("input");
-commandText.type = "text";
-commandText.classList.add("form-control");
-commandText.name = "command";
-
-const actionSelect = document.createElement("select");
-actionSelect.name = "action";
-actionSelect.classList.add("form-control");
-for(let i = 0; i < actionTypes.length; i++) {
-	let option = document.createElement("option");
-	option.text = actionTypes[i];
-	actionSelect.add(option.cloneNode(true));
-}
-
-function editRow(button, index, id) {
+function editRow(button, triggerID, id) {
 	let table = tables[id];
 	button.innerHTML = '';
-	let row = table.rows[index];
-	let oldCommandText = tableContents[id][index-1][2];
-	let oldValueText = tableContents[id][index-1][1];
-	let oldActionText = tableContents[id][index-1][3];
+	
+	let row = findRowById(table, triggerID)
+
 	let rowType = row.cells[0].textContent;
+	
 	for(let colIndex = 1; colIndex < row.cells.length - 1; colIndex++) {
 		let col = row.cells[colIndex];
 		col.innerHTML = '';
 	}
+	
 	if(button.classList.contains("btn-warning")) {
 		button.classList.remove("btn-warning");
 		button.classList.add("btn-primary");
 		button.appendChild(editIconClose.cloneNode(true));
+		
 		let input;
 		if(rowType === "Time") {
 			input = valueTime.cloneNode(true);
 		}
-		else {
+		else if(rowType === "Output") {
 			input = valueText.cloneNode(true)
 		}
-		input.value = oldValueText;
-		input.setAttribute('form', id + index);
+		else if(rowType === "Recurring") {
+			input = recurringText.cloneNode(true);
+		}
+		
+		input.value = triggerOldValues[triggerID]["value"];
+		input.setAttribute('form', id + triggerID);
 		input.onkeydown = function(event) {
 			if(event.key === 'Enter') {
 				document.getElementById(input.getAttribute('form')).submit();
 			}
 		}
+		
 		row.cells[1].appendChild(input);
 		let commandTextClone = commandText.cloneNode(true);
-		commandTextClone.value = oldCommandText;
-		commandTextClone.setAttribute('form', id + index);
+		commandTextClone.value = triggerOldValues[triggerID]["command"];
+		commandTextClone.setAttribute('form', id + triggerID);
 		commandTextClone.onkeydown = function(event) {
 			if(event.key === 'Enter') {
 				document.getElementById(commandTextClone.getAttribute('form')).submit();
 			}
 		}
+		
 		row.cells[2].appendChild(commandTextClone);
 		let actionSelectClone = actionSelect.cloneNode(true);
-		actionSelectClone.setAttribute('form', id + index);
+		actionSelectClone.setAttribute('form', id + triggerID);
 		for(let i = 0; i < actionSelectClone.options.length; i++) {
-			if(actionSelectClone.options[i].value === oldActionText) {
+			if(actionSelectClone.options[i].value === triggerOldValues[triggerID]["action"]) {
 				actionSelectClone.selectedIndex = i;
 				break;
 			}
 		}
+		
 		actionSelectClone.onkeydown = function(event) {
 			if(event.key === 'Enter') {
 				document.getElementById(actionSelectClone.getAttribute('form')).submit();
@@ -272,10 +187,9 @@ function editRow(button, index, id) {
 		button.classList.remove("btn-primary");
 		button.classList.add("btn-warning");
 		button.appendChild(editIcon.cloneNode(true));
-		for(let colIndex = 1; colIndex < row.cells.length - 1; colIndex++) {
-			let col = row.cells[colIndex];
-			col.textContent = tableContents[id][index-1][colIndex];
-		}
+		row.cells[1].innerHTML = triggerOldValues[triggerID]["value"];
+		row.cells[2].innerHTML = triggerOldValues[triggerID]["command"];
+		row.cells[3].innerHTML = triggerOldValues[triggerID]["action"];
 	}
 }
 
@@ -301,7 +215,7 @@ function addTrigger(button) {
 	
 	let typeInput = typeSelect.cloneNode(true);
 	typeInput.setAttribute('form', newTriggerFormID);
-	let valueInput = valueText.cloneNode(true);
+	let valueInput = recurringText.cloneNode(true);
 	valueInput.setAttribute('form', newTriggerFormID);
 	let commandInput = commandText.cloneNode(true);
 	commandInput.setAttribute('form', newTriggerFormID);
@@ -320,8 +234,11 @@ function addTrigger(button) {
 		if(type === "Time") {
 			input = valueTime.cloneNode(true);
 		}
-		else {
+		else if(type === "Output") {
 			input = valueText.cloneNode(true);
+		}
+		else if(type === "Recurring") {
+			input = recurringText.cloneNode(true);
 		}
 		input.setAttribute('form', newTriggerFormID);
 		input.onkeydown = function(event) {
@@ -356,3 +273,120 @@ function addTrigger(button) {
 	commandCell.appendChild(commandInput);
 	actionCell.appendChild(actionInput);
 }
+
+function findRowById(table, id) {
+	for(let i = 0; i < table.rows.length; i++) {
+		if(table.rows[i].id == id) {
+			return table.rows[i];
+		}
+	}
+	
+	return null;
+}
+
+function getTableDataText(element) {
+	let elementFirst = element.firstChild;
+	
+	if(elementFirst == null) {
+		return "";
+	}
+	else if(elementFirst instanceof HTMLInputElement) {
+		return elementFirst.value;
+	}
+	else if(elementFirst instanceof HTMLSelectElement) {
+		return elementFirst.options[elementFirst.selectedIndex].text;
+	}
+	
+	return elementFirst.textContent;
+}
+
+var isRunning = false;
+var scrolledUp = false;
+var previousCommands = [""];
+var previousCommandsIndex = 0;
+var logBox = document.getElementById("log");
+logBox.onscroll = updateScroll;
+var commandBox = document.getElementById("command");
+var startButton = document.getElementById("start");
+var startSpinner = startButton.children[0];
+var stopButton = document.getElementById("stop");
+var stopSpinner = stopButton.children[0];
+startButton.disabled = true;
+stopButton.disabled = true;
+var lastScrollUp = logBox.scrollTop;
+var currentLineAmount = 0;
+
+const MAX_LINE_AMOUNT = 700;
+
+var socket;
+
+var tabs = document.getElementById("tab-contents");
+var tables = [];
+for(let i = 0; i < tabs.children.length; i++) {
+	tables[tabs.children[i].id] = tabs.children[i].getElementsByTagName("table")[0];
+}
+
+const editIcon = document.createElement("i");
+editIcon.classList.add("fas", "fa-edit");
+
+const editIconClose = document.createElement("i");
+editIconClose.classList.add("fas", "fa-times");
+
+const typeSelect = document.createElement("select");
+typeSelect.required = true;
+typeSelect.classList.add("form-control");
+typeSelect.name = "type";
+for(let i = 0; i < triggerTypes.length; i++) {
+	let option = document.createElement("option");
+	option.text = triggerTypes[i];
+	typeSelect.add(option.cloneNode(true));
+}
+
+const newTriggerFormID = "newTrigger";
+
+const valueTime = document.createElement("input");
+valueTime.type = "time";
+valueTime.classList.add("form-control");
+valueTime.required = true;
+valueTime.name = "value";
+valueTime.step = 1;
+
+const valueText = document.createElement("input");
+valueText.type = "text";
+valueText.classList.add("form-control");
+valueText.required = true;
+valueText.name = "value";
+
+const recurringText = valueText.cloneNode(true);
+recurringText.placeholder = "00:00:00";
+
+const commandText = document.createElement("input");
+commandText.type = "text";
+commandText.classList.add("form-control");
+commandText.name = "command";
+
+const actionSelect = document.createElement("select");
+actionSelect.name = "action";
+actionSelect.classList.add("form-control");
+actionSelect.add(document.createElement("option").cloneNode(true));
+for(let i = 0; i < actionTypes.length; i++) {
+	let option = document.createElement("option");
+	option.text = actionTypes[i];
+	actionSelect.add(option.cloneNode(true));
+}
+
+fetch(serverLastRequest).then(response => {
+	if(response.status === 200) {
+		response.text().then(text => {
+			logBox.value += text;
+			currentLineAmount += logBox.value.split("\n").length;
+			if(currentLineAmount >= MAX_LINE_AMOUNT) {
+				updateScroll();
+				logBox.value = logBox.value.substring(nthIndex(logBox.value, "\n", 1));
+				currentLineAmount -= 1;
+			}
+			updateScroll();
+			initializeSocket();
+		});
+	}
+});

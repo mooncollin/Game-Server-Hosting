@@ -14,6 +14,7 @@ import main.StartUpApplication;
 import model.Query;
 import model.Table;
 import models.TriggersTable;
+import utils.Utils;
 
 @WebServlet("/TriggerEdit")
 public class TriggerEdit extends HttpServlet
@@ -29,20 +30,9 @@ public class TriggerEdit extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var idStr = request.getParameter("id");
+		var id = Utils.fromString(Integer.class, request.getParameter("id"));
 		
-		if(idStr == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		int id;
-		try
-		{
-			id = Integer.valueOf(idStr);
-		}
-		catch(NumberFormatException e)
+		if(id == null)
 		{
 			response.setStatus(400);
 			return;

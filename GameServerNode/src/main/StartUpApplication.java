@@ -1,5 +1,6 @@
 package main;
 
+import java.lang.management.ManagementFactory;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Collections;
@@ -13,6 +14,8 @@ import java.util.logging.Logger;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
+
+import com.sun.management.OperatingSystemMXBean;
 
 import api.NodeUsage;
 import api.Output;
@@ -40,8 +43,8 @@ public class StartUpApplication implements ServletContextListener
 	private static final Map<Integer, GameServer> servers = Collections.synchronizedMap(new HashMap<Integer, GameServer>());;
 	private static final Map<GameServer, Integer> serverToID = Collections.synchronizedMap(new HashMap<GameServer, Integer>());
 	public static final BoundedCircularList<Pair<Integer, Long>> nodeUsage = new BoundedCircularList<Pair<Integer, Long>>(500);
-	public static final long NODE_USAGE_WAIT_TIME = 900;
 	public static final Logger LOGGER = Logger.getGlobal();
+	public static final OperatingSystemMXBean SYSTEM = OperatingSystemMXBean.class.cast(ManagementFactory.getOperatingSystemMXBean());
 	
 	public static Database database;
 	

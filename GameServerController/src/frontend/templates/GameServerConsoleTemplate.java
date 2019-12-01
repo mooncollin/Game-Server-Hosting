@@ -1,34 +1,34 @@
 package frontend.templates;
 
-import java.time.Duration;
-import java.time.LocalTime;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import api.minecraft.MinecraftServer;
 import attributes.Attributes;
 import backend.api.GameServerTriggerDelete;
 import backend.api.GameServerTriggerEdit;
-import backend.api.ServerInteract;
 import forms.Form;
 import forms.TextField;
 import frontend.Assets;
 import frontend.GameServerFiles;
 import frontend.GameServerSettings;
+import frontend.javascript.JavaScriptUtils;
+import frontend.javascript.JavascriptMap;
 import frontend.javascript.JavascriptVariable;
 import html.CompoundElement;
 import html.Element;
 import model.Table;
 import models.TriggersTable;
 import server.GameServer;
+import server.TriggerHandler;
+import server.TriggerHandlerRecurring;
+import server.TriggerHandlerTime;
 import tags.Anchor;
 import tags.Button;
 import tags.Div;
 import tags.H1;
 import tags.HR;
-import tags.Icon;
 import tags.LI;
 import tags.Script;
 import tags.TableBody;
@@ -43,8 +43,8 @@ import utils.StringUtils;
 import utils.Utils;
 
 public class GameServerConsoleTemplate extends Template
-{
-	public GameServerConsoleTemplate(Class<? extends GameServer> serverType, int serverID, String serverName, List<Table> triggers)
+{	
+	public GameServerConsoleTemplate(String serverAddress, Class<? extends GameServer> serverType, int serverID, String serverName, List<Table> triggers)
 	{
 		Objects.requireNonNull(serverType);
 		Objects.requireNonNull(serverName);
@@ -58,34 +58,29 @@ public class GameServerConsoleTemplate extends Template
 		
 		content.addElements
 		(
-			new Div(
-				Map.ofEntries(
-					Map.entry(Attributes.ID.ATTRIBUTE_NAME, "left-elements")
-				))
+			new Div(Attributes.ID.makeAttribute("left-elements"))
 				.addClasses("float-left", "ml-5")
 				.addElements
 				(
-					new H1(serverName,
-						Map.ofEntries(
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, "title")
-						))
+					new H1(serverName, Attributes.ID.makeAttribute("title"))
 						.addClasses("text-light"),
 					new HR(),
-					new TextArea(
-						Map.ofEntries(
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, "log"),
-							Map.entry(Attributes.Rows.ATTRIBUTE_NAME, 20),
-							Map.entry(Attributes.Cols.ATTRIBUTE_NAME, 50),
-							Map.entry(Attributes.ReadOnly.ATTRIBUTE_NAME, true)
-						))
+					new TextArea
+						(
+							Attributes.ID.makeAttribute("log"),
+							Attributes.Rows.makeAttribute(20),
+							Attributes.Cols.makeAttribute(50),
+							Attributes.ReadOnly.makeAttribute(true),
+							Attributes.Value.makeAttribute("")
+						)
 						.addClasses("form-control", "text-light", "bg-dark"),
-					new TextField(
-						Map.ofEntries(
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, "command"),
-							Map.entry(Attributes.AutoFocus.ATTRIBUTE_NAME, true),
-							Map.entry(Attributes.OnKeyDown.ATTRIBUTE_NAME, "history(event)"),
-							Map.entry(Attributes.OnKeyPress.ATTRIBUTE_NAME, "command(event)")
-						))
+					new TextField
+						(
+							Attributes.ID.makeAttribute("command"),
+							Attributes.AutoFocus.makeAttribute(true),
+							Attributes.OnKeyDown.makeAttribute("history(event)"),
+							Attributes.OnKeyPress.makeAttribute("command(event)")
+						)
 						.addClasses("form-control"),
 					new UL()
 						.addClasses("nav", "nav-tabs", "mt-5", "bg-dark")
@@ -95,64 +90,42 @@ public class GameServerConsoleTemplate extends Template
 								.addClasses("nav-item")
 								.addElements
 								(
-									new Anchor("All Triggers",
-										Map.ofEntries(
-											Map.entry(Attributes.Href.ATTRIBUTE_NAME, "#allTriggers"),
-											Map.entry("data-toggle", "tab")
-										))
+									new Anchor("All Triggers", Attributes.Href.makeAttribute("#allTriggers"), Attributes.makeAttribute("data-toggle", "tab"))
 										.addClasses("nav-link", "active")
 								),
 							new LI()
 								.addClasses("nav-item")
 								.addElements
 								(
-									new Anchor("Time Triggers",
-										Map.ofEntries(
-											Map.entry(Attributes.Href.ATTRIBUTE_NAME, "#timeTriggers"),
-											Map.entry("data-toggle", "tab")
-										))
+									new Anchor("Time Triggers", Attributes.Href.makeAttribute("#timeTriggers"), Attributes.makeAttribute("data-toggle", "tab"))
 										.addClasses("nav-link")
 								),
 							new LI()
 							.addClasses("nav-item")
 							.addElements
 							(
-								new Anchor("Recurring Triggers",
-									Map.ofEntries(
-										Map.entry(Attributes.Href.ATTRIBUTE_NAME, "#recurringTriggers"),
-										Map.entry("data-toggle", "tab")
-									))
+								new Anchor("Recurring Triggers", Attributes.Href.makeAttribute("#recurringTriggers"), Attributes.makeAttribute("data-toggle", "tab"))
 									.addClasses("nav-link")
 							),
 							new LI()
 							.addClasses("nav-item")
 							.addElements
 							(
-								new Anchor("Output Triggers",
-									Map.ofEntries(
-										Map.entry(Attributes.Href.ATTRIBUTE_NAME, "#outputTriggers"),
-										Map.entry("data-toggle", "tab")
-									))
+								new Anchor("Output Triggers", Attributes.Href.makeAttribute("#outputTriggers"), Attributes.makeAttribute("data-toggle", "tab"))
 									.addClasses("nav-link")
 							)
 						),
-						new Div(
-							Map.ofEntries(
-								Map.entry(Attributes.ID.ATTRIBUTE_NAME, "tab-contents")
-							))
+						new Div(Attributes.ID.makeAttribute("tab-contents"))
 							.addClasses("tab-content")
 							.addElements
 							(
-								getTriggers(triggers, "allTriggers", serverName),
-								getTriggers(triggers, "timeTriggers", serverName),
-								getTriggers(triggers, "recurringTriggers", serverName),
-								getTriggers(triggers, "outputTriggers", serverName)
+								getTriggers(serverID, triggers, "allTriggers"),
+								getTriggers(serverID, triggers, "timeTriggers"),
+								getTriggers(serverID, triggers, "recurringTriggers"),
+								getTriggers(serverID, triggers, "outputTriggers")
 							)
 				),
-			new UL(
-				Map.ofEntries(
-					Map.entry(Attributes.ID.ATTRIBUTE_NAME, "options")
-				))
+			new UL(Attributes.ID.makeAttribute("options"))
 				.addClasses("float-right", "list-group", "list-group-flush", "mr-3", "bg-dark", "text-center", "mb-5")
 				.addElements
 				(
@@ -172,48 +145,81 @@ public class GameServerConsoleTemplate extends Template
 						.addClasses("list-group-item", "bg-dark")
 						.addElements
 						(
-							new Anchor("View Files",
-								Map.ofEntries(
-									Map.entry(Attributes.Href.ATTRIBUTE_NAME, GameServerFiles.getEndpoint(serverID, serverName))
-								))
+							new Anchor("View Files", Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName)))
 								.addClasses("btn", "btn-info")
 						),
 					new LI()
 						.addClasses("list-group-item", "bg-dark")
 						.addElements
 						(
-							new Anchor("View Settings",
-								Map.ofEntries(
-									Map.entry(Attributes.Href.ATTRIBUTE_NAME, GameServerSettings.getEndpoint(serverID))
-								))
+							new Anchor("View Settings", Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID)))
 								.addClasses("btn", "btn-warning")
 						)
 				)
 		);
 		
 		var serverIDVar = new JavascriptVariable<Integer>("serverID", serverID);
-		var serverLocation = new JavascriptVariable<String>("serverLocation", ServerInteract.getEndpoint(serverID, null));
+		var socketAddress = JavaScriptUtils.createSocketAddress("socketAddress", serverAddress, serverID);
+		var serverCommandRequest = JavaScriptUtils.createInteractAddress("serverCommandRequest", serverID, "serverCommand&serverCommand=");
+		var serverStartRequest = JavaScriptUtils.createInteractAddress("serverStartRequest", serverID, "start");
+		var serverStopRequest = JavaScriptUtils.createInteractAddress("serverStopRequest", serverID, "stop");
+		var serverLastRequest = JavaScriptUtils.createInteractAddress("serverLastRequest", serverID, "last");
+		var triggerTypes = JavaScriptUtils.triggerTypes("triggerTypes");
+		var actionTypes = JavaScriptUtils.actionTypes("actionTypes");
 		
-		mainTemplate.getBody().addEndElement(new Script(serverLocation.toString()));
+		var triggerOldValues = new JavascriptMap<Integer, JavascriptMap<String, String>>("triggerOldValues");
+		
+		for(var trigger : triggers)
+		{
+			var triggerID = trigger.getColumnValue(TriggersTable.ID);
+			var triggerValue = trigger.getColumnValue(TriggersTable.VALUE);
+			var triggerCommand = trigger.getColumnValue(TriggersTable.COMMAND);
+			var triggerAction = trigger.getColumnValue(TriggersTable.EXTRA);
+			var triggerType = trigger.getColumnValue(TriggersTable.TYPE);
+			
+			if(triggerType.equals(TriggerHandler.RECURRING_TYPE))
+			{
+				var seconds = Utils.fromString(Long.class, triggerValue);
+				triggerValue = TriggerHandlerRecurring.convertSecondsToFormat(seconds);
+			}
+			else if(triggerType.equals(TriggerHandler.TIME_TYPE))
+			{
+				var seconds = Utils.fromString(Long.class, triggerValue);
+				triggerValue = TriggerHandlerTime.convertSecondsToFormat(seconds);
+			}
+			
+			var triggerMap = new JavascriptMap<String, String>("");
+			triggerMap.set("value", triggerValue);
+			triggerMap.set("command", triggerCommand);
+			triggerMap.set("action", triggerAction);
+			
+			triggerOldValues.set(triggerID, triggerMap);
+		}
+		
 		mainTemplate.getBody().addEndElement(new Script(serverIDVar.toString()));
+		mainTemplate.getBody().addEndElement(new Script(socketAddress.toString()));
+		mainTemplate.getBody().addEndElement(new Script(serverStartRequest.toString()));
+		mainTemplate.getBody().addEndElement(new Script(serverStopRequest.toString()));
+		mainTemplate.getBody().addEndElement(new Script(serverLastRequest.toString()));
+		mainTemplate.getBody().addEndElement(new Script(serverCommandRequest.toString()));
+		mainTemplate.getBody().addEndElement(new Script(triggerTypes.toString()));
+		mainTemplate.getBody().addEndElement(new Script(actionTypes.toString()));
+		mainTemplate.getBody().addEndElement(new Script(triggerOldValues.toString()));
 		mainTemplate.getBody().addScript("js/server.js");
 		setBody(mainTemplate.getBody());
 		setHead(mainTemplate.getHead());
 	}
 	
-	@SuppressWarnings("unchecked")
-	private static CompoundElement getTriggers(List<Table> triggers, String filterType, String serverName)
+	private static CompoundElement getTriggers(int serverID, List<Table> triggers, String filterType)
 	{
 		var triggerIDs = new LinkedList<Integer>();
 		
-		return new Div()
-		.addAttributes(Attributes.ID.makeAttribute(filterType))
-		.addClasses(filterType.equals("allTriggers") ? new String[] {"show", "active"} : new String[] {})
+		return new Div(Attributes.ID.makeAttribute(filterType))
+		.addClasses(filterType.equals("allTriggers") ? new String[] {"show", "active"} : null)
 		.addClasses("tab-pane", "fade")
 		.addElements
 		(
-			new tags.Table()
-				.addAttributes(Attributes.Style.makeAttribute("table-layout: fixed;"))
+			new tags.Table(Attributes.Style.makeAttribute("table-layout: fixed;"))
 				.addClasses("table", "table-dark")
 				.addElements
 				(
@@ -230,8 +236,7 @@ public class GameServerConsoleTemplate extends Template
 									new TableHead()
 										.addElements
 										(
-											new Button()
-												.addAttributes
+											new Button
 												(
 													Attributes.makeAttribute("trigger", filterType),
 													Attributes.OnClick.makeAttribute("addTrigger(this)")
@@ -239,7 +244,7 @@ public class GameServerConsoleTemplate extends Template
 												.addClasses("text-light", "btn", "btn-primary", "float-right")
 												.addElements
 												(
-													new Icon().addClasses("fas", "fa-plus")
+													Templates.createIcon("plus")
 												)
 										)
 								)
@@ -259,22 +264,20 @@ public class GameServerConsoleTemplate extends Template
 								
 								var valueResult = triggerValue;
 								
-								if(trigger.getColumnValue(TriggersTable.TYPE).equals("time"))
+								if(trigger.getColumnValue(TriggersTable.TYPE).equals(TriggerHandler.TIME_TYPE))
 								{
-									var time = LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(triggerValue));
-									valueResult = time.toString();
+									var seconds = Utils.fromString(Long.class, triggerValue);
+									valueResult = TriggerHandlerTime.convertSecondsToFormat(seconds);
 								}
 								else if(triggerType.equals("recurring"))
 								{
-									var dur = Duration.ofSeconds(Long.valueOf(triggerValue));
-									valueResult = dur.toString().substring(2)
-								            .replaceAll("(\\d[HMS])(?!$)", "$1 ")
-								            .toLowerCase();
+									var seconds = Utils.fromString(Long.class, triggerValue);
+									valueResult = TriggerHandlerRecurring.convertSecondsToFormat(seconds);
 								}
 								
 								triggerIDs.add(triggerID);
 								
-								return new TableRow()
+								return new TableRow(Attributes.ID.makeAttribute(String.valueOf(triggerID)))
 											.addElements
 											(
 												new TableData(StringUtils.capitalize(triggerType)),
@@ -284,23 +287,21 @@ public class GameServerConsoleTemplate extends Template
 												new TableData()
 													.addElements
 													(
-														new Button()
-															.addAttributes
+														new Button
 															(
-																Attributes.makeAttribute("link", Utils.encodeURL(String.format("%s?name=%s&id=%s", GameServerTriggerDelete.URL, serverName, triggerID))),
+																Attributes.makeAttribute("link", GameServerTriggerDelete.getEndpoint(serverID, triggerID)),
 																Attributes.OnClick.makeAttribute("deleteRow(this)")
 															)
 															.addClasses("btn-danger", "text-light", "btn", "float-right")
 															.addElements
 															(
-																new Icon().addClasses("fas", "fa-trash")
+																Templates.createIcon("trash")
 															),
-														new Button()
-															.addAttributes(Attributes.OnClick.makeAttribute(String.format("editRow(this, %d, '%s')", triggerID, filterType)))
+														new Button(Attributes.OnClick.makeAttribute(String.format("editRow(this, %d, '%s')", triggerID, filterType)))
 															.addClasses("btn-warning", "text-light", "btn", "float-right", "mr-2")
 															.addElements
 															(
-																new Icon().addClasses("fas", "fa-edit")
+																Templates.createIcon("edit")
 															)
 													)
 											);
@@ -310,140 +311,23 @@ public class GameServerConsoleTemplate extends Template
 				.addElements
 				(
 					triggerIDs.stream().map(id -> {
-						return new Form()
-								.addAttributes
-								(
-									Attributes.Method.makeAttribute("POST"),
-									Attributes.Action.makeAttribute(Utils.encodeURL(String.format("%s?name=%s&id=%d", GameServerTriggerEdit.URL, serverName, id))),
-									Attributes.ID.makeAttribute(filterType + id)
-								);
+						return new Form
+						(
+							Attributes.Method.makeAttribute("POST"),
+							Attributes.Action.makeAttribute(GameServerTriggerEdit.getEndpoint(serverID, id)),
+							Attributes.ID.makeAttribute(filterType + id)
+						);
 					}).toArray(Element[]::new)
 				)
 				.addElement
 				(
-					new Form()
-						.addAttributes
+					new Form
 						(
 							Attributes.Method.makeAttribute("POST"),
-							Attributes.Action.makeAttribute(Utils.encodeURL(String.format("%s?name=%s&id=%d", GameServerTriggerEdit.URL, serverName, -1))),
+							Attributes.Action.makeAttribute(GameServerTriggerEdit.getEndpoint(serverID, -1)),
 							Attributes.ID.makeAttribute("newTrigger")
 						)
 				)
 		);
-					
-//		CompoundElement allTriggers = new CompoundElement("div");
-//		if(filterType.equals("allTriggers"))
-//		{
-//			allTriggers.addClasses("show", "active");
-//		}
-//		allTriggers.addClasses("tab-pane", "fade");
-//		allTriggers.setID(filterType);
-//		
-//		CompoundElement table = new CompoundElement("table");
-//		table.addClasses("table", "table-dark");
-//		table.setStyle("table-layout: fixed;");
-//		CompoundElement thead = new CompoundElement("thead");
-//		CompoundElement headingRow = new CompoundElement("tr");
-//		CompoundElement typeHeader = new CompoundElement("th", "Type");
-//		CompoundElement valueHeader = new CompoundElement("th", "Value");
-//		CompoundElement commandHeader = new CompoundElement("th", "Command");
-//		CompoundElement actionHeader = new CompoundElement("th", "Action");
-//		CompoundElement optionsHeader = new CompoundElement("th");
-//		
-//		Button addTrigger = new Button();
-//		addTrigger.addClasses("text-light", "btn", "btn-primary", "float-right");
-//		addTrigger.setAttribute("trigger", filterType);
-//		addTrigger.setOnClick("addTrigger(this)");
-//		CompoundElement addIcon = new CompoundElement("i");
-//		addIcon.addClasses("fas", "fa-plus");
-//		addTrigger.addElement(addIcon);
-//		optionsHeader.addElement(addTrigger);
-//		
-//		headingRow.addElement(typeHeader);
-//		headingRow.addElement(valueHeader);
-//		headingRow.addElement(commandHeader);
-//		headingRow.addElement(actionHeader);
-//		headingRow.addElement(optionsHeader);
-//		thead.addElement(headingRow);
-//		table.addElement(thead);
-//		
-//		CompoundElement tableBody = new CompoundElement("tbody");
-//		int index = 1;
-//		for(var trigger : triggers)
-//		{
-//			var triggerType 	= trigger.getColumnValue(TriggersTable.TYPE);
-//			var triggerValue 	= trigger.getColumnValue(TriggersTable.VALUE);
-//			var triggerID 		= trigger.getColumnValue(TriggersTable.ID);
-//			var triggerCommand 	= trigger.getColumnValue(TriggersTable.COMMAND);
-//			var triggerExtra	= trigger.getColumnValue(TriggersTable.EXTRA);
-//			if(filterType.equals("allTriggers") || filterType.contains(triggerType))
-//			{
-//				String formID = filterType + index;
-//				CompoundElement tableRow = new CompoundElement("tr");
-//				CompoundElement type = new CompoundElement("td", StringUtils.capitalize(triggerType));
-//				CompoundElement value = new CompoundElement("td");
-//				String valueResult = triggerValue;
-//				if(trigger.getColumnValue(TriggersTable.TYPE).equals("time"))
-//				{
-//					LocalTime time = LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(triggerValue));
-//					valueResult = time.toString();
-//				}
-//				else if(triggerType.equals("recurring"))
-//				{
-//					Duration dur = Duration.ofSeconds(Long.valueOf(triggerValue));
-//					valueResult = dur.toString().substring(2)
-//				            .replaceAll("(\\d[HMS])(?!$)", "$1 ")
-//				            .toLowerCase();
-//				}
-//				value.setData(valueResult);
-//				CompoundElement command = new CompoundElement("td", triggerCommand);
-//				CompoundElement action = new CompoundElement("td", Objects.requireNonNullElse(triggerExtra, ""));
-//				
-//				CompoundElement options = new CompoundElement("td");
-//				
-//				Button deleteButton = new Button();
-//				deleteButton.addClasses("btn-danger", "text-light", "btn", "float-right");
-//				deleteButton.setAttribute("link", Utils.encodeURL(String.format("%s?name=%s&id=%s", GameServerTriggerDelete.URL, serverName, triggerID)));
-//				deleteButton.setOnClick("deleteRow(this)");
-//				CompoundElement deleteIcon = new CompoundElement("i");
-//				deleteIcon.addClasses("fas", "fa-trash");
-//				deleteButton.addElement(deleteIcon);
-//				options.addElement(deleteButton);
-//				
-//				
-//				Button editButton = new Button();
-//				editButton.addClasses("btn-warning", "text-light", "btn", "float-right", "mr-2");
-//				editButton.setOnClick(String.format("editRow(this, %d, '%s')", index, filterType));
-//				CompoundElement editIcon = new CompoundElement("i");
-//				editIcon.addClasses("fas", "fa-edit");
-//				editButton.addElement(editIcon);
-//				options.addElement(editButton);
-//				
-//				tableRow.addElement(type);
-//				tableRow.addElement(value);
-//				tableRow.addElement(command);
-//				tableRow.addElement(action);
-//				tableRow.addElement(options);
-//				tableBody.addElement(tableRow);
-//				
-//				Form rowForm = new Form();
-//				rowForm.setMethod("POST");
-//				rowForm.setAction(Utils.encodeURL(String.format("%s?name=%s&id=%d", GameServerTriggerEdit.URL, serverName, triggerID)));
-//				rowForm.setID(formID);
-//				table.addEndElement(rowForm);
-//				index++;
-//			}
-//		}
-//		
-//		Form newForm = new Form();
-//		newForm.setMethod("POST");
-//		newForm.setAction(Utils.encodeURL(String.format("%s?name=%s&id=%d", GameServerTriggerEdit.URL, serverName, -1)));
-//		newForm.setID("newTrigger");
-//		table.addEndElement(newForm);
-//		
-//		table.addElement(tableBody);
-//		allTriggers.addElement(table);
-//		
-//		return allTriggers;
 	}
 }

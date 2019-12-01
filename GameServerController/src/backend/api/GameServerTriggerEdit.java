@@ -25,6 +25,7 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 import models.TriggersTable;
+import server.TriggerHandler;
 import utils.Utils;
 
 @WebServlet("/GameServerTriggerEdit")
@@ -32,61 +33,38 @@ public class GameServerTriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final Pattern TIME_HOUR = Pattern.compile(".*?(?<hour>(?:[0-2])?[0-9])(?:h|H).*");
-	public static final Pattern TIME_MINUTE = Pattern.compile(".*?(?<minute>(?:[0-5])?[0-9])(?:m|M).*");
-	public static final Pattern TIME_SECOND = Pattern.compile(".*?(?<second>(?:[0-5])?[0-9])(?:s|S).*");
+	public static final Pattern RECURRING_PATTERN = Pattern.compile("(?<hour>[01]?[0-9]|2[0-3]):(?<minute>[0-5][0-9]):(?<second>[0-5][0-9])");
 	
 	public static final String URL = "/GameServerController/GameServerTriggerEdit";
 	
+	public static String getEndpoint(int serverID, int triggerID)
+	{
+		return String.format("%s?id=%d&triggerID=%d", URL, serverID, triggerID);
+	}
+	
 	public static String getEndpoint(int serverID, int triggerID, String value, String command, String action, String type)
 	{
-		var commandString = "";
-		var actionString = "";
-		if(command != null && !command.isEmpty())
-		{
-			commandString = String.format("&command=%s", command);
-		}
 		
-		if(action != null && !action.isEmpty())
-		{
-			actionString = String.format("&action=%s", action);
-		}
-		
-		return String.format("%s?id=%d&triggerID=%d&value=%s&type=%s%s%s", 
-			URL, serverID, triggerID, value, type, commandString, actionString);
+		return String.format("%s?id=%d&triggerID=%d&value=%s&type=%s&command=%s&action=%s", 
+			URL, serverID, triggerID, value, type, command, action);
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
+		var serverID = Utils.fromString(Integer.class, request.getParameter("id"));
+		var triggerID = Utils.fromString(Integer.class, request.getParameter("triggerID"));
 		var value = request.getParameter("value");
-		var triggerIDStr = request.getParameter("triggerID");
 		var command = Objects.requireNonNullElse(request.getParameter("command"), "");
 		var action = Objects.requireNonNullElse(request.getParameter("action"), "");
 		var type = request.getParameter("type");
 		
-		
-		if(serverIDStr == null || value == null || triggerIDStr == null || type == null || type.isBlank() || value.isBlank())
+		if(serverID == null || value == null || triggerID == null || (triggerID == -1 && type == null))
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-
-		int triggerID;
-		int serverID;
-		try
-		{
-			triggerID = Integer.parseInt(triggerIDStr);
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		var redirectUrl = Utils.encodeURL(GameServerConsole.getEndpoint(serverID));
+		var redirectUrl = GameServerConsole.getEndpoint(serverID);
 		
 		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
 		
@@ -135,35 +113,31 @@ public class GameServerTriggerEdit extends HttpServlet
 		}
 		
 		var parsedValue = value;
-		var triggerValue = trigger.getColumnValue(TriggersTable.TYPE);
+		var triggerType = trigger.getColumnValue(TriggersTable.TYPE);
 		
-		if(triggerValue.equals("recurring"))
-		{
-			var hourMatcher = TIME_HOUR.matcher(value);
-			var minuteMatcher = TIME_MINUTE.matcher(value);
-			var secondMatcher = TIME_SECOND.matcher(value);
-			var hour = hourMatcher.matches() ? hourMatcher.group("hour") + "H" : "";
-			var minute = minuteMatcher.matches() ? minuteMatcher.group("minute") + "M" : "";
-			var second = secondMatcher.matches() ? secondMatcher.group("second") + "S" : "";
-			
-			if(hour.isEmpty() && minute.isEmpty() && second.isEmpty())
+		if(triggerType.equals(TriggerHandler.RECURRING_TYPE))
+		{	
+			var matcher = RECURRING_PATTERN.matcher(value);
+			if(!matcher.matches())
 			{
 				response.sendRedirect(redirectUrl);
 				return;
 			}
 			
-			try
-			{
-				var dur = Duration.parse(String.format("PT%s%s%s", hour, minute, second));
-				parsedValue = String.valueOf(dur.getSeconds());
-			}
-			catch(DateTimeParseException e)
+			var hour = Objects.requireNonNullElse(Utils.fromString(Integer.class, matcher.group("hour")), 0);
+			var minute = Objects.requireNonNullElse(Utils.fromString(Integer.class, matcher.group("minute")), 0);
+			var second = Objects.requireNonNullElse(Utils.fromString(Integer.class, matcher.group("second")), 0);
+			
+			if(hour == 0 && minute == 0 && second == 0)
 			{
 				response.sendRedirect(redirectUrl);
 				return;
 			}
+			
+			var dur = Duration.ZERO.plusHours(hour).plusMinutes(minute).plusSeconds(second);
+			parsedValue = String.valueOf(dur.getSeconds());
 		}
-		else if(triggerValue.equals("time"))
+		else if(triggerType.equals(TriggerHandler.TIME_TYPE))
 		{
 			try
 			{
@@ -191,7 +165,7 @@ public class GameServerTriggerEdit extends HttpServlet
 		}
 		
 		
-		var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, trigger.getColumnValue(TriggersTable.ID)));
+		var url = String.format("http://%s%s", serverAddress, api.TriggerEdit.getEndpoint(trigger.getColumnValue(TriggersTable.ID)));
 		
 		try
 		{

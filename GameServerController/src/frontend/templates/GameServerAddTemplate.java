@@ -16,8 +16,8 @@ import tags.Button;
 import tags.Div;
 import tags.H1;
 import tags.HR;
+import tags.LI;
 import tags.Label;
-import tags.ListItem;
 import tags.Option;
 import tags.Select;
 import tags.Small;
@@ -33,36 +33,29 @@ public class GameServerAddTemplate extends Template
 		
 		content.addElements
 		(
-			new Div(
-				Map.ofEntries(
-					Map.entry(Attributes.ID.ATTRIBUTE_NAME, "inner-content")
-				))
+			new Div(Attributes.ID.makeAttribute("inner-content"))
 				.addClasses("ml-5", "mt-5")
 				.addElements
 				(
 					new H1("Add Game Server").addClasses("text-light"),
 					new HR().addClasses("border", "border-light"),
-					new Form(
-						Map.ofEntries(
-							Map.entry(Attributes.Method.ATTRIBUTE_NAME, "POST"),
-							Map.entry(Attributes.Enctype.ATTRIBUTE_NAME, "multipart/form-data")
-						))
+					new Form(Attributes.Method.makeAttribute("POST"), Attributes.Enctype.makeAttribute("multipart/form-data"))
 						.addElements
 						(
 							BootstrapTemplates.settingsInput(TextField.class, "Server Name", "name", "Enter server name", "", "This name must be unique. Cannot contain special characters.", true, false),
 							BootstrapTemplates.settingsInput(TextField.class, "Enter Server Executable Name", "execName", "Enter executable name", "", "This will be the file executed when the server needs to start.", true, false),
-							new ListItem()
+							new LI()
 								.addClasses("form-group", "form-inline", "list-group-item")
 								.addElements
 								(
 									new Label("Select Node").addClasses("d-inline-block", "w-25", "align-middle"),
-									new Select(
-										Map.ofEntries(
-											Map.entry(Attributes.ID.ATTRIBUTE_NAME, "node"),
-											Map.entry(Attributes.Name.ATTRIBUTE_NAME, "node"),
-											Map.entry(Attributes.Required.ATTRIBUTE_NAME, true),
-											Map.entry("onchange", "changeNode()")
-										))
+									new Select
+										(
+											Attributes.ID.makeAttribute("node"),
+											Attributes.Name.makeAttribute("node"),
+											Attributes.Required.makeAttribute(true),
+											Attributes.OnChange.makeAttribute("changeNode()")
+										)
 										.addClasses("form-control")
 										.addElements
 										(
@@ -72,7 +65,7 @@ public class GameServerAddTemplate extends Template
 												{
 													if(node.getColumnValue(NodeTable.NAME).equals(nodeName))
 													{
-														option.setAttribute("totalram", String.valueOf(node.getColumnValue(NodeTable.MAX_RAM_ALLOWED)));
+														option.setAttribute("totalram", node.getColumnValue(NodeTable.MAX_RAM_ALLOWED));
 														option.setAttribute("reservedram", ramAmounts.get(nodeName));
 													}
 												}
@@ -81,18 +74,18 @@ public class GameServerAddTemplate extends Template
 										),
 									new Small().addClasses("form-text", "text-muted")
 								),
-							new ListItem()
+							new LI()
 								.addClasses("form-group", "form-inline", "list-group-item")
 								.addElements
 								(
 									new Label("Select Server Type").addClasses("d-inline-block", "w-25", "align-middle"),
-									new Select(
-										Map.ofEntries(
-											Map.entry(Attributes.ID.ATTRIBUTE_NAME, "type"),
-											Map.entry(Attributes.Required.ATTRIBUTE_NAME, true),
-											Map.entry(Attributes.Name.ATTRIBUTE_NAME, "type"),
-											Map.entry("onchange", "changeType()")
-										))
+									new Select
+										(
+											Attributes.ID.makeAttribute("type"),
+											Attributes.Required.makeAttribute(true),
+											Attributes.Name.makeAttribute("type"),
+											Attributes.OnChange.makeAttribute("changeType()")
+										)
 										.addClasses("form-control")
 										.addElements
 										(
@@ -106,7 +99,7 @@ public class GameServerAddTemplate extends Template
 							BootstrapTemplates.settingsInput(forms.Checkbox.class, "Automatic Restart", "restartsUnexpected", null, "true", "This will restart the server when it stops unexpectingly", false, false)
 								.addClasses("minecraft-type"),
 							BootstrapTemplates.settingsInput(forms.File.class, "Starting Files", "files", null, "", "The zip given will unzip in the parent directory. This is optional", false, false),
-							new ListItem()
+							new LI()
 								.addClasses("list-group-item")
 								.addElements
 								(

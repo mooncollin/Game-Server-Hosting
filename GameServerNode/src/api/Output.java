@@ -1,7 +1,6 @@
 package api;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -15,7 +14,6 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 import main.StartUpApplication;
-import server.GameServer;
 import utils.Pair;
 
 @ServerEndpoint("/Output")
@@ -24,11 +22,17 @@ public class Output
 	private static final int MAXIUMUM_POOL_SIZE = 200;
 	private static final int STARING_POOL_SIZE = 100;
 	public static final ThreadPoolExecutor execService = new ThreadPoolExecutor(STARING_POOL_SIZE, MAXIUMUM_POOL_SIZE, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
-	private static final List<Pair<Session, Future<?>>> currentRunning = Collections.synchronizedList(new LinkedList<Pair<Session, Future<?>>>());
+	private static final List<Pair<Session, Future<?>>> currentRunning = new LinkedList<Pair<Session, Future<?>>>();
 	public static final String SERVER_ON_MESSAGE = "<on>";
 	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
 	public static final String URL = "/Output";
+	public static final String PROTOCOL = "ws://";
+	
+	public static String getEndpoint(int id)
+	{
+		return String.format("%s?id=%d", URL, id);
+	}
 	
 	public static String getEndpoint(int id, String mode)
 	{
@@ -96,17 +100,23 @@ public class Output
 			}
 		}
 		
-		GameServer foundServer = StartUpApplication.getServer(serverID);
+		var foundServer = StartUpApplication.getServer(serverID);
 
 		if(outputOnly || !outputOnly && !runningOnly)
 		{
-			Future<?> future = execService.submit(foundServer.getOutputRunnable(session));
-			currentRunning.add(Pair.of(session, future));
+			var future = execService.submit(foundServer.getOutputRunnable(session));
+			synchronized(currentRunning)
+			{
+				currentRunning.add(Pair.of(session, future));
+			}
 		}
 		if(runningOnly || !outputOnly && !runningOnly)
 		{
-			Future<?> future = execService.submit(foundServer.getServerRunningStatusRunnable(session));
-			currentRunning.add(Pair.of(session, future));
+			var future = execService.submit(foundServer.getServerRunningStatusRunnable(session));
+			synchronized (currentRunning)
+			{
+				currentRunning.add(Pair.of(session, future));
+			}
 		}
 	}
 	
@@ -116,8 +126,8 @@ public class Output
 		synchronized(currentRunning)
 		{
 			currentRunning.removeIf(pair -> {
-				Session currentSession = pair.getFirst();
-				Future<?> currentRunnable = pair.getSecond();
+				var currentSession = pair.getFirst();
+				var currentRunnable = pair.getSecond();
 				if(currentSession.equals(session))
 				{
 					currentRunnable.cancel(true);
@@ -138,21 +148,6 @@ public class Output
 	@OnError
 	public void onError(Session session, Throwable t)
 	{
-		try
-		{
-			currentRunning.removeIf(pair -> {
-				Session currentSession = pair.getFirst();
-				Future<?> currentRunnable = pair.getSecond();
-				if(currentSession.equals(session))
-				{
-					currentRunnable.cancel(true);
-					return true;
-				}
-				return false;
-			});
-			session.close();
-		} catch (IOException e)
-		{
-		}
+		onClose(session);
 	}
 }

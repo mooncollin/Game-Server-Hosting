@@ -2,59 +2,48 @@ package frontend.templates;
 
 import java.lang.reflect.InvocationTargetException;
 
+import attributes.Attributes;
 import forms.Input;
-import html.CompoundElement;
+import tags.LI;
+import tags.Label;
+import tags.Small;
+import tags.Span;
 
 public class BootstrapTemplates
 {
-	public static CompoundElement settingsInput(Class<? extends Input> inputType, String labelText, String id, String placeholder, String value, String smallText, boolean required, boolean disabled)
+	@SuppressWarnings("unchecked")
+	public static LI settingsInput(Class<? extends Input> inputType, String labelText, String id, String placeholder, String value, String smallText, boolean required, boolean disabled)
 	{
-		CompoundElement listItem = new CompoundElement("li");
-		listItem.addClasses("list-group-item", "form-group", "form-inline");
-		CompoundElement label = new CompoundElement("label", labelText);
-		label.setAttribute("for", id);
-		label.addClasses("d-inline-block", "w-25", "align-middle");
-		Input field;
 		try
 		{
-			field = inputType.getConstructor().newInstance();
+			return new LI()
+					.addClasses("list-group-item", "form-group", "form-inline")
+					.addElements
+					(
+						new Label(labelText, Attributes.makeAttribute("for", id))
+							.addClasses("d-inline-block", "w-25", "align-middle"),
+						inputType.getConstructor().newInstance()
+						.addClasses("form-control")
+						.addAttributes
+						(
+							Attributes.Name.makeAttribute(id),
+							Attributes.ID.makeAttribute(id),
+							Attributes.Required.makeAttribute(required),
+							placeholder != null ? Attributes.PlaceHolder.makeAttribute(placeholder) : null,
+							inputType.equals(forms.Checkbox.class) ? Attributes.Disabled.makeAttribute(disabled) : Attributes.ReadOnly.makeAttribute(disabled),
+							inputType.equals(forms.Checkbox.class) ? Attributes.Checked.makeAttribute(value.equals("true")) : Attributes.Value.makeAttribute(value)
+						),
+						smallText != null ? new Small(smallText).addClasses("form-text", "text-muted") : null
+					);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e)
 		{
 			throw new RuntimeException(e.getMessage());
 		}
-		
-		field.setName(id);
-		field.setID(id);
-		field.addClass("form-control");
-		if(placeholder != null)
-		{
-			field.setAttribute("placeholder", placeholder);
-		}
-		
-		
-		if(inputType.equals(forms.Checkbox.class))
-		{
-			field.setDisabled(disabled);
-			((forms.Checkbox) field).setChecked(value.equals("true"));
-		}
-		else
-		{
-			field.setReadOnly(disabled);
-			field.setValue(value);
-		}
-		field.setRequired(required);
-		
-		listItem.addElement(label);
-		listItem.addElement(field);
-
-		if(smallText != null)
-		{
-			CompoundElement small = new CompoundElement("small", smallText);
-			small.addClasses("form-text", "text-muted");
-			listItem.addElement(small);
-		}
-		
-		return listItem;
+	}
+	
+	public static Span makeSpinner(String type, boolean small)
+	{
+		return new Span().addClasses("spinner-border", type != null ? "text-" + type : null, small ? "spinner-border-sm" : null);
 	}
 }

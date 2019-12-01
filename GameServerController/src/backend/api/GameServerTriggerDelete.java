@@ -30,23 +30,12 @@ public class GameServerTriggerDelete extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverIDStr = request.getParameter("id");
-		String idStr = request.getParameter("triggerID");
+		var serverIDStr = request.getParameter("id");
+		var idStr = request.getParameter("triggerID");
+		var serverID = Utils.fromString(Integer.class, serverIDStr);
+		var triggerID = Utils.fromString(Integer.class, idStr);
 		
-		if(idStr == null || serverIDStr == null)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		int triggerID;
-		int serverID;
-		try
-		{
-			serverID = Integer.valueOf(serverIDStr);
-			triggerID = Integer.valueOf(idStr);
-		}
-		catch(NumberFormatException e)
+		if(serverID == null || triggerID == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;

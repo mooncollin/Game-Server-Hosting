@@ -8,6 +8,11 @@ import utils.TimerTaskID;
 
 public class TriggerHandlerTime extends TriggerHandler
 {
+	public static String convertSecondsToFormat(long seconds)
+	{
+		return LocalTime.MIDNIGHT.plusSeconds(seconds).toString();
+	}
+	
 	private LocalTime timeExecuted;
 	
 	public TriggerHandlerTime(GameServer server, String command, String action, long id, LocalTime timeExecuted)

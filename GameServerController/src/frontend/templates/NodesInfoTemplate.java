@@ -23,7 +23,6 @@ import util.Template;
 
 public class NodesInfoTemplate extends Template
 {
-	@SuppressWarnings("unchecked")
 	public NodesInfoTemplate(Map<String, List<Table>> nodeNamesToServers)
 	{
 		var mainTemplate = Templates.getMainTemplate();
@@ -48,10 +47,9 @@ public class NodesInfoTemplate extends Template
 										  	 (
 										  		new H1(nodeName).addClasses("text-center"),
 										  		new HR(),
-										  		new Div()
-										  			.addAttributes
+										  		new Div
 										  			(
-										  				Attributes.Width.makeAttribute(200),
+									  					Attributes.Width.makeAttribute(200),
 										  				Attributes.Height.makeAttribute(200)
 										  			)
 										  			.addElements
@@ -65,14 +63,10 @@ public class NodesInfoTemplate extends Template
 										  				new TableHeader()
 										  					.addElements
 										  					(
-										  						new TableHead("Name")
-										  							.addAttributes(Attributes.makeAttribute("scope", "col")),
-										  						new TableHead("Type")
-										  							.addAttributes(Attributes.makeAttribute("scope", "col")),
-										  						new TableHead("Status")
-										  							.addAttributes(Attributes.makeAttribute("scope", "col")),
-										  						new TableHead("Options")
-										  							.addAttributes(Attributes.makeAttribute("scope", "col"))
+										  						new TableHead("Name", Attributes.makeAttribute("scope", "col")),
+										  						new TableHead("Type", Attributes.makeAttribute("scope", "col")),
+										  						new TableHead("Status", Attributes.makeAttribute("scope", "col")),
+										  						new TableHead("Options", Attributes.makeAttribute("scope", "col"))
 										  					),
 										  				new TableBody()
 										  					.addElements

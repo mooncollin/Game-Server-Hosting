@@ -1,6 +1,5 @@
 package frontend.templates;
 
-import java.util.Map;
 import java.util.stream.Stream;
 
 import api.minecraft.MinecraftServer;
@@ -26,21 +25,20 @@ import tags.Span;
 import tags.TableData;
 import tags.TableRow;
 import util.Template;
-import utils.Utils;
 
 public class Templates
 {
-	public static final String[] CSS_FILES =
+	public static final String[] GLOBAL_CSS_FILES =
 	{
 			"css/bootstrap.min.css",
 			"css/main.css"
 	};
 	
-	public static final String[] JAVASCRIPT_FILES =
+	public static final String[] GLOBAL_JAVASCRIPT_FILES =
 	{
 			"js/jquery-3.3.1.min.js",
 			"js/popper.min.js",
-			"js/bootstrap.js",
+			"js/bootstrap.min.js",
 			"js/all.js"
 	};
 	
@@ -50,26 +48,20 @@ public class Templates
 		
 		t.getBody().addElements
 		(
-			new Div(
-				Map.ofEntries(
-					Map.entry(Attributes.ID.ATTRIBUTE_NAME, "wrapper")
-				))
+			new Div(Attributes.ID.makeAttribute("wrapper"))
 				.addClasses("d-flex", "justify-content-between")
 				.addElements
 				(
 					getSideBar(),
-					new Div(
-						Map.ofEntries(
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, "content")
-						))
+					new Div(Attributes.ID.makeAttribute("content"))
 						.addClasses("w-100", "flex-fill")
 				)
 		);
 		
-		Stream.of(CSS_FILES)
+		Stream.of(GLOBAL_CSS_FILES)
 			  .forEach(css -> t.getHead().addStylesheet(css));
 		
-		Stream.of(JAVASCRIPT_FILES)
+		Stream.of(GLOBAL_JAVASCRIPT_FILES)
 			  .forEach(javascript -> t.getHead().addScript(javascript));
 		
 		return t;
@@ -78,25 +70,14 @@ public class Templates
 	private static Nav getSideBar()
 	{
 		
-		return new Nav
-		(
-			Map.ofEntries(
-				Map.entry(Attributes.ID.ATTRIBUTE_NAME, "sidebar")
-			))
+		return new Nav(Attributes.ID.makeAttribute("sidebar"))
 			.addClasses("p-3", "flex-fill")
 			.addElements
 			(
-				new Anchor(
-					Map.ofEntries(
-						Map.entry(Attributes.Href.ATTRIBUTE_NAME, Index.URL),
-						Map.entry(Attributes.ID.ATTRIBUTE_NAME, "homeLink")
-					))
+				new Anchor(Attributes.Href.makeAttribute(Index.URL), Attributes.ID.makeAttribute("homeLink"))
 					.addElements
 					(
-						new Div(
-							Map.ofEntries(
-								Map.entry(Attributes.ID.ATTRIBUTE_NAME, "sidebar-header")
-							))
+						new Div(Attributes.ID.makeAttribute("sidebar-header"))
 							.addClasses("text-center", "text-light", "overflow-hidden", "bg-secondary", "rounded")
 							.addElements
 							(
@@ -107,20 +88,14 @@ public class Templates
 					.addClasses("list-group", "list-group-flush", "mt-5", "text-center")
 					.addElements
 					(
-						new Anchor(
-							Map.ofEntries(
-								Map.entry(Attributes.Href.ATTRIBUTE_NAME, Index.URL)
-							))
+						new Anchor(Attributes.Href.makeAttribute(Index.URL))
 							.addClasses("list-group-item", "bg-secondary", "text-light")
 							.addElements
 							(
 								Templates.createIcon("server").addClasses("mr-2"),
 								new Span("Servers")
 							),
-						new Anchor(
-							Map.ofEntries(
-								Map.entry(Attributes.Href.ATTRIBUTE_NAME, NodesInfo.URL)
-							))
+						new Anchor(Attributes.Href.makeAttribute(NodesInfo.URL))
 							.addClasses("list-group-item", "bg-secondary", "text-light", "mt-3")
 							.addElements
 							(
@@ -135,12 +110,11 @@ public class Templates
 	{
 		return new Anchor
 		(
-			Map.ofEntries(
-				Map.entry(Attributes.Href.ATTRIBUTE_NAME, GameServerConsole.getEndpoint(serverID)),
-				Map.entry("data-toggle", "tooltip"),
-				Map.entry("data-placement", "bottom"),
-				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "Open server console")
-		))
+			Attributes.Href.makeAttribute(GameServerConsole.getEndpoint(serverID)),
+			Attributes.makeAttribute("data-toggle", "tooltip"),
+			Attributes.makeAttribute("data-placement", "bottom"),
+			Attributes.Title.makeAttribute("Open server console")
+		)
 		.addClasses("rounded-circle", "bg-light", "p-2")
 		.addElements
 		(
@@ -168,12 +142,11 @@ public class Templates
 	{
 		return new Anchor
 		(
-			Map.ofEntries(
-				Map.entry(Attributes.Href.ATTRIBUTE_NAME, GameServerSettings.getEndpoint(serverID)),
-				Map.entry("data-toggle", "tooltip"),
-				Map.entry("data-placement", "bottom"),
-				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "Edit server settings")
-		))
+			Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID)),
+			Attributes.makeAttribute("data-toggle", "tooltip"),
+			Attributes.makeAttribute("data-placement", "bottom"),
+			Attributes.Title.makeAttribute("Edit server settings")
+		)
 		.addClasses("rounded-circle", "bg-light", "p-2")
 		.addElements
 		(
@@ -185,14 +158,13 @@ public class Templates
 	{
 		return new Anchor
 		(
-			Map.ofEntries(
-				Map.entry(Attributes.Href.ATTRIBUTE_NAME, "#"),
-				Map.entry("data-toggle", "tooltip"),
-				Map.entry("data-placement", "bottom"),
-				Map.entry(Attributes.Title.ATTRIBUTE_NAME, "Delete server"),
-				Map.entry("link", Utils.encodeURL(GameServerDelete.getEndpoint(serverID))),
-				Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, String.format("deleteServer(this, '%s')", serverName))
-		))
+			Attributes.Href.makeAttribute("#"),
+			Attributes.makeAttribute("data-toggle", "tooltip"),
+			Attributes.makeAttribute("data-placement", "bottom"),
+			Attributes.Title.makeAttribute("Delete Server"),
+			Attributes.makeAttribute("link", GameServerDelete.getEndpoint(serverID)),
+			Attributes.OnClick.makeAttribute(String.format("deleteServer(this, '%s')", serverName))
+		)
 		.addClasses("rounded-circle", "bg-light", "p-2")
 		.addElements
 		(
@@ -220,6 +192,7 @@ public class Templates
 		return new Script(JavaScriptUtils.getNodeNames() + JavaScriptUtils.getNodeUsageAddresses());
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static CompoundElement createServerTableRow(Integer serverID, String serverName, Class<? extends GameServer> type)
 	{
 		var typeName = "Unknown";
@@ -229,17 +202,12 @@ public class Templates
 			typeName = "Minecraft";
 		}
 		
-		
-		
 		return new TableRow()
 		.addElements
 		(
 			new TableData(serverName),
 			new TableData(typeName),
-			new TableData(
-					Map.ofEntries(
-						Map.entry(Attributes.ID.ATTRIBUTE_NAME, "status-" + serverID)
-					))
+			new TableData(Attributes.ID.makeAttribute("status-" + serverID))
 					.addElements
 					(
 						new Span()
@@ -263,43 +231,52 @@ public class Templates
 				.addElements
 				(
 					generateStartButton()
-						.addAttributes(Map.ofEntries(
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, String.format("start-%d", serverID)),
-							Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, String.format("startServer(%d)", serverID)),
-							Map.entry(Attributes.Disabled.ATTRIBUTE_NAME, true)
-						))
+						.addAttributes
+						(
+							Attributes.ID.makeAttribute(String.format("start-%d", serverID)),
+							Attributes.OnClick.makeAttribute(String.format("startServer(%d)", serverID)),
+							Attributes.Disabled.makeAttribute(true)
+						)
 						.addClasses("mr-4"),
 					generateStopButton()
-						.addAttributes(Map.ofEntries(
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, String.format("stop-%d", serverID)),
-							Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, String.format("stopServer(%d)", serverID)),
-							Map.entry(Attributes.Disabled.ATTRIBUTE_NAME, true)
-						))
+						.addAttributes
+						(
+							Attributes.ID.makeAttribute(String.format("stop-%d", serverID)),
+							Attributes.OnClick.makeAttribute(String.format("stopServer(%d)", serverID)),
+							Attributes.Disabled.makeAttribute(true)
+						)
 						.addClasses("mr-4")
 				)
 		);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static Button generateStartButton()
 	{
-		var start = new Button("Start Server");
-		start.setID("start");
-		start.addClasses("btn", "btn-primary");
-		start.setOnClick("startServer()");
-		return start;
+		return new Button("Start Server", Attributes.ID.makeAttribute("start"), Attributes.OnClick.makeAttribute("startServer()"))
+				.addClasses("btn", "btn-primary")
+				.addElements(BootstrapTemplates.makeSpinner(null, true)
+								.addClasses("ml-2")	
+								.addAttributes(Attributes.Hidden.makeAttribute(true)));
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static Button generateStopButton()
 	{
-		var stop = new Button("Stop Server");
-		stop.setID("stop");
-		stop.addClasses("btn", "btn-danger");
-		stop.setOnClick("stopServer()");
-		return stop;
+		return new Button("Stop Server", Attributes.ID.makeAttribute("stop"), Attributes.OnClick.makeAttribute("stopServer()"))
+				.addClasses("btn", "btn-danger")
+				.addElements(BootstrapTemplates.makeSpinner(null, true)
+								.addClasses("ml-2")
+								.addAttributes(Attributes.Hidden.makeAttribute(true)));
 	}
 	
 	public static Icon createIcon(String fontAwesomeType)
-	{	
-		return new Icon().addClasses("fas", String.format("fa-%s", fontAwesomeType));
+	{
+		return createIcon("fas", fontAwesomeType);
+	}
+	
+	public static Icon createIcon(String preclass, String fontAwesomeType)
+	{
+		return new Icon().addClasses(preclass, "fa-" + fontAwesomeType);
 	}
 }

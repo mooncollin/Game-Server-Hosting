@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -82,7 +83,6 @@ public class MinecraftServer extends GameServer
 		Map.entry("enforce-whitelist", false)
 	);
 	
-//	private List<OutputStream> outputConnectors;
 	private boolean autoRestart;
 	private boolean expectedShutdown;
 	private int maximumHeapSize;
@@ -115,30 +115,35 @@ public class MinecraftServer extends GameServer
 				
 				final var lineTerminated = lineRead + "\r\n";
 				var triggers = getTriggerHandlers();
+
+				triggers.parallelStream()
+					.filter(trigger -> trigger instanceof TriggerHandlerCondition)
+					.map(trigger -> (TriggerHandlerCondition<String>) trigger)
+					.filter(condition -> condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
+					.forEach(condition -> condition.trigger(lineRead));
+					
+				var streamsToRemove = new LinkedList<OutputStream>();
 				
-				synchronized(triggers)
+				var outputConnectors = getOutputConnectors();
+				
+				synchronized (outputConnectors)
 				{
-					triggers.stream()
-							.filter(trigger -> trigger instanceof TriggerHandlerCondition)
-							.map(trigger -> (TriggerHandlerCondition<String>) trigger)
-							.filter(condition -> condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
-							.forEach(condition -> condition.trigger(lineTerminated));
+					outputConnectors.parallelStream()
+						.forEach(stream -> {
+							synchronized (stream)
+							{
+								try
+								{
+									stream.write(lineTerminated.getBytes());
+								} catch (IOException e)
+								{
+									streamsToRemove.add(stream);
+								}
+							}
+						});
+					
+					outputConnectors.removeAll(streamsToRemove);
 				}
-				
-				getOutputConnectors().removeIf(stream -> {
-					try
-					{
-						synchronized(stream)
-						{
-							stream.write(lineTerminated.getBytes());
-						}
-					} catch (IOException e)
-					{
-						StartUpApplication.LOGGER.log(Level.INFO, String.format("Minecraft output stream ended:\n%s", e.getMessage()));
-						return true;
-					}
-					return false;
-				});
 				
 				synchronized(lastReadBounded)
 				{
@@ -150,6 +155,8 @@ public class MinecraftServer extends GameServer
 				{
 					log = log.substring(getLogSize()/4);
 				}
+				
+				notifyOutputNotifiers();
 			}
 		}
 	};
@@ -199,6 +206,7 @@ public class MinecraftServer extends GameServer
 		this.arguments = Objects.requireNonNullElse(arguments, "");
 	}
 	
+	@Override
 	synchronized public boolean stopServer()
 	{
 		if(!isRunning())
@@ -234,6 +242,7 @@ public class MinecraftServer extends GameServer
 		return super.forceStopServer();
 	}
 	
+	@Override
 	synchronized public boolean startServer()
 	{
 		if(!isRunning())
@@ -275,6 +284,7 @@ public class MinecraftServer extends GameServer
 		return false;
 	}
 	
+	@Override
 	synchronized public boolean writeToServer(String out)
 	{
 		if(isRunning())
@@ -382,7 +392,7 @@ public class MinecraftServer extends GameServer
 	}
 	
 	@Override
-	protected CommandHandler generateCommandHandler()
+	public CommandHandler<MinecraftServer> getCommandHandler()
 	{
 		return new MinecraftServerCommandHandler(this);
 	}

@@ -16,7 +16,6 @@ import tags.Button;
 import tags.Div;
 import tags.H1;
 import tags.HR;
-import tags.Icon;
 import tags.LI;
 import tags.Small;
 import tags.UL;
@@ -56,27 +55,27 @@ public class GameServerSettingsTemplate extends Template
 					.addClasses("list-group-item", "form-group", "rounded", "mr-5")
 					.addElements
 					(
-						new Button(
-							Map.ofEntries(
-								Map.entry(Attributes.OnClick.ATTRIBUTE_NAME, "edit()"),
-								Map.entry(Attributes.ID.ATTRIBUTE_NAME, "editButton"),
-								Map.entry(Attributes.Type.ATTRIBUTE_NAME, "button")
-							))
+						new Button
+							(
+								Attributes.OnClick.makeAttribute("edit()"),
+								Attributes.ID.makeAttribute("editButton"),
+								Attributes.Type.makeAttribute("button")
+							)
 							.addClasses("btn", "btn-warning")
 							.addElements
 							(
-								new Icon().addClasses("fas", "fa-pencil-alt")
+								Templates.createIcon("pencil-alt")
 							),
-						new Button(
-							Map.ofEntries(
-								Map.entry(Attributes.ID.ATTRIBUTE_NAME, "submitButton"),
-								Map.entry(Attributes.Hidden.ATTRIBUTE_NAME, true),
-								Map.entry(Attributes.Form.ATTRIBUTE_NAME, "settingsForm")
-							))
+						new Button
+							(
+								Attributes.ID.makeAttribute("submitButton"),
+								Attributes.Hidden.makeAttribute(true),
+								Attributes.Form.makeAttribute("settingsForm")
+							)
 							.addClasses("btn", "btn-success", "ml-3")
 							.addElements
 							(
-								new Icon().addClasses("fas", "fa-check")
+								Templates.createIcon("check")
 							)
 					)
 			),
@@ -84,11 +83,11 @@ public class GameServerSettingsTemplate extends Template
 				.addClasses("container", "bg-dark")
 				.addElements
 				(
-					new Form(
-						Map.ofEntries(
-							Map.entry(Attributes.Method.ATTRIBUTE_NAME, "POST"),
-							Map.entry(Attributes.ID.ATTRIBUTE_NAME, "settingsForm")
-						))
+					new Form
+						(
+							Attributes.Method.makeAttribute("POST"),
+							Attributes.ID.makeAttribute("settingsForm")
+						)
 						.addElements
 						(
 							new UL() // Settings List

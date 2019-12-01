@@ -4,8 +4,16 @@ import java.util.Objects;
 
 public class JavascriptVariable <T>
 {
+	public static String escapeString(String input)
+	{
+		input = input.replace("\"", "\\\"");
+		input = input.replace("\\", "\\\\");
+		return String.format("\"%s\"", input);
+	}
+	
 	private String name;
 	private T value;
+	private boolean isConst;
 	
 	public JavascriptVariable(String name)
 	{
@@ -38,15 +46,39 @@ public class JavascriptVariable <T>
 		return value;
 	}
 	
-	@Override
-	public String toString()
+	public boolean isConst()
+	{
+		return isConst;
+	}
+	
+	public void setConst(boolean c)
+	{
+		this.isConst = c;
+	}
+	
+	public String valueString()
 	{
 		var valueString = String.valueOf(value);
 		if(value instanceof String)
 		{
-			valueString = String.format("\"%s\"", valueString.replace("\"", "\\\""));
+			valueString = escapeString(valueString);
+		}
+		else if(value instanceof JavascriptVariable)
+		{
+			valueString = ((JavascriptVariable<?>) value).valueString();
 		}
 		
-		return String.format("var %s = %s;", name, valueString);
+		return valueString;
+	}
+	
+	public String variableString()
+	{
+		return String.format("%svar %s", isConst ? "const " : "", name);
+	}
+	
+	@Override
+	public String toString()
+	{
+		return String.format("%s = %s;", variableString(), valueString());
 	}
 }

@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import main.StartUpApplication;
+import utils.Utils;
 
 @WebServlet("/ServerInteract")
 public class ServerInteract extends HttpServlet
@@ -26,19 +27,9 @@ public class ServerInteract extends HttpServlet
 	{
 		var serverIDStr = request.getParameter("id");
 		var command = request.getParameter("command");
+		var serverID = Utils.fromString(Integer.class, serverIDStr);
 		
-		if(serverIDStr == null || command == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
+		if(serverIDStr == null || command == null || serverID == null)
 		{
 			response.setStatus(400);
 			return;
@@ -56,27 +47,15 @@ public class ServerInteract extends HttpServlet
 		{
 			response.setStatus(400);
 		}
-		
-		response.setContentType("text/plain");
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var serverIDStr = request.getParameter("id");
 		var command = request.getParameter("command");
+		var serverID = Utils.fromString(Integer.class, serverIDStr);
 		
-		if(serverIDStr == null || command == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
+		if(serverIDStr == null || command == null || serverID == null)
 		{
 			response.setStatus(400);
 			return;

@@ -33,10 +33,32 @@ public class TriggerHandlerFactory
 			{
 				if(triggerValue.startsWith("r/") && triggerValue.endsWith("/"))
 				{
-					String regexValue = triggerValue.replaceFirst("r/", "");
+					var regexValue = triggerValue.replaceFirst("r/", "");
 					regexValue = regexValue.substring(0, regexValue.lastIndexOf("/"));
-					Pattern p = Pattern.compile(".*?" + regexValue + ".*");
-					specificTrigger = new TriggerHandlerCondition<String>(server, triggerCommand, triggerExtra, triggerID, p.asPredicate(), TriggerHandlerConditionType.OUTPUT);
+					final var p = Pattern.compile(".*?" + regexValue + ".*");
+					specificTrigger = new TriggerHandlerCondition<String>(server, triggerCommand, triggerExtra, triggerID, p.asPredicate(), TriggerHandlerConditionType.OUTPUT)
+							{
+								@Override
+								public void trigger(String input)
+								{
+									var matcher = p.matcher(input);
+									if(matcher.matches())
+									{
+										var oldCommand = getCommand();
+										var newCommand = getCommand();
+										
+										for(var i = 1; i <= matcher.groupCount(); i++)
+										{
+											newCommand = newCommand.replaceAll(String.format("(?<!\\\\)\\$%d", i), matcher.group(i));
+										}
+										
+										setCommand(newCommand);
+										
+										trigger();
+										setCommand(oldCommand);
+									}
+								}
+							};
 				}
 				else
 				{

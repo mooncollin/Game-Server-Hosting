@@ -36,7 +36,14 @@ The game servers currently supported:
 
 * Minecraft
 
-Since this project was mainly created for hosting Minecraft servers, some of the general implementation is geared towards Minecraft server functionality/requirements. The server abstraction is not fully complete, but one can still create their own types of game servers by inheriting certain interfaces and creating new tables in their database for their own needs. I have created a library for easily managing database objects, which is part of the DatabaseObjects project in this repo.
+Since this project was mainly created for hosting Minecraft servers, some of the general implementation is geared towards Minecraft server functionality/requirements. The server abstraction is not fully complete, but one can still create their own types of game servers by inheriting certain interfaces and creating new tables in their database for their own needs. Ability to load code to handle new games at run-time is being researched.
+
+Current dependencies:
+* Tomcat 8/9 (http://tomcat.apache.org/): This is used both as a platform to run the applications and as a library dependency for http/web socket programming.
+* Java-ORM (https://github.com/mooncollin/Java-ORM): These may require jarring this project up and putting it into Tomcat's lib directory. So far, I haven't put it anywhere and it somehow works.
+* Html Rendering Tool (https://github.com/mooncollin/HTMLRenderingTool): This is used to generate the HTML from the controller's frontend section. A jar of this project must be either in Tomcat's lib directory or the lib directory of the Controller.
+* MYSQL Connector: I have included the jar that I currently use in this repo. This is just easier to manage. This is used in both the controller and node applications to communicate with the database. Place this inside the lib folder of the Tomcat installation directory.
+* GameServerNode: So this is more a dependency for the Controller. The controller uses code from the GameServerNode section for various things. For this reason, it must be placed in the lib folder of the Controller application and NOT in the lib folder of Tomcat. If placed in the lib folder of Tomcat, it will break.
 
 # Installation and Run Guide
 
@@ -48,14 +55,31 @@ Network factors such as firewalls, port forwarding, and static IPs are not manag
 
 # Changelog
 
+## Version 1.2
+Lots more bug fixes and more features!
+
+### Front-end Features:
+* Triggers now work again!
+* Recurring triggers now uses the format HH:MM:SS in the text field
+* Output triggers can now use regex groups in the command! Just use $1 for the first group, $2 for the second, and so on (Note: To use regex, wrap your value in "r/YOUR MESSAGE HERE/").
+* When starting and stopping a server, a spinner will appear next to the button to indicate that it is processing. This will only be noticable on the same page. Other users shutting down/starting up a server will not show this indicator on your browser.
+* Simplified front-end websocket connections and javascript logic
+
+### Back-end Features:
+* Changed how those accepting output from a server gets notified when they have been written to.
+* Notifiers to server output and to server on/off state changes are now possibly paralleled.
+* Output coming from the MinecraftServer object now sends to its output connectors in parallel.
+* Writing to the web socket connection a servers' output is now vastly simplified, more generic, and much faster.
+* Various bug fixes and improvements.
+
 ## Version 1.1
 Various back-end improvements and bug fixes.
 
-Minor front-end features:
+### Minor front-end features:
 * Cannot make a server name with symbols, except for underscore (_)
 * Fixed a bug where node resources were not showing on the website when no servers are added
 
-Major back-end features:
+### Major back-end features:
 * Database will clear table entries associated with a game server when that game server gets deleted
 * Changed database to use integer IDs that are auto-generated instead of the server names
 * The application will now auto-generate the gameserver, minecraftserver, node, and triggers tables if they are not already created. Both the controller and node will attempt to do this if either one is started first (recommend doing this since it will do it correctly everytime).
