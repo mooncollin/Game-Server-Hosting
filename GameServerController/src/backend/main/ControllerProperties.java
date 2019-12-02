@@ -10,8 +10,6 @@ public class ControllerProperties
 	public static final String PROPERTIES_LOCATION = System.getenv("GAME_SERVER_CONTROLLER_PROPERTIES");
 	public static final String NODE_NAMES;
 	public static final String NODE_ADDRESSES;
-	public static final String NODE_PORTS;
-	public static final String NODE_EXTENSION;
 	public static final String DATABASE_URL;
 	public static final String DATABASE_USERNAME;
 	public static final String DATABASE_PASSWORD;
@@ -41,8 +39,6 @@ public class ControllerProperties
 		
 		NODE_NAMES = properties.getProperty("node_names");
 		NODE_ADDRESSES = properties.getProperty("node_addresses");
-		NODE_PORTS = properties.getProperty("node_ports");
-		NODE_EXTENSION = properties.getProperty("node_extension");
 		DATABASE_URL = properties.getProperty("database_url");
 		DATABASE_USERNAME = properties.getProperty("database_username");
 		DATABASE_PASSWORD = properties.getProperty("database_password");

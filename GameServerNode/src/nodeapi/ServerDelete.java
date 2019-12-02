@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -9,39 +9,37 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.StartUpApplication;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
+import nodemain.StartUpApplication;
+import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/ServerDelete")
 public class ServerDelete extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/ServerDelete";
+	public static final String URL = "/GameServerNode/ServerDelete";
 	
-	public static String getEndpoint(int id)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL getEndpoint(int id)
 	{
-		return String.format("%s?id=%d", URL, id);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
 		
-		if(serverIDStr == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
+		if(serverID == null)
 		{
 			response.setStatus(400);
 			return;

@@ -29,7 +29,7 @@ import tags.Script;
 import tags.Span;
 import util.Template;
 import utils.Pair;
-import utils.Utils;
+import utils.ParameterURL;
 
 public class GameServerFilesTemplate extends Template
 {
@@ -69,7 +69,7 @@ public class GameServerFilesTemplate extends Template
 			Map.entry("log", "alt")
 	);
 	
-	public GameServerFilesTemplate(int serverID, Class<? extends GameServer> serverType, String serverName, String directory, String[] directories, String redirectURL, List<Pair<String, Boolean>> files)
+	public GameServerFilesTemplate(int serverID, Class<? extends GameServer> serverType, String serverName, String directory, String[] directories, ParameterURL redirectURL, List<Pair<String, Boolean>> files)
 	{
 		var main = Templates.getMainTemplate();
 		var content = Div.class.cast(main.getBody().getElementById("content"));
@@ -111,7 +111,7 @@ public class GameServerFilesTemplate extends Template
 									 else
 									 {
 										 breadcrumbItem.addElement(new Anchor(directories[i], 
-											Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, String.join(",", Arrays.copyOf(directories, i+1)))))
+											Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, String.join(",", Arrays.copyOf(directories, i+1))).getURL()))
 										);
 									 }
 									 
@@ -150,7 +150,7 @@ public class GameServerFilesTemplate extends Template
 				new Anchor
 					(
 						Attributes.Title.makeAttribute("Download current folder"),
-						Attributes.Href.makeAttribute(GameServerFileDownload.getEndpoint(serverID, directory)),
+						Attributes.Href.makeAttribute(GameServerFileDownload.getEndpoint(serverID, directory).getURL()),
 						Attributes.makeAttribute("data-toggle", "tooltip"),
 						Attributes.makeAttribute("data-placement", "top")
 					)
@@ -178,8 +178,7 @@ public class GameServerFilesTemplate extends Template
 						Attributes.ID.makeAttribute("deleteMultipleSubmit"),
 						Attributes.makeAttribute("data-toggle", "tooltip"),
 						Attributes.makeAttribute("data-placement", "top"),
-						Attributes.makeAttribute("link", Utils.encodeURL(
-							GameServerFileDeleteMultiple.getEndpoint(serverID, String.join(",", directories), ""))),
+						Attributes.makeAttribute("link", GameServerFileDeleteMultiple.getEndpoint(serverID, String.join(",", directories), "").getURL()),
 						Attributes.Hidden.makeAttribute(true)
 					)
 					.addClasses("btn", "bg-success", "rounded", "ml-3")
@@ -243,7 +242,7 @@ public class GameServerFilesTemplate extends Template
 					 			.addElements
 					 			(
 					 				new Anchor(Attributes.ID.makeAttribute("file-" + name),
-					 					Attributes.Href.makeAttribute(fileHref))
+					 					Attributes.Href.makeAttribute(fileHref.getURL()))
 					 					.addClasses("list-group-item", "list-group-item-action", "bg-dark", "text-light", "form-inline", "input-group", "input-group-sm", "col-lg-11")
 					 					.addElements
 					 					(

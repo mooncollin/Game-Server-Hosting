@@ -18,6 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import api.minecraft.MinecraftServer;
+import api.minecraft.MinecraftServerCommandHandler;
 import backend.api.ServerInteract;
 import backend.main.StartUpApplication;
 import frontend.templates.GameServerSettingsTemplate;
@@ -27,6 +28,8 @@ import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 import models.NodeTable;
+import nodeapi.ApiSettings;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/GameServerSettings")
@@ -34,34 +37,35 @@ public class GameServerSettings extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameServerSettings";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerSettings";
 	
-	public static String getEndpoint(int id)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int id)
 	{
-		return String.format("%s?id=%d", URL, id);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		return url;
+	}
+	
+	public static ParameterURL postEndpoint(int id)
+	{
+		return getEndpoint(id);
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		if(serverIDStr == null)
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		if(serverID == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		var serverType = StartUpApplication.serverTypes.get(serverID);
 		if(serverAddress == null)
 		{
@@ -145,8 +149,9 @@ public class GameServerSettings extends HttpServlet
 		String nodeResponse;
 		try
 		{
-			var url = String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "properties"));
-			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var url = nodeapi.ServerInteract.getEndpoint(serverID, "properties");
+			url.setHost(serverAddress);
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofString());
 			nodeResponse = httpResponse.body();
 		}
@@ -174,25 +179,14 @@ public class GameServerSettings extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		if(serverIDStr == null)
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		if(serverID == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		var serverType = StartUpApplication.serverTypes.get(serverID);
 		if(serverAddress == null)
 		{
@@ -202,44 +196,34 @@ public class GameServerSettings extends HttpServlet
 		
 		var redirectURL = getEndpoint(serverID);
 		
-		var execName = request.getParameter("execName");
+		var execName = request.getParameter(ApiSettings.EXECUTABLE_NAME_PARAMETER);
 		if(execName == null || execName.isBlank())
 		{
-			response.sendRedirect(redirectURL);
+			response.sendRedirect(redirectURL.getURL());
 			return;
 		}
 		
 		
-		var sendURL = String.format("http://%s%s", serverAddress, api.ServerEdit.getEndpoint(serverID, execName.replace(' ', '+')));
+		var sendURL = nodeapi.ServerEdit.postEndpoint(serverID, execName);
+		sendURL.setHost(serverAddress);
 		
 		if(serverType.equals(MinecraftServer.class))
 		{
 			
-			var ramAmountStr = request.getParameter("ramAmount");
-			int ramAmount;
-			if(ramAmountStr == null || ramAmountStr.isBlank())
+			var ramAmount = Utils.fromString(Long.class, request.getParameter(MinecraftServer.RAM_AMOUNT_PARAMETER));
+			if(ramAmount == null)
 			{
-				response.sendRedirect(redirectURL);
-				return;
-			}
-			
-			try
-			{
-				ramAmount = Integer.valueOf(ramAmountStr);
-			}
-			catch(NumberFormatException e)
-			{
-				response.sendRedirect(redirectURL);
+				response.sendRedirect(redirectURL.getURL());
 				return;
 			}
 			
 			if(ramAmount < MinecraftServer.MINIMUM_HEAP_SIZE || ramAmount % 1024 != 0)
 			{
-				response.sendRedirect(redirectURL);
+				response.sendRedirect(redirectURL.getURL());
 				return;
 			}
 			
-			sendURL += String.format("&ramAmount=%s", ramAmount);
+			sendURL.addQuery(MinecraftServer.RAM_AMOUNT_PARAMETER, ramAmount);
 			
 			// Server Properties
 			var propertiesPost = MinecraftServer.MINECRAFT_PROPERTIES.keySet()
@@ -253,8 +237,9 @@ public class GameServerSettings extends HttpServlet
 
 			try
 			{
-				var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "properties")));
-				var httpRequest = HttpRequest.newBuilder(URI.create(url))
+				var url = nodeapi.ServerInteract.getEndpoint(serverID, MinecraftServerCommandHandler.PROPERTIES_COMMAND);
+				url.setHost(serverAddress);
+				var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
 						.header("content-type", "application/x-www-form-urlencoded")
 						.POST(BodyPublishers.ofString(propertiesPost))
 						.build();
@@ -268,11 +253,16 @@ public class GameServerSettings extends HttpServlet
 			
 			try
 			{
-				var restartPost = request.getParameter("restartsUnexpected") == null ? "" : "restartsUnexpected=on";
-				var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "restarts")));
-				var httpRequest = HttpRequest.newBuilder(URI.create(url))
+				var url = nodeapi.ServerInteract.getEndpoint(serverID, MinecraftServerCommandHandler.RESTARTS_COMMAND);
+				url.setHost(serverAddress);
+				if(request.getParameter(MinecraftServer.RESTART_PARAMETER) != null)
+				{
+					url.addQuery(MinecraftServer.RESTART_PARAMETER, "on");
+				}
+				
+				var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
 						.header("content-type", "application/x-www-form-urlencoded")
-						.POST(BodyPublishers.ofString(restartPost))
+						.POST(BodyPublishers.noBody())
 						.build();
 				ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 			}
@@ -283,11 +273,12 @@ public class GameServerSettings extends HttpServlet
 			
 			try
 			{
-				var argumentsPost = ("arguments=" + Objects.requireNonNullElse(request.getParameter("arguments"), "").replace("+", "%2B")).strip();
-				var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, "arguments")));
-				var httpRequest = HttpRequest.newBuilder(URI.create(url))
+				var url = nodeapi.ServerInteract.getEndpoint(serverID, MinecraftServer.ARGUMENTS_PARAMETER);
+				url.setHost(serverAddress);
+				url.addQuery(MinecraftServer.ARGUMENTS_PARAMETER, Objects.requireNonNullElse(request.getParameter(MinecraftServer.ARGUMENTS_PARAMETER), ""));
+				var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
 						.header("content-type", "application/x-www-form-urlencoded")
-						.POST(BodyPublishers.ofString(argumentsPost))
+						.POST(BodyPublishers.noBody())
 						.build();
 				ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 			}
@@ -299,7 +290,7 @@ public class GameServerSettings extends HttpServlet
 		
 		try
 		{
-			var httpRequest = HttpRequest.newBuilder(URI.create(sendURL))
+			var httpRequest = HttpRequest.newBuilder(URI.create(sendURL.getURL()))
 										 .POST(BodyPublishers.noBody())
 										 .build();
 			

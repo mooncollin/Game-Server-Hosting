@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -13,12 +13,26 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
-import main.StartUpApplication;
+import nodemain.StartUpApplication;
 import utils.Pair;
+import utils.ParameterURL;
 
 @ServerEndpoint("/NodeUsage")
 public class NodeUsage
 {
+	public static final String URL = "/GameServerNode/NodeUsage";
+	
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.WEB_SOCKET_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL getEndpoint()
+	{
+		var url = new ParameterURL(PARAMETER_URL);
+		return url;
+	}
+	
 	public static final ExecutorService execService = Executors.newFixedThreadPool(40);
 	private static final List<Pair<Session, Future<?>>> currentRunning = new LinkedList<Pair<Session, Future<?>>>();
 	private static final long NODE_USAGE_WAIT_TIME = 900;

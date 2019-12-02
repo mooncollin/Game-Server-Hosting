@@ -27,16 +27,15 @@ import server.GameServer;
 public class StartUpApplication implements ServletContextListener
 {
 	public static final Map<Integer, Class<? extends GameServer>> serverTypes = Collections.synchronizedMap(new HashMap<Integer, Class<? extends GameServer>>());
-	public static final Map<Integer, String> serverAddresses = Collections.synchronizedMap(new HashMap<Integer, String>());
-	public static final Map<String, String> nodeAddresses = new HashMap<String, String>();
-	
+	public static final Map<Integer, String> serverIPAddresses = Collections.synchronizedMap(new HashMap<Integer, String>());
+	public static final Map<String, String> nodeIPAddresses = new HashMap<String, String>();
 	public static final String NODE_OUTPUT_URL = "/Output";
 	public static String[] NODE_NAMES;
 	public static String[] NODE_ADDRESSES;
-	public static String[] NODE_PORTS;
 	public static final Logger LOGGER = Logger.getGlobal();
 	public static Database database;
 	
+	public static String SERVLET_PATH;
 
 	public void contextInitialized(ServletContextEvent sce)
 	{
@@ -55,18 +54,17 @@ public class StartUpApplication implements ServletContextListener
 			throw new RuntimeException("Is the database up?");
 		}
 		
+		SERVLET_PATH = sce.getServletContext().getContextPath();
+		
 		GameServer.setup(database);
 		MinecraftServer.setup(database);
 		
 		NODE_NAMES = ControllerProperties.NODE_NAMES.split(",");
 		NODE_ADDRESSES = ControllerProperties.NODE_ADDRESSES.split(",");
-		NODE_PORTS = ControllerProperties.NODE_PORTS.split(",");
-		var extension = ControllerProperties.NODE_EXTENSION;
 		
 		for(var i = 0; i < NODE_NAMES.length; i++)
 		{
-			var url = createNodeURL(NODE_ADDRESSES[i], NODE_PORTS[i], extension);
-			nodeAddresses.put(NODE_NAMES[i], url);
+			nodeIPAddresses.put(NODE_NAMES[i], NODE_ADDRESSES[i]);
 			List<Table> gameServers;
 			try
 			{
@@ -82,14 +80,9 @@ public class StartUpApplication implements ServletContextListener
 			{
 				var id = server.getColumnValue(GameServerTable.ID);
 				serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(server.getColumnValue(GameServerTable.SERVER_TYPE)));
-				serverAddresses.put(id, url);
+				serverIPAddresses.put(id, NODE_ADDRESSES[i]);
 			}
 		}
-	}
-	
-	public static String createNodeURL(String address, String port, String extension)
-	{
-		return String.format("%s:%s/%s", address, port, extension);
 	}
 	
 	public static long getNodeReservedRam(String nodeName) throws SQLException

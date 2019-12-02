@@ -1,4 +1,4 @@
-package main;
+package nodemain;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;

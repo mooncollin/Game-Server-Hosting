@@ -23,8 +23,11 @@ import frontend.templates.GameServerFilesTemplate;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
+import nodeapi.ApiSettings;
 import utils.MultipartInputStream;
 import utils.Pair;
+import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/GameServerFiles")
 @MultipartConfig
@@ -32,36 +35,47 @@ public class GameServerFiles extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameServerFiles";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerFiles";
 	
-	public static String getEndpoint(int serverID, String directory) 
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int serverID, String directory) 
 	{
-		return String.format("%s?id=%d&directory=%s", URL, serverID, directory);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		return url;
+	}
+	
+	public static ParameterURL postEndpoint(int serverID, String directory, String folder)
+	{
+		var url = getEndpoint(serverID, directory);
+		if(folder != null)
+		{
+			url.addQuery(ApiSettings.FOLDER_PARAMETER, folder);
+		}
+		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverIDStr = request.getParameter("id");
-		String directory = request.getParameter("directory");
-		String redirectURL = request.getRequestURL() + "?" + request.getQueryString().replace("&folder=true", "");
-		if(serverIDStr == null || directory == null)
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
+		
+		var redirectURL = new ParameterURL(request.getScheme(), request.getServerName(), request.getServerPort(), StartUpApplication.SERVLET_PATH + request.getServletPath());
+		redirectURL.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		redirectURL.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		
+		if(serverID == null || directory == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		var serverType = StartUpApplication.serverTypes.get(serverID);
 		if(serverAddress == null)
 		{
@@ -105,8 +119,9 @@ public class GameServerFiles extends HttpServlet
 		
 		try
 		{
-			var url = String.format("http://%s%s", serverAddress, api.ServerFiles.getEndpoint(directory));
-			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var url = nodeapi.ServerFiles.getEndpoint(directory);
+			url.setHost(serverAddress);
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofString());
 			if(httpResponse.statusCode() != 200)
 			{
@@ -151,31 +166,21 @@ public class GameServerFiles extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var directory = request.getParameter("directory");
-		var isFolder = request.getParameter("folder") != null;
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
+		var isFolder = request.getParameter(ApiSettings.FOLDER_PARAMETER) != null;
 		
-		if(serverIDStr == null || directory == null)
+		if(serverID == null || directory == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		int serverID;
+		var redirectURL = new ParameterURL(request.getScheme(), request.getServerName(), request.getServerPort(), StartUpApplication.SERVLET_PATH + request.getServletPath());
+		redirectURL.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		redirectURL.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
 		
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.sendRedirect(Index.URL);
-			return;
-		}
-		
-		var redirectURL = String.format("%s?%s", request.getRequestURL(), request.getQueryString().replace("&folder=true", ""));
-		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		
 		if(serverAddress == null)
 		{
@@ -183,7 +188,8 @@ public class GameServerFiles extends HttpServlet
 			return;
 		}
 		
-		var url = String.format("http://%s%s", serverAddress, api.FileUpload.getEndpoint(directory, isFolder).replace(' ', '+'));
+		var url = nodeapi.FileUpload.postEndpoint(directory, isFolder);
+		url.setHost(serverAddress);
 		
 		var fileParts = request.getParts()
 							   .parallelStream()
@@ -194,7 +200,7 @@ public class GameServerFiles extends HttpServlet
 		{
 			try(var multiInputStream = new MultipartInputStream(fileParts))
 			{
-				var httpRequest = HttpRequest.newBuilder(URI.create(url))
+				var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
 						.header("Content-type", "multipart/form-data; boundary=" + multiInputStream.getBoundary())
 						.POST(BodyPublishers.ofInputStream(() -> multiInputStream))
 						.build();
@@ -207,6 +213,6 @@ public class GameServerFiles extends HttpServlet
 			}
 		}
 		
-		response.sendRedirect(redirectURL);
+		response.sendRedirect(redirectURL.getURL());
 	}
 }

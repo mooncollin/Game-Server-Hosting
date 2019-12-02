@@ -17,42 +17,41 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 import models.TriggersTable;
+import nodeapi.ApiSettings;
+import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/GameServerConsole")
 public class GameServerConsole extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameServerConsole";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerConsole";
 	
-	public static String getEndpoint(int id)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int id)
 	{
-		return String.format("%s?id=%d", URL, id);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverStr = request.getParameter("id");
-		int serverID;
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
 		
-		if(serverStr == null)
+		if(serverID == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		try
-		{
-			serverID = Integer.parseInt(serverStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
 		var serverType = StartUpApplication.serverTypes.get(serverID);
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		
 		if(serverType == null)
 		{

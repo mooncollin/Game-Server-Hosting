@@ -17,7 +17,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
 import frontend.Index;
-import server.CommandHandler;
+import nodeapi.ApiSettings;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/ServerInteract")
@@ -25,16 +26,27 @@ public class ServerInteract extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/ServerInteract";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/ServerInteract";
 	
-	public static String getEndpoint(int serverID, String command)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int serverID, String command)
 	{
-		if(command == null || command.isBlank())
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		if(command != null && !command.isBlank())
 		{
-			return String.format("%s?id=%d", URL, serverID);
+			url.addQuery(ApiSettings.COMMAND_PARAMETER, command);
 		}
-		
-		return String.format("%s?id=%d&command=%s", URL, serverID, command);
+		return url;
+	}
+	
+	public static ParameterURL postEndpoint(int serverID, String command)
+	{
+		return getEndpoint(serverID, command);
 	}
 	
 	public static final HttpClient client;
@@ -50,55 +62,31 @@ public class ServerInteract extends HttpServlet
        
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var serverCommand = request.getParameter("command");
-		var serverID = Utils.fromString(Integer.class, serverIDStr);
-		if(serverIDStr == null || serverCommand == null || serverID == null)
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var serverCommand = request.getParameter(ApiSettings.COMMAND_PARAMETER);
+		if(serverID == null || serverCommand == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
-		var serverType = StartUpApplication.serverTypes.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		if(serverAddress == null)
 		{
 			response.setStatus(400);
 			return;
 		}
+		var url = nodeapi.ServerInteract.getEndpoint(serverID, serverCommand);
+		url.setHost(serverAddress);
 		
-		if(serverCommand.equals("output"))
+		for(var entry : request.getParameterMap().entrySet())
 		{
-			response.getWriter().print(serverAddress + StartUpApplication.NODE_OUTPUT_URL);
-			return;
+			var name = entry.getKey();
+			var value = entry.getValue()[0];
+			url.addQuery(name, value);
 		}
 		
-		var commands = CommandHandler.getCommand(serverType, serverCommand);
-		if(commands == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		var extraCommands = new String[commands.length - 1];
-		for(var i = 1; i < commands.length; i++)
-		{
-			var command = request.getParameter(commands[i]);
-			if(command == null)
-			{
-				response.setStatus(400);
-				return;
-			}
-			extraCommands[i-1] = command;
-		}
-		
-		var url = String.format("http://%s%s", serverAddress, api.ServerInteract.getEndpoint(serverID, serverCommand));
-		for(var i = 0; i < extraCommands.length; i++)
-		{
-			url += "&" + commands[i+1] + "=" + extraCommands[i];
-		}
-		
-		var httpRequest = HttpRequest.newBuilder(URI.create(Utils.encodeURL(url))).build();
+		var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 
 		try
 		{

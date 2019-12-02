@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import api.minecraft.MinecraftServer;
+import api.minecraft.MinecraftServerCommandHandler;
 import attributes.Attributes;
 import backend.api.GameServerTriggerDelete;
 import backend.api.GameServerTriggerEdit;
@@ -21,6 +22,7 @@ import html.Element;
 import model.Table;
 import models.TriggersTable;
 import server.GameServer;
+import server.GameServerCommandHandler;
 import server.TriggerHandler;
 import server.TriggerHandlerRecurring;
 import server.TriggerHandlerTime;
@@ -145,27 +147,19 @@ public class GameServerConsoleTemplate extends Template
 						.addClasses("list-group-item", "bg-dark")
 						.addElements
 						(
-							new Anchor("View Files", Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName)))
+							new Anchor("View Files", Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName).getURL()))
 								.addClasses("btn", "btn-info")
 						),
 					new LI()
 						.addClasses("list-group-item", "bg-dark")
 						.addElements
 						(
-							new Anchor("View Settings", Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID)))
+							new Anchor("View Settings", Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID).getURL()))
 								.addClasses("btn", "btn-warning")
 						)
 				)
 		);
 		
-		var serverIDVar = new JavascriptVariable<Integer>("serverID", serverID);
-		var socketAddress = JavaScriptUtils.createSocketAddress("socketAddress", serverAddress, serverID);
-		var serverCommandRequest = JavaScriptUtils.createInteractAddress("serverCommandRequest", serverID, "serverCommand&serverCommand=");
-		var serverStartRequest = JavaScriptUtils.createInteractAddress("serverStartRequest", serverID, "start");
-		var serverStopRequest = JavaScriptUtils.createInteractAddress("serverStopRequest", serverID, "stop");
-		var serverLastRequest = JavaScriptUtils.createInteractAddress("serverLastRequest", serverID, "last");
-		var triggerTypes = JavaScriptUtils.triggerTypes("triggerTypes");
-		var actionTypes = JavaScriptUtils.actionTypes("actionTypes");
 		
 		var triggerOldValues = new JavascriptMap<Integer, JavascriptMap<String, String>>("triggerOldValues");
 		
@@ -196,6 +190,16 @@ public class GameServerConsoleTemplate extends Template
 			triggerOldValues.set(triggerID, triggerMap);
 		}
 		
+		var serverIDVar = new JavascriptVariable<Integer>("serverID", serverID);
+		var socketAddress = JavaScriptUtils.createSocketAddress("socketAddress", serverAddress, serverID);
+		var serverCommandRequest = JavaScriptUtils.createInteractAddress("serverCommandRequest", serverID, MinecraftServerCommandHandler.SERVER_COMMAND_COMMAND);
+		var serverStartRequest = JavaScriptUtils.createInteractAddress("serverStartRequest", serverID, GameServerCommandHandler.START_COMMAND);
+		var serverStopRequest = JavaScriptUtils.createInteractAddress("serverStopRequest", serverID, GameServerCommandHandler.STOP_COMMAND);
+		var serverLastRequest = JavaScriptUtils.createInteractAddress("serverLastRequest", serverID, MinecraftServerCommandHandler.LAST_COMMAND);
+		var serverCommandEnd = new JavascriptVariable<String>("serverCommandEnd", "&" + MinecraftServerCommandHandler.SERVER_COMMAND_COMMAND + "=");
+		var triggerTypes = JavaScriptUtils.triggerTypes("triggerTypes");
+		var actionTypes = JavaScriptUtils.actionTypes("actionTypes");
+		
 		mainTemplate.getBody().addEndElement(new Script(serverIDVar.toString()));
 		mainTemplate.getBody().addEndElement(new Script(socketAddress.toString()));
 		mainTemplate.getBody().addEndElement(new Script(serverStartRequest.toString()));
@@ -205,6 +209,7 @@ public class GameServerConsoleTemplate extends Template
 		mainTemplate.getBody().addEndElement(new Script(triggerTypes.toString()));
 		mainTemplate.getBody().addEndElement(new Script(actionTypes.toString()));
 		mainTemplate.getBody().addEndElement(new Script(triggerOldValues.toString()));
+		mainTemplate.getBody().addEndElement(new Script(serverCommandEnd.toString()));
 		mainTemplate.getBody().addScript("js/server.js");
 		setBody(mainTemplate.getBody());
 		setHead(mainTemplate.getHead());
@@ -314,7 +319,7 @@ public class GameServerConsoleTemplate extends Template
 						return new Form
 						(
 							Attributes.Method.makeAttribute("POST"),
-							Attributes.Action.makeAttribute(GameServerTriggerEdit.getEndpoint(serverID, id)),
+							Attributes.Action.makeAttribute(GameServerTriggerEdit.postEndpoint(serverID, id).getURL()),
 							Attributes.ID.makeAttribute(filterType + id)
 						);
 					}).toArray(Element[]::new)
@@ -324,7 +329,7 @@ public class GameServerConsoleTemplate extends Template
 					new Form
 						(
 							Attributes.Method.makeAttribute("POST"),
-							Attributes.Action.makeAttribute(GameServerTriggerEdit.getEndpoint(serverID, -1)),
+							Attributes.Action.makeAttribute(GameServerTriggerEdit.postEndpoint(serverID, -1).getURL()),
 							Attributes.ID.makeAttribute("newTrigger")
 						)
 				)

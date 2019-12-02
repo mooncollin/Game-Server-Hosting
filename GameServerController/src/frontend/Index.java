@@ -16,13 +16,25 @@ import backend.main.StartUpApplication;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
+import utils.ParameterURL;
 
 @WebServlet("/Home")
 public class Index extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/Home";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/Home";
+	
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint()
+	{
+		var url = new ParameterURL(PARAMETER_URL);
+		return url;
+	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -44,10 +56,5 @@ public class Index extends HttpServlet
 		var template = new frontend.templates.IndexTemplate(serverNames);
 		response.setContentType("text/html");
 		response.getWriter().print(template);
-	}
-	
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		doGet(request, response);
 	}
 }

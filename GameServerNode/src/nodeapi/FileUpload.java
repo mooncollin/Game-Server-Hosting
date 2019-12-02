@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,7 +16,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.NodeProperties;
+import nodemain.NodeProperties;
+import utils.ParameterURL;
 
 @WebServlet("/FileUpload")
 @MultipartConfig
@@ -24,17 +25,22 @@ public class FileUpload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/FileUpload";
+	public static final String URL = "/GameServerNode/FileUpload";
 	
-	public static String getEndpoint(String directory, boolean isFolder)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL postEndpoint(String directory, boolean isFolder)
 	{
-		var folderString = "";
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
 		if(isFolder)
 		{
-			folderString = "&folder=true";
+			url.addQuery(ApiSettings.FOLDER_PARAMETER, "true");
 		}
-		
-		return String.format("%s?directory=%s%s", URL, directory, folderString);
+		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
@@ -44,8 +50,8 @@ public class FileUpload extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var directory = request.getParameter("directory");
-		var folder = request.getParameter("folder");
+		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
+		var folder = request.getParameter(ApiSettings.FOLDER_PARAMETER);
 		
 		if(directory == null)
 		{

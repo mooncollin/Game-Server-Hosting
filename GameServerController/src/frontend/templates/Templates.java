@@ -74,7 +74,7 @@ public class Templates
 			.addClasses("p-3", "flex-fill")
 			.addElements
 			(
-				new Anchor(Attributes.Href.makeAttribute(Index.URL), Attributes.ID.makeAttribute("homeLink"))
+				new Anchor(Attributes.Href.makeAttribute(Index.getEndpoint().getURL()), Attributes.ID.makeAttribute("homeLink"))
 					.addElements
 					(
 						new Div(Attributes.ID.makeAttribute("sidebar-header"))
@@ -88,14 +88,14 @@ public class Templates
 					.addClasses("list-group", "list-group-flush", "mt-5", "text-center")
 					.addElements
 					(
-						new Anchor(Attributes.Href.makeAttribute(Index.URL))
+						new Anchor(Attributes.Href.makeAttribute(Index.getEndpoint().getURL()))
 							.addClasses("list-group-item", "bg-secondary", "text-light")
 							.addElements
 							(
 								Templates.createIcon("server").addClasses("mr-2"),
 								new Span("Servers")
 							),
-						new Anchor(Attributes.Href.makeAttribute(NodesInfo.URL))
+						new Anchor(Attributes.Href.makeAttribute(NodesInfo.getEndpoint().getURL()))
 							.addClasses("list-group-item", "bg-secondary", "text-light", "mt-3")
 							.addElements
 							(
@@ -110,7 +110,7 @@ public class Templates
 	{
 		return new Anchor
 		(
-			Attributes.Href.makeAttribute(GameServerConsole.getEndpoint(serverID)),
+			Attributes.Href.makeAttribute(GameServerConsole.getEndpoint(serverID).getURL()),
 			Attributes.makeAttribute("data-toggle", "tooltip"),
 			Attributes.makeAttribute("data-placement", "bottom"),
 			Attributes.Title.makeAttribute("Open server console")
@@ -126,7 +126,7 @@ public class Templates
 	{
 		return new Anchor
 		(
-			Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName)),
+			Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName).getURL()),
 			Attributes.makeAttribute("data-toggle", "tooltip"),
 			Attributes.makeAttribute("data-placement", "bottom"),
 			Attributes.Title.makeAttribute("View server files")
@@ -142,7 +142,7 @@ public class Templates
 	{
 		return new Anchor
 		(
-			Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID)),
+			Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID).getURL()),
 			Attributes.makeAttribute("data-toggle", "tooltip"),
 			Attributes.makeAttribute("data-placement", "bottom"),
 			Attributes.Title.makeAttribute("Edit server settings")
@@ -162,7 +162,7 @@ public class Templates
 			Attributes.makeAttribute("data-toggle", "tooltip"),
 			Attributes.makeAttribute("data-placement", "bottom"),
 			Attributes.Title.makeAttribute("Delete Server"),
-			Attributes.makeAttribute("link", GameServerDelete.getEndpoint(serverID)),
+			Attributes.makeAttribute("link", GameServerDelete.getEndpoint(serverID).getURL()),
 			Attributes.OnClick.makeAttribute(String.format("deleteServer(this, '%s')", serverName))
 		)
 		.addClasses("rounded-circle", "bg-light", "p-2")

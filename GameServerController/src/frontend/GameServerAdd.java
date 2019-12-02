@@ -27,8 +27,11 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 import models.NodeTable;
+import nodeapi.ApiSettings;
 import server.GameServer;
 import utils.MultipartInputStream;
+import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/GameServerAdd")
 @MultipartConfig
@@ -36,7 +39,29 @@ public class GameServerAdd extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameServerAdd";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerAdd";
+	
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint()
+	{
+		var url = new ParameterURL(PARAMETER_URL);
+		return url;
+	}
+	
+	public static ParameterURL postEndpoint(String serverName, String execName, String nodeName, String type)
+	{
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_NAME_PARAMETER, serverName);
+		url.addQuery(ApiSettings.EXECUTABLE_NAME_PARAMETER, execName);
+		url.addQuery(ApiSettings.NODE_NAME_PARAMETER, nodeName);
+		url.addQuery(ApiSettings.SERVER_TYPE_PARAMETER, type);
+		
+		return url;
+	}
 	
 	private static final Pattern SERVER_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_  ]+");
 	
@@ -82,10 +107,10 @@ public class GameServerAdd extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = request.getParameter("name");
-		var executableName = request.getParameter("execName");
-		var nodeName = request.getParameter("node");
-		var type = request.getParameter("type");
+		var serverName = request.getParameter(ApiSettings.SERVER_NAME_PARAMETER);
+		var executableName = request.getParameter(ApiSettings.EXECUTABLE_NAME_PARAMETER);
+		var nodeName = request.getParameter(ApiSettings.NODE_NAME_PARAMETER);
+		var type = request.getParameter(ApiSettings.SERVER_TYPE_PARAMETER);
 		
 		if(serverName == null || executableName == null || nodeName == null || type == null)
 		{
@@ -99,7 +124,7 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.nodeAddresses.get(nodeName);
+		var serverAddress = StartUpApplication.nodeIPAddresses.get(nodeName);
 		
 		if(serverAddress == null)
 		{
@@ -126,23 +151,13 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		var url = String.format("http://%s%s", serverAddress, api.ServerAdd.getEndpoint(serverName, executableName, type));
+		var url = nodeapi.ServerAdd.postEndpoint(serverName, executableName, type);
+		url.setHost(serverAddress);
 		
 		if(type.equals("minecraft"))
 		{
-			var ramStr = request.getParameter("ramAmount");
-			if(ramStr == null)
-			{
-				doGet(request, response);
-				return;
-			}
-			
-			int ram;
-			try
-			{
-				ram = Integer.parseInt(ramStr);
-			}
-			catch(NumberFormatException e)
+			var ram = Utils.fromString(Long.class, request.getParameter("ramAmount"));
+			if(ram == null)
 			{
 				doGet(request, response);
 				return;
@@ -156,7 +171,8 @@ public class GameServerAdd extends HttpServlet
 			
 			var restart = request.getParameter("restartsUnexpected") == null ? "no" : "yes";
 			
-			url += String.format("&ram=%s&restart=%s", ramStr, restart);
+			url.addQuery("ram", ram);
+			url.addQuery("restart", restart);
 		}
 		
 		var fileParts = request.getParts()
@@ -166,7 +182,7 @@ public class GameServerAdd extends HttpServlet
 		
 		try(var multiInputStream = new MultipartInputStream(fileParts))
 		{
-			var httpRequest = HttpRequest.newBuilder(URI.create(url))
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
 					.header("Content-type", "multipart/form-data; boundary=" + multiInputStream.getBoundary())
 					.POST(BodyPublishers.ofInputStream(() -> multiInputStream))
 					.build();
@@ -178,7 +194,7 @@ public class GameServerAdd extends HttpServlet
 				{
 					var id = Integer.parseInt(httpResponse.body());
 					StartUpApplication.serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(type));
-					StartUpApplication.serverAddresses.put(id, serverAddress);
+					StartUpApplication.serverIPAddresses.put(id, serverAddress);
 					response.sendRedirect(Index.URL);
 					return;
 				}

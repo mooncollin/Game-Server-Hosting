@@ -25,7 +25,9 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 import models.TriggersTable;
+import nodeapi.ApiSettings;
 import server.TriggerHandler;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/GameServerTriggerEdit")
@@ -35,28 +37,39 @@ public class GameServerTriggerEdit extends HttpServlet
 	
 	public static final Pattern RECURRING_PATTERN = Pattern.compile("(?<hour>[01]?[0-9]|2[0-3]):(?<minute>[0-5][0-9]):(?<second>[0-5][0-9])");
 	
-	public static final String URL = "/GameServerController/GameServerTriggerEdit";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerTriggerEdit";
 	
-	public static String getEndpoint(int serverID, int triggerID)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL postEndpoint(int serverID, int triggerID)
 	{
-		return String.format("%s?id=%d&triggerID=%d", URL, serverID, triggerID);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		url.addQuery(ApiSettings.TRIGGER_ID_PARAMETER, triggerID);
+		return url;
 	}
 	
-	public static String getEndpoint(int serverID, int triggerID, String value, String command, String action, String type)
+	public static ParameterURL postEndpoint(int serverID, int triggerID, String value, String command, String action, String type)
 	{
-		
-		return String.format("%s?id=%d&triggerID=%d&value=%s&type=%s&command=%s&action=%s", 
-			URL, serverID, triggerID, value, type, command, action);
+		var url = postEndpoint(serverID, triggerID);
+		url.addQuery(ApiSettings.TRIGGER_VALUE_PARAMETER, value);
+		url.addQuery(ApiSettings.TRIGGER_TYPE_PARAMETER, type);
+		url.addQuery(ApiSettings.TRIGGER_COMMAND_PARAMETER, command);
+		url.addQuery(ApiSettings.TRIGGER_ACTION_PARAMETER, action);
+		return url;
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter("id"));
-		var triggerID = Utils.fromString(Integer.class, request.getParameter("triggerID"));
-		var value = request.getParameter("value");
-		var command = Objects.requireNonNullElse(request.getParameter("command"), "");
-		var action = Objects.requireNonNullElse(request.getParameter("action"), "");
-		var type = request.getParameter("type");
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var triggerID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.TRIGGER_ID_PARAMETER));
+		var value = request.getParameter(ApiSettings.TRIGGER_VALUE_PARAMETER);
+		var command = Objects.requireNonNullElse(request.getParameter(ApiSettings.TRIGGER_COMMAND_PARAMETER), "");
+		var action = Objects.requireNonNullElse(request.getParameter(ApiSettings.TRIGGER_ACTION_PARAMETER), "");
+		var type = request.getParameter(ApiSettings.TRIGGER_TYPE_PARAMETER);
 		
 		if(serverID == null || value == null || triggerID == null || (triggerID == -1 && type == null))
 		{
@@ -66,7 +79,7 @@ public class GameServerTriggerEdit extends HttpServlet
 		
 		var redirectUrl = GameServerConsole.getEndpoint(serverID);
 		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		
 		if(serverAddress == null)
 		{
@@ -120,7 +133,7 @@ public class GameServerTriggerEdit extends HttpServlet
 			var matcher = RECURRING_PATTERN.matcher(value);
 			if(!matcher.matches())
 			{
-				response.sendRedirect(redirectUrl);
+				response.sendRedirect(redirectUrl.getURL());
 				return;
 			}
 			
@@ -130,7 +143,7 @@ public class GameServerTriggerEdit extends HttpServlet
 			
 			if(hour == 0 && minute == 0 && second == 0)
 			{
-				response.sendRedirect(redirectUrl);
+				response.sendRedirect(redirectUrl.getURL());
 				return;
 			}
 			
@@ -146,7 +159,7 @@ public class GameServerTriggerEdit extends HttpServlet
 			}
 			catch(DateTimeParseException e)
 			{
-				response.sendRedirect(redirectUrl);
+				response.sendRedirect(redirectUrl.getURL());
 				return;
 			}
 		}
@@ -160,16 +173,17 @@ public class GameServerTriggerEdit extends HttpServlet
 			trigger.commit(StartUpApplication.database);
 		} catch (SQLException e)
 		{
-			response.sendRedirect(redirectUrl);
+			response.sendRedirect(redirectUrl.getURL());
 			return;
 		}
 		
 		
-		var url = String.format("http://%s%s", serverAddress, api.TriggerEdit.getEndpoint(trigger.getColumnValue(TriggersTable.ID)));
+		var url = nodeapi.TriggerEdit.getEndpoint(trigger.getColumnValue(TriggersTable.ID));
+		url.setHost(serverAddress);
 		
 		try
 		{
-			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)
@@ -178,6 +192,6 @@ public class GameServerTriggerEdit extends HttpServlet
 			return;
 		}
 		
-		response.sendRedirect(redirectUrl);
+		response.sendRedirect(redirectUrl.getURL());
 	}
 }

@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -9,23 +9,31 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.NodeProperties;
+import nodemain.NodeProperties;
+import utils.ParameterURL;
 
 @WebServlet("/ServerFiles")
 public class ServerFiles extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/ServerFiles";
+	public static final String URL = "/GameServerNode/ServerFiles";
 	
-	public static String getEndpoint(String directory)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL getEndpoint(String directory)
 	{
-		return String.format("%s?directory=%s", URL, directory);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var directory = request.getParameter("directory");
+		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
 		
 		if(directory == null || directory.isEmpty())
 		{

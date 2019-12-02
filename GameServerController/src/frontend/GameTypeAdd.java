@@ -9,15 +9,28 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import backend.main.StartUpApplication;
 import frontend.templates.Templates;
 import util.Template;
+import utils.ParameterURL;
 
 @WebServlet("/GameTypeAdd")
 public class GameTypeAdd extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameTypeAdd";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameTypeAdd";
+	
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint()
+	{
+		var url = new ParameterURL(PARAMETER_URL);
+		return url;
+	}
 	
 	private static final Pattern SERVER_TYPE_PATTERN = Pattern.compile("[A-Za-z0-9_]+");
 	

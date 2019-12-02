@@ -17,6 +17,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
 import frontend.GameServerFiles;
+import nodeapi.ApiSettings;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/GameServerFileDeleteMultiple")
@@ -24,36 +26,34 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameServerFileDeleteMultiple";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerFileDeleteMultiple";
 	
-	public static String getEndpoint(int serverID, String directory, String files)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int serverID, String directory, String files)
 	{
-		return String.format("%s?id=%d&directory=%s&files=%s", URL, serverID, directory, files);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		url.addQuery(ApiSettings.FILES_PARAMETER, files);
+		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var directory = request.getParameter("directory");
-		var files = request.getParameter("files");
-		if(serverIDStr == null || directory == null || files == null)
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
+		var files = request.getParameter(ApiSettings.FILES_PARAMETER);
+		if(serverID == null || directory == null || files == null)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		if(serverAddress == null || directory.isEmpty() || files.isEmpty())
 		{
 			response.setStatus(404);
@@ -69,14 +69,15 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 			}
 		}
 		
-		var redirectURL = Utils.encodeURL(GameServerFiles.getEndpoint(serverID, directory));
+		var redirectURL = GameServerFiles.getEndpoint(serverID, directory);
 		
 		var futures = new LinkedList<CompletableFuture<HttpResponse<Void>>>();
 		
 		for(var file : files.split(","))
 		{
-			var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.FileDelete.getEndpoint(String.format("%s,%s", directory, file))));
-			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var url = nodeapi.FileDelete.getEndpoint(String.format("%s,%s", directory, file));
+			url.setHost(serverAddress);
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			futures.add(ServerInteract.client.sendAsync(httpRequest, BodyHandlers.discarding()));
 		}
 		
@@ -89,6 +90,6 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
 		}
 		
-		response.sendRedirect(redirectURL);
+		response.sendRedirect(redirectURL.getURL());
 	}
 }

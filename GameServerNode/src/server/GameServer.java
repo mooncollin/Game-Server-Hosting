@@ -16,11 +16,11 @@ import java.util.logging.Level;
 import javax.websocket.Session;
 
 import api.minecraft.MinecraftServer;
-import main.StartUpApplication;
 import model.Database;
 import models.GameServerTable;
 import models.NodeTable;
 import models.TriggersTable;
+import nodemain.StartUpApplication;
 
 import java.util.Collections;
 

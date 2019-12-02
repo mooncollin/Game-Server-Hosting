@@ -20,13 +20,12 @@ public class JavaScriptUtils
 	{
 		var nodeUsageAddresses = new JavascriptArray<String>("nodeUsageAddresses");
 		
-		nodeUsageAddresses.addElements(
-			StartUpApplication.nodeAddresses
-							  .values()
-							  .stream()
-							  .map(address -> String.format("ws://%s/NodeUsage", address))
-							  .toArray(String[]::new)
-		);
+		for(var ipAddress : StartUpApplication.nodeIPAddresses.values())
+		{
+			var url = nodeapi.NodeUsage.getEndpoint();
+			url.setHost(ipAddress);
+			nodeUsageAddresses.add(url.getURL());
+		}
 		
 		return nodeUsageAddresses.toString();
 	}
@@ -35,9 +34,9 @@ public class JavaScriptUtils
 	{
 		var startServerAddressMap = new JavascriptMap<Integer, String>("startServerAddresses");
 		
-		for(var serverID : StartUpApplication.serverAddresses.keySet())
+		for(var serverID : StartUpApplication.serverIPAddresses.keySet())
 		{
-			startServerAddressMap.set(serverID, ServerInteract.getEndpoint(serverID, "start"));
+			startServerAddressMap.set(serverID, ServerInteract.getEndpoint(serverID, "start").getURL());
 		}
 		
 		return startServerAddressMap;
@@ -47,9 +46,9 @@ public class JavaScriptUtils
 	{
 		var stopServerAddressMap = new JavascriptMap<Integer, String>("stopServerAddresses");
 		
-		for(var serverID : StartUpApplication.serverAddresses.keySet())
+		for(var serverID : StartUpApplication.serverIPAddresses.keySet())
 		{
-			stopServerAddressMap.set(serverID, ServerInteract.getEndpoint(serverID, "stop"));
+			stopServerAddressMap.set(serverID, ServerInteract.getEndpoint(serverID, "stop").getURL());
 		}
 		
 		return stopServerAddressMap;
@@ -59,12 +58,14 @@ public class JavaScriptUtils
 	{
 		var nodeOutputAddresses = new JavascriptMap<Integer, String>("nodeOutputAddresses");
 		
-		for(var entry : StartUpApplication.serverAddresses.entrySet())
+		for(var entry : StartUpApplication.serverIPAddresses.entrySet())
 		{
 			var serverID = entry.getKey();
 			var nodeAddress = entry.getValue();
+			var url = nodeapi.Output.getEndpoint(serverID, "running");
+			url.setHost(nodeAddress);
 			
-			nodeOutputAddresses.set(serverID, String.format("ws://%s%s", nodeAddress, api.Output.getEndpoint(serverID, "running")));
+			nodeOutputAddresses.set(serverID, url.getURL());
 		}
 		
 		return nodeOutputAddresses;
@@ -72,12 +73,14 @@ public class JavaScriptUtils
 	
 	public static JavascriptVariable<String> createSocketAddress(String name, String serverAddress, int serverID)
 	{
-		return new JavascriptVariable<String>(name, String.format("%s%s%s", api.Output.PROTOCOL, serverAddress, api.Output.getEndpoint(serverID)));
+		var url = nodeapi.Output.getEndpoint(serverID);
+		url.setHost(serverAddress);
+		return new JavascriptVariable<String>(name, url.getURL());
 	}
 	
 	public static JavascriptVariable<String> createInteractAddress(String name, int serverID, String command)
 	{
-		return new JavascriptVariable<String>(name, ServerInteract.getEndpoint(serverID, command));
+		return new JavascriptVariable<String>(name, ServerInteract.getEndpoint(serverID, command).getURL());
 	}
 	
 	public static JavascriptArray<String> triggerTypes(String name)

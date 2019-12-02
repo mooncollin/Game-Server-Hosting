@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.util.Map;
@@ -9,18 +9,26 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.NodeProperties;
+import nodemain.NodeProperties;
+import utils.ParameterURL;
 
 @WebServlet("/NodeInfo")
 public class NodeInfo extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/NodeInfo";
+	public static final String URL = "/GameServerNode/NodeInfo";
 	
-	public static String getEndpoint(String property)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL getEndpoint(String property)
 	{
-		return String.format("%s?property=%s", URL, property);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.PROPERTY_PARAMETER, property);
+		return url;
 	}
 	
 	public static final Map<String, String> PROPERTY_COMMANDS = Map.ofEntries
@@ -30,7 +38,7 @@ public class NodeInfo extends HttpServlet
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var property = request.getParameter("property");
+		var property = request.getParameter(ApiSettings.PROPERTY_PARAMETER);
 		
 		if(property == null)
 		{

@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 
@@ -8,7 +8,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.StartUpApplication;
+import nodemain.StartUpApplication;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/ServerInteract")
@@ -16,20 +17,32 @@ public class ServerInteract extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/ServerInteract";
+	public static final String URL = "/GameServerNode/ServerInteract";
 	
-	public static String getEndpoint(int id, String command)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL getEndpoint(int id, String command)
 	{
-		return String.format("%s?id=%d&command=%s", URL, id, command);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		url.addQuery(ApiSettings.COMMAND_PARAMETER, command);
+		return url;
+	}
+	
+	public static ParameterURL postEndpoint(int id, String command)
+	{
+		return getEndpoint(id, command);
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var command = request.getParameter("command");
-		var serverID = Utils.fromString(Integer.class, serverIDStr);
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var command = request.getParameter(ApiSettings.COMMAND_PARAMETER);
 		
-		if(serverIDStr == null || command == null || serverID == null)
+		if(serverID == null || command == null)
 		{
 			response.setStatus(400);
 			return;
@@ -51,11 +64,10 @@ public class ServerInteract extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var command = request.getParameter("command");
-		var serverID = Utils.fromString(Integer.class, serverIDStr);
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var command = request.getParameter(ApiSettings.COMMAND_PARAMETER);
 		
-		if(serverIDStr == null || command == null || serverID == null)
+		if(serverID == null || command == null)
 		{
 			response.setStatus(400);
 			return;

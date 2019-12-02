@@ -6,13 +6,13 @@ import java.sql.SQLException;
 import java.util.Objects;
 
 import api.minecraft.MinecraftServer;
-import main.NodeProperties;
-import main.StartUpApplication;
 import model.Query;
 import model.Table;
 import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
+import nodemain.NodeProperties;
+import nodemain.StartUpApplication;
 
 public class GameServerFactory
 {

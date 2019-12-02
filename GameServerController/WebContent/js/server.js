@@ -17,7 +17,7 @@ function stopServer() {
 
 function command(event) {
 	if(event.key === "Enter" && commandBox.value != "" && !stopButton.disabled) {
-		fetch(serverCommandRequest + commandBox.value);
+		fetch(serverCommandRequest + serverCommandEnd + commandBox.value);
 		previousCommands.splice(previousCommands.length - 1, 0, commandBox.value);
 		if(previousCommands.length >= 50)
 		{

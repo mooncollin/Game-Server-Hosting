@@ -1,4 +1,4 @@
-package main;
+package nodemain;
 
 import java.lang.management.ManagementFactory;
 import java.sql.SQLException;
@@ -17,8 +17,6 @@ import javax.servlet.annotation.WebListener;
 
 import com.sun.management.OperatingSystemMXBean;
 
-import api.NodeUsage;
-import api.Output;
 import api.minecraft.MinecraftServer;
 import model.Database;
 import model.Filter.FilterType;
@@ -27,6 +25,8 @@ import model.Table;
 import models.GameServerTable;
 import models.NodeTable;
 import models.TriggersTable;
+import nodeapi.NodeUsage;
+import nodeapi.Output;
 import server.GameServer;
 import server.GameServerFactory;
 import server.TriggerHandlerFactory;

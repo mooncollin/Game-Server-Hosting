@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -10,10 +10,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import main.StartUpApplication;
 import model.Query;
 import model.Table;
 import models.TriggersTable;
+import nodemain.StartUpApplication;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/TriggerEdit")
@@ -21,16 +22,23 @@ public class TriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/TriggerEdit";
+	public static final String URL = "/GameServerNode/TriggerEdit";
 	
-	public static String getEndpoint(int triggerID)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL getEndpoint(int triggerID)
 	{
-		return String.format("%s?id=%d", URL, triggerID);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.TRIGGER_ID_PARAMETER, triggerID);
+		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var id = Utils.fromString(Integer.class, request.getParameter("id"));
+		var id = Utils.fromString(Integer.class, request.getParameter(ApiSettings.TRIGGER_ID_PARAMETER));
 		
 		if(id == null)
 		{

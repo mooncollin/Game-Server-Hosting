@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 import backend.main.StartUpApplication;
 import frontend.GameServerConsole;
 import frontend.Index;
+import nodeapi.ApiSettings;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/GameServerTriggerDelete")
@@ -21,19 +23,25 @@ public class GameServerTriggerDelete extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/GameServerTriggerDelete";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerTriggerDelete";
 	
-	public static String getEndpoint(int serverID, int triggerID)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int serverID, int triggerID)
 	{
-		return String.format("%s?id=%d&triggerID=%d", URL, serverID, triggerID);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		url.addQuery(ApiSettings.TRIGGER_ID_PARAMETER, triggerID);
+		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var idStr = request.getParameter("triggerID");
-		var serverID = Utils.fromString(Integer.class, serverIDStr);
-		var triggerID = Utils.fromString(Integer.class, idStr);
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var triggerID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.TRIGGER_ID_PARAMETER));
 		
 		if(serverID == null || triggerID == null)
 		{
@@ -41,20 +49,21 @@ public class GameServerTriggerDelete extends HttpServlet
 			return;
 		}
 		
-		var redirectUrl = Utils.encodeURL(GameServerConsole.getEndpoint(serverID));
+		var redirectUrl = GameServerConsole.getEndpoint(serverID);
 		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		if(serverAddress == null)
 		{
 			response.sendRedirect(Index.URL);
 			return;
 		}
 		
-		var url = Utils.encodeURL(String.format("http://%s%s", serverAddress, api.TriggerDelete.getEndpoint(triggerID)));
+		var url = nodeapi.TriggerDelete.getEndpoint(triggerID);
+		url.setHost(serverAddress);
 		
 		try
 		{
-			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)
@@ -63,6 +72,6 @@ public class GameServerTriggerDelete extends HttpServlet
 			return;
 		}
 		
-		response.sendRedirect(redirectUrl);
+		response.sendRedirect(redirectUrl.getURL());
 	}
 }

@@ -19,10 +19,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-import main.NodeProperties;
-import main.StartUpApplication;
 import model.Database;
 import models.MinecraftServerTable;
+import nodemain.NodeProperties;
+import nodemain.StartUpApplication;
 import server.CommandHandler;
 import server.GameServer;
 import server.TriggerHandlerCondition;
@@ -37,6 +37,11 @@ public class MinecraftServer extends GameServer
 	public static final String SERVER_PROPERTIES_FILE_NAME = "server.properties";
 	public static final String MINIMUM_HEAP_ARGUMENT = "-Xms%dm";
 	public static final String MAXIMUM_HEAP_ARGUMENT = "-Xmx%dm";
+	
+	public static final String RAM_AMOUNT_PARAMETER = "ramAmount";
+	public static final String RESTART_PARAMETER = "restartsUnexpected";
+	public static final String ARGUMENTS_PARAMETER = "arguments";
+	public static final String SERVER_COMMAND_PARAMETER = "serverCommand";
 	
 	public static final Map<String, Object> MINECRAFT_PROPERTIES = Map.ofEntries
 	(
@@ -313,7 +318,7 @@ public class MinecraftServer extends GameServer
 		command.add(NodeProperties.JAVA8);
 		command.add(String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize));
 		command.add(String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE));
-		command.addAll(Arrays.asList(arguments));
+		command.addAll(Arrays.asList(arguments.split(" ")));
 		command.add("-jar");
 		command.add(String.format("\"%s\"", getExecutableName().getAbsolutePath()));
 		command.add("nogui");

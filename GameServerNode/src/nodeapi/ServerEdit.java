@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -11,42 +11,41 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import api.minecraft.MinecraftServer;
-import main.NodeProperties;
-import main.StartUpApplication;
 import model.Query;
 import model.Table;
 import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
+import nodemain.NodeProperties;
+import nodemain.StartUpApplication;
+import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/ServerEdit")
 public class ServerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/ServerEdit";
+	public static final String URL = "/GameServerNode/ServerEdit";
 	
-	public static String getEndpoint(int id, String execName)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL postEndpoint(int id, String execName)
 	{
-		return String.format("%s?id=%d&execName=%s", URL, id, execName);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		url.addQuery(ApiSettings.EXECUTABLE_NAME_PARAMETER, execName);
+		return url;
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverIDStr = request.getParameter("id");
-		var execName = request.getParameter("execName");
-		if(serverIDStr == null || execName == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var execName = request.getParameter(ApiSettings.EXECUTABLE_NAME_PARAMETER);
+		if(serverID == null || execName == null)
 		{
 			response.setStatus(400);
 			return;
@@ -83,24 +82,14 @@ public class ServerEdit extends HttpServlet
 			
 			if(foundServer.getClass().equals(MinecraftServer.class))
 			{
-				var ramAmountStr = request.getParameter("ramAmount");
-				int ramAmount;
+				var ramAmount = Utils.fromString(Integer.class, request.getParameter("ramAmount"));
 				
-				if(ramAmountStr == null)
+				if(ramAmount == null)
 				{
 					response.setStatus(400);
 					return;
 				}
 				
-				try
-				{
-					ramAmount = Integer.valueOf(ramAmountStr);
-				}
-				catch(NumberFormatException e)
-				{
-					response.setStatus(400);
-					return;
-				}
 				
 				if(ramAmount < MinecraftServer.MINIMUM_HEAP_SIZE || ramAmount % 1024 != 0)
 				{

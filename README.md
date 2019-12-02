@@ -55,6 +55,13 @@ Network factors such as firewalls, port forwarding, and static IPs are not manag
 
 # Changelog
 
+## Version 1.2.1
+Bug Fixes and URL Endpoint changes
+
+### Back-end Features:
+* Fixed a bug related to servers with spaces in their names.
+* Changed how URL endpoint are generated for each api endpoint. All parameter variables are now encoded correctly.
+
 ## Version 1.2
 Lots more bug fixes and more features!
 

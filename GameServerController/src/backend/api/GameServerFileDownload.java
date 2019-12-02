@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
+import nodeapi.ApiSettings;
+import utils.ParameterURL;
 import utils.Utils;
 
 @WebServlet("/GameServerFile")
@@ -19,35 +21,37 @@ public class GameServerFileDownload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 
-	public static final String URL = "/GameServerController/GameServerFile";
+	public static final String URL = StartUpApplication.SERVLET_PATH +  "/GameServerFile";
 	
-	public static String getEndpoint(int serverID, String directory)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint(int serverID, String directory)
 	{
-		return String.format("%s?id=%d&directory=%s", URL, serverID, directory);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		return url;
+	}
+	
+	public static ParameterURL postEndpoint(int serverID, String directory)
+	{
+		return getEndpoint(serverID, directory);
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		String serverIDStr = request.getParameter("id");
-		String directory = request.getParameter("directory");
-		if(serverIDStr == null || directory == null || directory.isEmpty())
+		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
+		if(serverID == null || directory == null || directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		int serverID;
-		try
-		{
-			serverID = Integer.parseInt(serverIDStr);
-		}
-		catch(NumberFormatException e)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		var serverAddress = StartUpApplication.serverAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
 		if(serverAddress == null)
 		{
 			response.setStatus(404);
@@ -75,8 +79,9 @@ public class GameServerFileDownload extends HttpServlet
 		
 		try
 		{
-			var url = String.format("http://%s%s", serverAddress, Utils.encodeURL(api.FileDownload.getEndpoint(directory)));
-			var httpRequest = HttpRequest.newBuilder(URI.create(url)).build();
+			var url = nodeapi.FileDownload.getEndpoint(directory);
+			url.setHost(serverAddress);
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofInputStream());
 			if(httpResponse.statusCode() != 200)
 			{

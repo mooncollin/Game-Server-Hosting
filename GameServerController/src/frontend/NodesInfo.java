@@ -19,13 +19,25 @@ import frontend.templates.NodesInfoTemplate;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
+import utils.ParameterURL;
 
 @WebServlet("/NodesInfo")
 public class NodesInfo extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/GameServerController/NodesInfo";
+	public static final String URL = StartUpApplication.SERVLET_PATH + "/NodesInfo";
+	
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		null, null, null, URL
+	);
+	
+	public static ParameterURL getEndpoint()
+	{
+		var url = new ParameterURL(PARAMETER_URL);
+		return url;
+	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -59,10 +71,5 @@ public class NodesInfo extends HttpServlet
 		
 		response.setContentType("text/html");
 		response.getWriter().print(template);
-	}
-	
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		doGet(request, response);
 	}
 }

@@ -1,4 +1,4 @@
-package api;
+package nodeapi;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -15,13 +15,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import api.minecraft.MinecraftServer;
-import main.NodeProperties;
-import main.StartUpApplication;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
 import models.MinecraftServerTable;
+import nodemain.NodeProperties;
+import nodemain.StartUpApplication;
 import server.GameServerFactory;
+import utils.ParameterURL;
 
 @WebServlet("/ServerAdd")
 @MultipartConfig
@@ -29,18 +30,27 @@ public class ServerAdd extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = "/ServerAdd";
+	public static final String URL = "/GameServerNode/ServerAdd";
 	
-	public static String getEndpoint(String serverName, String execName, String type)
+	private static final ParameterURL PARAMETER_URL = new ParameterURL
+	(
+		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+	);
+	
+	public static ParameterURL postEndpoint(String serverName, String execName, String type)
 	{
-		return String.format("%s?name=%s&execName=%s&type=%s", URL, serverName, execName, type);
+		var url = new ParameterURL(PARAMETER_URL);
+		url.addQuery(ApiSettings.SERVER_NAME_PARAMETER, serverName);
+		url.addQuery(ApiSettings.EXECUTABLE_NAME_PARAMETER, execName);
+		url.addQuery(ApiSettings.SERVER_TYPE_PARAMETER, type);
+		return url;
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = request.getParameter("name");
-		var execName = request.getParameter("execName");
-		var type = request.getParameter("type");
+		var serverName = request.getParameter(ApiSettings.SERVER_NAME_PARAMETER);
+		var execName = request.getParameter(ApiSettings.EXECUTABLE_NAME_PARAMETER);
+		var type = request.getParameter(ApiSettings.SERVER_TYPE_PARAMETER);
 		if(serverName == null || execName == null || type == null)
 		{
 			response.setStatus(400);
