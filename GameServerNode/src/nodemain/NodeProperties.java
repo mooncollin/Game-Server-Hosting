@@ -9,6 +9,8 @@ import java.util.Properties;
 
 import com.sun.management.OperatingSystemMXBean;
 
+import utils.Utils;
+
 public class NodeProperties
 {
 	public static final String PROPERTIES_LOCATION;
@@ -24,7 +26,7 @@ public class NodeProperties
 	
 	static
 	{
-		PROPERTIES_LOCATION = System.getenv("GAME_SERVER_NODE_PROPERTIES");
+		PROPERTIES_LOCATION = Objects.requireNonNull(System.getenv("GAME_SERVER_NODE_PROPERTIES"), "Do you have the GAME_SERVER_NODE_PROPERTIES environment variable set?");
 		JAVA8 = Objects.requireNonNull(System.getenv("JAVA8"), "Do you have the JAVA8 environment variable set?");
 		properties = new Properties();
 		
@@ -45,29 +47,16 @@ public class NodeProperties
 		DATABASE_USERNAME = properties.getProperty("database_username");
 		DATABASE_PASSWORD = properties.getProperty("database_password");
 		
-		var ramStr = properties.getProperty("max_ram");
-		if(ramStr == null)
-		{
-			ramStr = "-1";
-		}
-		
-		int ramAmount = 0;
-		try
-		{
-			ramAmount = Integer.valueOf(ramStr);
-		}
-		catch(NumberFormatException e)
-		{
-		}
+		var ramAmount = Utils.fromString(Long.class, properties.getProperty("max_ram"), -1L);
 		
 		if(ramAmount < 0)
 		{
 			var system = OperatingSystemMXBean.class.cast(ManagementFactory.getOperatingSystemMXBean());
 			var totalRamMB = system.getTotalPhysicalMemorySize() / NodeProperties.BYTES_IN_MEGABYTE;
-			ramAmount = (int) totalRamMB;
+			ramAmount = totalRamMB;
 		}
 		
-		MAX_RAM = ramAmount;
+		MAX_RAM = ramAmount.intValue();
 		if(MAX_RAM == 0)
 		{
 			throw new RuntimeException("Invalid RAM property");

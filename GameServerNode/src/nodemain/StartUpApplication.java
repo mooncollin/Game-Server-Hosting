@@ -148,8 +148,8 @@ public class StartUpApplication implements ServletContextListener
 				correspondingServer.getTriggerHandlers().add(generatedHandler);
 				if(generatedHandler instanceof TriggerHandlerTime)
 				{
-					var time = ((TriggerHandlerTime) generatedHandler).getTimeExecuted();
-					var generatedTask = ((TriggerHandlerTime) generatedHandler).generateTimerTask();
+					var time = TriggerHandlerTime.class.cast(generatedHandler).getTimeExecuted();
+					var generatedTask = TriggerHandlerTime.class.cast(generatedHandler).generateTimerTask();
 					correspondingServer.getTimerTasks().add(generatedTask);
 					
 					var today = Calendar.getInstance();
@@ -166,9 +166,9 @@ public class StartUpApplication implements ServletContextListener
 				}
 				else if(generatedHandler instanceof TriggerHandlerRecurring)
 				{
-					var secondInterval = ((TriggerHandlerRecurring) generatedHandler).getRecurringPeriod();
+					var secondInterval = TriggerHandlerRecurring.class.cast(generatedHandler).getRecurringPeriod();
 					
-					var generatedTask = ((TriggerHandlerRecurring) generatedHandler).generateTimerTask();
+					var generatedTask = TriggerHandlerRecurring.class.cast(generatedHandler).generateTimerTask();
 					
 					correspondingServer.getTimerTasks().add(generatedTask);
 					
@@ -188,7 +188,7 @@ public class StartUpApplication implements ServletContextListener
 			correspondingServer.getTimerTasks().removeIf(timer -> {
 				if(timer instanceof TimerTaskID)
 				{
-					if(((TimerTaskID) timer).getID() == triggerID.longValue())
+					if(TimerTaskID.class.cast(timer).getID() == triggerID.longValue())
 					{
 						timer.cancel();
 						return true;
@@ -201,19 +201,20 @@ public class StartUpApplication implements ServletContextListener
 	
 	public void contextDestroyed(ServletContextEvent event)
 	{
-		for(GameServer server : servers.values())
-		{
-			server.stopServer();
-			server.getTriggerTimer().cancel();
-		}
+		servers.values()
+			   .parallelStream()
+			   .forEach(server -> {
+				   server.stopServer();
+				   server.getTriggerTimer().cancel();
+			   });
 		
-		if(Output.execService != null)
+		if(!Output.OUTPUT_THREADS.isShutdown())
 		{
-			Output.execService.shutdownNow();
+			Output.OUTPUT_THREADS.shutdownNow();
 		}
-		if(NodeUsage.execService != null)
+		if(!NodeUsage.TIMER.isShutdown())
 		{
-			NodeUsage.execService.shutdownNow();
+			NodeUsage.TIMER.shutdownNow();
 		}
 	}
 	

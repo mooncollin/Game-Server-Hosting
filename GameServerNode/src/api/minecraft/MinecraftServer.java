@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
@@ -121,7 +120,7 @@ public class MinecraftServer extends GameServer
 				final var lineTerminated = lineRead + "\r\n";
 				var triggers = getTriggerHandlers();
 
-				triggers.parallelStream()
+				triggers.stream()
 					.filter(trigger -> trigger instanceof TriggerHandlerCondition)
 					.map(trigger -> (TriggerHandlerCondition<String>) trigger)
 					.filter(condition -> condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
@@ -133,19 +132,16 @@ public class MinecraftServer extends GameServer
 				
 				synchronized (outputConnectors)
 				{
-					outputConnectors.parallelStream()
-						.forEach(stream -> {
-							synchronized (stream)
-							{
-								try
-								{
-									stream.write(lineTerminated.getBytes());
-								} catch (IOException e)
-								{
-									streamsToRemove.add(stream);
-								}
-							}
-						});
+					for(var stream : outputConnectors)
+					{
+						try
+						{
+							stream.write(lineTerminated.getBytes());
+						} catch (IOException e)
+						{
+							streamsToRemove.add(stream);
+						}
+					}
 					
 					outputConnectors.removeAll(streamsToRemove);
 				}
@@ -318,9 +314,15 @@ public class MinecraftServer extends GameServer
 		command.add(NodeProperties.JAVA8);
 		command.add(String.format(MAXIMUM_HEAP_ARGUMENT, maximumHeapSize));
 		command.add(String.format(MINIMUM_HEAP_ARGUMENT, MINIMUM_HEAP_SIZE));
-		command.addAll(Arrays.asList(arguments.split(" ")));
+		for(var argument : arguments.split(" "))
+		{
+			if(!argument.isBlank())
+			{
+				command.add(argument);
+			}
+		}
 		command.add("-jar");
-		command.add(String.format("\"%s\"", getExecutableName().getAbsolutePath()));
+		command.add(getExecutableName().getAbsolutePath());
 		command.add("nogui");
 		
 		var fullCommand = command.toArray(String[]::new);

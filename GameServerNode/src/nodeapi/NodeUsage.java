@@ -1,20 +1,18 @@
 package nodeapi;
 
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.websocket.OnClose;
-import javax.websocket.OnError;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
 import nodemain.StartUpApplication;
-import utils.Pair;
 import utils.ParameterURL;
 
 @ServerEndpoint("/NodeUsage")
@@ -33,92 +31,60 @@ public class NodeUsage
 		return url;
 	}
 	
-	public static final ExecutorService execService = Executors.newFixedThreadPool(40);
-	private static final List<Pair<Session, Future<?>>> currentRunning = new LinkedList<Pair<Session, Future<?>>>();
-	private static final long NODE_USAGE_WAIT_TIME = 900;
+	public static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor();
+	public static Future<?> NODE_USAGE_TASK;
+	
+	private static final long NODE_USAGE_WAIT_TIME = 350;
+	
+	private static final Set<Session> allSessions = new HashSet<Session>();
 	
 	@OnOpen
 	public void onOpen(Session session)
 	{
-		var future = execService.submit(new NodeUsageRunnable(session));
-		synchronized(currentRunning)
+		synchronized (allSessions)
 		{
-			currentRunning.add(Pair.of(session, future));
+			allSessions.add(session);
+			if(allSessions.size() == 1)
+			{
+				NODE_USAGE_TASK = TIMER.scheduleAtFixedRate(NodeUsage::sendUsage, 0, NODE_USAGE_WAIT_TIME, TimeUnit.MILLISECONDS);
+			}
 		}
 	}
 	
 	@OnClose
 	public void onClose(Session session)
 	{
-		try
+		synchronized (allSessions)
 		{
-			synchronized (currentRunning)
+			allSessions.remove(session);
+			if(allSessions.isEmpty())
 			{
-				currentRunning.removeIf(pair -> {
-					Session currentSession = pair.getFirst();
-					Future<?> currentRunnable = pair.getSecond();
-					if(currentSession.equals(session))
-					{
-						currentRunnable.cancel(true);
-						return true;
-					}
-					return false;
-				});
+				NODE_USAGE_TASK.cancel(false);
 			}
-			session.close();
-		} catch (IOException e)
-		{
 		}
 	}
 	
-	@OnError
-	public void onError(Session session, Throwable t)
+	private static void sendUsage()
 	{
-		onClose(session);
-	}
-	
-	private class NodeUsageRunnable implements Runnable
-	{
-		private Session session;
+		var cpuLoad = (int) (StartUpApplication.SYSTEM.getSystemCpuLoad() * 100);
+		var totalMemory = StartUpApplication.SYSTEM.getTotalPhysicalMemorySize();
+		var freeMemory = StartUpApplication.SYSTEM.getFreePhysicalMemorySize();
+		var ramUsage = (long) ((totalMemory - freeMemory) / ((double) totalMemory) * 100.0);
 		
-		public NodeUsageRunnable(Session s)
+		if(cpuLoad >= 0)
 		{
-			this.session = s;
-		}
-		
-		public void run()
-		{
-			var system = StartUpApplication.SYSTEM;
-			while(session.isOpen() && !Thread.interrupted())
+			synchronized (allSessions)
 			{
-				var cpuLoad = (int) (system.getSystemCpuLoad() * 100);
-				var totalMemory = system.getTotalPhysicalMemorySize();
-				var freeMemory = system.getFreePhysicalMemorySize();
-				var ramUsage = (long) ((totalMemory - freeMemory) / ((double) totalMemory) * 100.0);
-				if(cpuLoad >= 0)
+				for(var session : allSessions)
 				{
-					try
-					{
-						sendUsage(session, cpuLoad, ramUsage);
-					} catch (IOException | IllegalStateException e)
-					{
-						break;
-					}
-				}
-				
-				try
-				{
-					Thread.sleep(NODE_USAGE_WAIT_TIME);
-				} catch (InterruptedException e)
-				{
-					break;
+					sendUsage(session, cpuLoad, ramUsage);
 				}
 			}
 		}
 	}
 	
-	private void sendUsage(Session session, int cpu, long ram) throws IOException
+	private static void sendUsage(Session session, int cpu, long ram)
 	{
-		session.getBasicRemote().sendText(String.format("%d %d", cpu, ram));
+		session.getAsyncRemote().sendText(String.format("%d %d", cpu, ram));
 	}
 }

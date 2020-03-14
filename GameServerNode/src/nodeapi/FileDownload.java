@@ -66,17 +66,17 @@ public class FileDownload extends HttpServlet
 			{
 				for(var deeperFile : currentFile.listFiles())
 				{
-					zipDirectory(currentFile.getName(), deeperFile, s);
+					zipDirectory(currentFile, deeperFile, s);
 				}
 			}
 		}
 	}
 	
-	private void zipDirectory(String currentDirectory, File currentFile, ZipOutputStream zipOut) throws IOException
+	private void zipDirectory(File currentDirectory, File currentFile, ZipOutputStream zipOut) throws IOException
 	{
 		if(currentFile.isFile())
 		{
-			var fileName = String.format("%s%s%s", currentDirectory, File.separator, currentFile.getName());
+			var fileName = Paths.get(currentDirectory.getAbsolutePath(), currentFile.getName()).toString();
 			zipOut.putNextEntry(new ZipEntry(fileName));
 			try(var fileIn = new FileInputStream(currentFile))
 			{
@@ -88,12 +88,12 @@ public class FileDownload extends HttpServlet
 		{
 			for(var deeperFile : currentFile.listFiles())
 			{
-				var directoryName = currentFile.getName();
-				if(!deeperFile.getName().equals(currentDirectory))
+				var newDirectory = currentFile;
+				if(!deeperFile.equals(currentDirectory))
 				{
-					directoryName = String.format("%s%s%s", currentDirectory, File.separator, currentFile.getName());
+					newDirectory = Paths.get(currentDirectory.getAbsolutePath(), currentFile.getName()).toFile();
 				}
-				zipDirectory(directoryName, deeperFile, zipOut);
+				zipDirectory(newDirectory, deeperFile, zipOut);
 			}
 		}
 	}

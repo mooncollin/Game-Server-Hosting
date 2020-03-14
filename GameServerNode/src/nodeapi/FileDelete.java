@@ -3,6 +3,7 @@ package nodeapi;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -57,10 +58,9 @@ public class FileDelete extends HttpServlet
 	{
 		if(directory.isDirectory())
 		{
-			for(var f : directory.listFiles())
-			{
-				deleteDirectoryOrFile(f);
-			}
+			Arrays.stream(directory.listFiles())
+				  .parallel()
+				  .forEach(FileDelete::deleteDirectoryOrFile);
 		}
 		
 		directory.delete();

@@ -81,10 +81,7 @@ public class FileUpload extends HttpServlet
 				var newFile = directoryPath.resolve(fileName).toFile();
 				if(!newFile.exists())
 				{
-					try(var s = new FileOutputStream(newFile))
-					{
-						p.getInputStream().transferTo(s);
-					}
+					p.write(newFile.getAbsolutePath());
 				}
 			}
 		}

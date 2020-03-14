@@ -55,6 +55,9 @@ Network factors such as firewalls, port forwarding, and static IPs are not manag
 
 # Changelog
 
+## Version 1.2.2
+Fixed a major bug that disallowed server starting
+
 ## Version 1.2.1
 Bug Fixes and URL Endpoint changes
 

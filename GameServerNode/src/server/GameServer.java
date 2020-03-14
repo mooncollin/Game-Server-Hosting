@@ -1,8 +1,6 @@
 package server;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.LinkedList;
@@ -12,8 +10,6 @@ import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
-
-import javax.websocket.Session;
 
 import api.minecraft.MinecraftServer;
 import model.Database;
@@ -32,10 +28,6 @@ abstract public class GameServer
 		Map.ofEntries(
 				Map.entry("minecraft", MinecraftServer.class)
 		);
-	
-	public static final int WAIT_TIME = 500;
-	public static final String SERVER_ON_MESSAGE = "<on>";
-	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
 	protected Process process;
 	protected String log;
@@ -57,9 +49,9 @@ abstract public class GameServer
 		
 		try
 		{
-			triggersTable.createTable(db);
 			nodeTable.createTable(db);
 			gameserverTable.createTable(db);
+			triggersTable.createTable(db);
 		} catch (SQLException e)
 		{
 			throw new RuntimeException(String.format("Error Creating tables: %s", e.getMessage()));
@@ -134,7 +126,7 @@ abstract public class GameServer
 		return stateN;
 	}
 	
-	public void addOutputConnector(OutputStream s)
+	public void registerOutputConnector(OutputStream s)
 	{
 		synchronized (outputConnectors)
 		{
@@ -248,16 +240,6 @@ abstract public class GameServer
 		}
 	}
 	
-	public Runnable getOutputRunnable(Session s)
-	{
-		return new OutputRunnable(s, this);
-	}
-	
-	public Runnable getServerRunningStatusRunnable(Session s)
-	{
-		return new ServerRunningStatusRunnable(s, this);
-	}
-	
 	abstract public boolean stopServer();
 	abstract public boolean startServer();
 	abstract public boolean writeToServer(String out);
@@ -275,136 +257,5 @@ abstract public class GameServer
 	protected List<Object> getOutputNotifiers()
 	{
 		return outputNotifiers;
-	}
-	
-	private class OutputRunnable implements Runnable
-	{
-		private Session session;
-		private GameServer server;
-		private Object notifier;
-		private ByteArrayOutputStream intermediateOut;
-		
-		public OutputRunnable(Session s, GameServer server)
-		{
-			this.session = s;
-			this.server = server;
-			notifier = server.getOutputNotifier();
-			intermediateOut = new ByteArrayOutputStream();
-			server.addOutputConnector(intermediateOut);
-		}
-		
-		public void run()
-		{
-			while(session.isOpen() && !Thread.currentThread().isInterrupted())
-			{
-				try
-				{
-					synchronized (notifier)
-					{
-						notifier.wait(WAIT_TIME);
-					}
-					
-					if(session.isOpen() && intermediateOut.size() > 0)
-					{
-						synchronized (intermediateOut)
-						{
-							synchronized (session)
-							{
-								try(var sessionOutput = session.getBasicRemote().getSendStream())
-								{
-									intermediateOut.writeTo(sessionOutput);
-									intermediateOut.reset();
-								}
-							}
-						}
-					}
-				}
-				catch(InterruptedException e)
-				{
-					break;
-				}
-				catch (IOException e)
-				{
-					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send output data to server:\n%s", e.getMessage()));
-					break;
-				}
-			}
-			
-			StartUpApplication.LOGGER.log(Level.INFO, "Server output disconnected");
-			
-			server.removeOutputNotifier(notifier);
-			server.removeOutputConnector(intermediateOut);
-			
-			try
-			{
-				intermediateOut.close();
-			} catch (IOException e)
-			{
-			}
-		}
-	}
-	
-	private class ServerRunningStatusRunnable implements Runnable
-	{
-		private Session session;
-		private GameServer server;
-		private Object notifier;
-		
-		public ServerRunningStatusRunnable(Session s, GameServer server)
-		{
-			this.session = s;
-			this.server = server;
-			this.notifier = server.getRunningStateNotifier();
-		}
-		
-		public void run()
-		{
-			Boolean lastSent = null;
-			while(session.isOpen() && !Thread.currentThread().isInterrupted())
-			{
-				try
-				{
-					if(lastSent != null)
-					{
-						synchronized (notifier)
-						{
-							notifier.wait(WAIT_TIME);
-						}
-						
-						if(lastSent.booleanValue() == server.isRunning())
-						{
-							continue;
-						}
-						
-						if(!session.isOpen())
-						{
-							break;
-						}
-					}
-				}
-				catch(InterruptedException e)
-				{
-					break;
-				}
-				
-				lastSent = server.isRunning();
-				var text = lastSent ? SERVER_ON_MESSAGE : SERVER_OFF_MESSAGE;
-				
-				try
-				{
-					synchronized(session)
-					{
-						session.getBasicRemote().sendText(text);				
-					}
-				}
-				catch (IOException e)
-				{
-					StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to send %s to server:\n%s", text, e.getMessage()));
-					break;
-				}	
-			}
-			
-			server.removeRunningStateNotifier(notifier);
-		}
 	}
 }

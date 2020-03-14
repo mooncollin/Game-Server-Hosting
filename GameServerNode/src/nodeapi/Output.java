@@ -1,22 +1,21 @@
 package nodeapi;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.websocket.OnClose;
-import javax.websocket.OnError;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
 import nodemain.StartUpApplication;
-import utils.Pair;
+import server.GameServer;
 import utils.ParameterURL;
 import utils.Utils;
 
@@ -24,10 +23,9 @@ import utils.Utils;
 public class Output
 {
 	
-	private static final int MAXIUMUM_POOL_SIZE = 200;
-	private static final int STARING_POOL_SIZE = 100;
-	public static final ThreadPoolExecutor execService = new ThreadPoolExecutor(STARING_POOL_SIZE, MAXIUMUM_POOL_SIZE, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
-	private static final List<Pair<Session, Future<?>>> currentRunning = new LinkedList<Pair<Session, Future<?>>>();
+	private static final long WAIT_TIME = 50;
+	public static final ExecutorService OUTPUT_THREADS = Executors.newCachedThreadPool();
+	private static final Map<GameServer, Set<OutputContainer>> LISTENING_OUTPUT = new HashMap<GameServer, Set<OutputContainer>>();
 	public static final String SERVER_ON_MESSAGE = "<on>";
 	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
@@ -84,53 +82,189 @@ public class Output
 		}
 		
 		var foundServer = StartUpApplication.getServer(serverID);
-
-		if(outputOnly || !outputOnly && !runningOnly)
+		
+		var container = new OutputContainer(session, outputOnly, runningOnly);
+		
+		synchronized(LISTENING_OUTPUT)
 		{
-			var future = execService.submit(foundServer.getOutputRunnable(session));
-			synchronized(currentRunning)
+			var absent = LISTENING_OUTPUT.putIfAbsent(foundServer, new HashSet<OutputContainer>());
+			LISTENING_OUTPUT.get(foundServer).add(container);
+			if(absent == null || LISTENING_OUTPUT.get(foundServer).size() == 1)
 			{
-				currentRunning.add(Pair.of(session, future));
+				OUTPUT_THREADS.execute(() -> serveOutput(foundServer));
 			}
 		}
-		if(runningOnly || !outputOnly && !runningOnly)
+	}
+	
+	private static void serveOutput(GameServer foundServer)
+	{
+		Set<OutputContainer> outputs;
+		var runningOnly = new HashSet<Session>();
+		var outputOnly = new HashSet<Session>();
+		var runningTracker = new HashMap<Session, Boolean>();
+		synchronized (LISTENING_OUTPUT)
 		{
-			var future = execService.submit(foundServer.getServerRunningStatusRunnable(session));
-			synchronized (currentRunning)
+			outputs = LISTENING_OUTPUT.get(foundServer);
+		}
+		if(outputs == null)
+		{
+			return;
+		}
+		
+		var runningNotifier = foundServer.getRunningStateNotifier();
+		var outputNotifier = foundServer.getOutputNotifier();
+		var serverData = new ByteArrayOutputStream();
+		foundServer.registerOutputConnector(serverData);
+		
+		while(!Thread.interrupted())
+		{
+			synchronized (outputs)
 			{
-				currentRunning.add(Pair.of(session, future));
+				if(outputs.isEmpty())
+				{
+					return;
+				}
+				
+				for(var output : outputs)
+				{
+					if(!output.session.isOpen())
+					{
+						runningOnly.remove(output.getSession());
+						runningTracker.remove(output.getSession());
+						outputOnly.remove(output.getSession());
+					}
+					else
+					{
+						if(output.isOutputOnly() || !output.isOutputOnly() && !output.isRunningOnly())
+						{
+							outputOnly.add(output.getSession());
+						}
+						if(output.isRunningOnly() || !output.isOutputOnly() && !output.isRunningOnly())
+						{
+							runningTracker.put(output.getSession(), null);
+							runningOnly.add(output.getSession());
+						}
+					}
+				}
+			}
+			
+			synchronized (outputNotifier)
+			{
+				try
+				{
+					outputNotifier.wait(WAIT_TIME);
+				} catch (InterruptedException e)
+				{
+					break;
+				}
+			}
+			
+			if(serverData.size() > 0)
+			{
+				for(var session : outputOnly)
+				{
+					if(session.isOpen())
+					{
+						synchronized (session)
+						{
+							try(var sessionStream = session.getBasicRemote().getSendStream())
+							{
+								serverData.writeTo(sessionStream);
+							} catch (IOException e1)
+							{
+								return;
+							}
+						}
+					}
+				}
+				serverData.reset();
+			}
+			
+			synchronized (runningNotifier)
+			{
+				try
+				{
+					runningNotifier.wait(WAIT_TIME);
+				} catch (InterruptedException e)
+				{
+					return;
+				}
+			}
+			
+			var run = foundServer.isRunning();
+			var text = run ? SERVER_ON_MESSAGE : SERVER_OFF_MESSAGE;
+			for(var session : runningOnly)
+			{
+				if(session.isOpen() && ( runningTracker.get(session) == null ||
+				   run != runningTracker.get(session)))
+				{
+					synchronized (session)
+					{
+						try
+						{
+							session.getBasicRemote().sendText(text);
+						} catch (IOException e)
+						{
+							return;
+						}
+					}
+					runningTracker.replace(session, run);
+				}
 			}
 		}
+		
+		foundServer.removeRunningStateNotifier(runningNotifier);
+		foundServer.removeOutputNotifier(outputNotifier);
 	}
 	
 	@OnClose
 	public void onClose(Session session)
 	{
-		synchronized(currentRunning)
+		synchronized (LISTENING_OUTPUT)
 		{
-			currentRunning.removeIf(pair -> {
-				var currentSession = pair.getFirst();
-				var currentRunnable = pair.getSecond();
-				if(currentSession.equals(session))
-				{
-					currentRunnable.cancel(true);
-					return true;
-				}
-				
-				return false;
-			});
-		}
-		try
-		{
-			session.close();
-		} catch (IOException e)
-		{
+			LISTENING_OUTPUT.values()
+				.stream()
+				.map(Set::iterator)
+				.forEach(it -> {
+					while(it.hasNext())
+					{
+						var container = it.next();
+						if(container.getSession().equals(session))
+						{
+							it.remove();
+							break;
+						}
+					}
+				});
 		}
 	}
 	
-	@OnError
-	public void onError(Session session, Throwable t)
+	private static class OutputContainer
 	{
-		onClose(session);
+		private final Session session;
+		private final boolean outputOnly;
+		private final boolean runningOnly;
+		
+		public OutputContainer(Session s, boolean outputOnly, boolean runningOnly)
+		{
+			this.session = s;
+			this.outputOnly = outputOnly;
+			this.runningOnly = runningOnly;
+		}
+		
+		public Session getSession()
+		{
+			return session;
+		}
+		
+		public boolean isOutputOnly()
+		{
+			return outputOnly;
+		}
+		
+		public boolean isRunningOnly()
+		{
+			return runningOnly;
+		}
 	}
 }
