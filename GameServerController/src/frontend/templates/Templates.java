@@ -1,282 +1,273 @@
 package frontend.templates;
 
-import java.util.stream.Stream;
+import java.util.Map;
 
-import api.minecraft.MinecraftServer;
-import attributes.Attributes;
-import backend.api.GameServerDelete;
-import frontend.GameServerConsole;
-import frontend.GameServerFiles;
-import frontend.GameServerSettings;
-import frontend.Index;
-import frontend.NodesInfo;
-import frontend.javascript.JavaScriptUtils;
-import html.CompoundElement;
-import server.GameServer;
-import tags.Anchor;
-import tags.Button;
-import tags.Canvas;
-import tags.Div;
-import tags.H2;
-import tags.Icon;
-import tags.Nav;
-import tags.Script;
-import tags.Span;
-import tags.TableData;
-import tags.TableRow;
-import util.Template;
+import org.apache.velocity.shaded.commons.io.FilenameUtils;
+
+import model.Table;
+import models.TriggersTable;
+import server.TriggerHandler;
+import server.TriggerHandlerRecurring;
+import server.TriggerHandlerTime;
 
 public class Templates
 {
-	public static final String[] GLOBAL_CSS_FILES =
+	public static class ServerInfo
 	{
-			"css/bootstrap.min.css",
-			"css/main.css"
-	};
-	
-	public static final String[] GLOBAL_JAVASCRIPT_FILES =
-	{
-			"js/jquery-3.3.1.min.js",
-			"js/popper.min.js",
-			"js/bootstrap.min.js",
-			"js/all.js"
-	};
-	
-	public static Template getMainTemplate()
-	{
-		var t = new Template();
+		private int id;
+		private String name;
+		private String serverType;
 		
-		t.getBody().addElements
-		(
-			new Div(Attributes.ID.makeAttribute("wrapper"))
-				.addClasses("d-flex", "justify-content-between")
-				.addElements
-				(
-					getSideBar(),
-					new Div(Attributes.ID.makeAttribute("content"))
-						.addClasses("w-100", "flex-fill")
-				)
-		);
-		
-		Stream.of(GLOBAL_CSS_FILES)
-			  .forEach(css -> t.getHead().addStylesheet(css));
-		
-		Stream.of(GLOBAL_JAVASCRIPT_FILES)
-			  .forEach(javascript -> t.getHead().addScript(javascript));
-		
-		return t;
-	}
-	
-	private static Nav getSideBar()
-	{
-		
-		return new Nav(Attributes.ID.makeAttribute("sidebar"))
-			.addClasses("p-3", "flex-fill")
-			.addElements
-			(
-				new Anchor(Attributes.Href.makeAttribute(Index.getEndpoint().getURL()), Attributes.ID.makeAttribute("homeLink"))
-					.addElements
-					(
-						new Div(Attributes.ID.makeAttribute("sidebar-header"))
-							.addClasses("text-center", "text-light", "overflow-hidden", "bg-secondary", "rounded")
-							.addElements
-							(
-								new H2("GameServer Hosting")
-							)
-					),
-				new Div()
-					.addClasses("list-group", "list-group-flush", "mt-5", "text-center")
-					.addElements
-					(
-						new Anchor(Attributes.Href.makeAttribute(Index.getEndpoint().getURL()))
-							.addClasses("list-group-item", "bg-secondary", "text-light")
-							.addElements
-							(
-								Templates.createIcon("server").addClasses("mr-2"),
-								new Span("Servers")
-							),
-						new Anchor(Attributes.Href.makeAttribute(NodesInfo.getEndpoint().getURL()))
-							.addClasses("list-group-item", "bg-secondary", "text-light", "mt-3")
-							.addElements
-							(
-								Templates.createIcon("project-diagram").addClasses("mr-2"),
-								new Span("Nodes")
-							)
-					)
-			);
-	}
-	
-	public static Anchor generateConsoleLink(int serverID)
-	{
-		return new Anchor
-		(
-			Attributes.Href.makeAttribute(GameServerConsole.getEndpoint(serverID).getURL()),
-			Attributes.makeAttribute("data-toggle", "tooltip"),
-			Attributes.makeAttribute("data-placement", "bottom"),
-			Attributes.Title.makeAttribute("Open server console")
-		)
-		.addClasses("rounded-circle", "bg-light", "p-2")
-		.addElements
-		(
-			Templates.createIcon("terminal")
-		);
-	}
-	
-	public static Anchor generateFilesLink(int serverID, String serverName)
-	{
-		return new Anchor
-		(
-			Attributes.Href.makeAttribute(GameServerFiles.getEndpoint(serverID, serverName).getURL()),
-			Attributes.makeAttribute("data-toggle", "tooltip"),
-			Attributes.makeAttribute("data-placement", "bottom"),
-			Attributes.Title.makeAttribute("View server files")
-		)
-		.addClasses("rounded-circle", "bg-light", "p-2")
-		.addElements
-		(
-			Templates.createIcon("file").addClasses("fa-lg")
-		);
-	}
-	
-	public static Anchor generateSettingsLink(int serverID)
-	{
-		return new Anchor
-		(
-			Attributes.Href.makeAttribute(GameServerSettings.getEndpoint(serverID).getURL()),
-			Attributes.makeAttribute("data-toggle", "tooltip"),
-			Attributes.makeAttribute("data-placement", "bottom"),
-			Attributes.Title.makeAttribute("Edit server settings")
-		)
-		.addClasses("rounded-circle", "bg-light", "p-2")
-		.addElements
-		(
-			Templates.createIcon("edit")
-		);
-	}
-	
-	public static Anchor generateDeleteLink(int serverID, String serverName)
-	{
-		return new Anchor
-		(
-			Attributes.Href.makeAttribute("#"),
-			Attributes.makeAttribute("data-toggle", "tooltip"),
-			Attributes.makeAttribute("data-placement", "bottom"),
-			Attributes.Title.makeAttribute("Delete Server"),
-			Attributes.makeAttribute("link", GameServerDelete.getEndpoint(serverID).getURL()),
-			Attributes.OnClick.makeAttribute(String.format("deleteServer(this, '%s')", serverName))
-		)
-		.addClasses("rounded-circle", "bg-light", "p-2")
-		.addElements
-		(
-			Templates.createIcon("trash-alt")
-		);
-	}
-	
-	/**
-	 * Generates the canvas element that holds the graph.
-	 * The page also needs to include moment.js, Chart.min.js,
-	 * chartjs-plugin-streaming.js, nodeUsage.js, and the names
-	 * of the nodes and addresses through the JavaScriptUtils class.
-	 * @param nodeName
-	 * @return
-	 */
-	public static CompoundElement generateNodeUsageGraph(String nodeName)
-	{
-		var canvas = new Canvas();
-		canvas.setID(nodeName + "-data");
-		return canvas;
-	}
-	
-	public static Script generateNodeNamesWithUsageAddresses()
-	{
-		return new Script(JavaScriptUtils.getNodeNames() + JavaScriptUtils.getNodeUsageAddresses());
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static CompoundElement createServerTableRow(Integer serverID, String serverName, Class<? extends GameServer> type)
-	{
-		var typeName = "Unknown";
-		
-		if(type.equals(MinecraftServer.class))
+		public ServerInfo(int id, String name, String serverType)
 		{
-			typeName = "Minecraft";
+			this.id = id;
+			this.name = name;
+			this.serverType = serverType;
 		}
 		
-		return new TableRow()
-		.addElements
+		public String getName()
+		{
+			return name;
+		}
+		
+		public int getId()
+		{
+			return id;
+		}
+		
+		public String getServerType()
+		{
+			return serverType;
+		}
+	}
+	
+	public static class TriggerInfo
+	{
+		private int id;
+		private String type;
+		private String value;
+		private String command;
+		private String extra;
+		
+		public TriggerInfo(int id, String type, String value, String command, String extra)
+		{
+			this.id = id;
+			this.type = type;
+			this.value = value;
+			this.command = command;
+			this.extra = extra;
+			
+			if(type.equals(TriggerHandler.RECURRING_TYPE))
+			{
+				this.value = TriggerHandlerRecurring.convertSecondsToFormat(Long.valueOf(this.value));
+			}
+			else if(type.equals(TriggerHandler.TIME_TYPE))
+			{
+				this.value = TriggerHandlerTime.convertSecondsToFormat(Long.valueOf(this.value));
+			}
+		}
+		
+		public TriggerInfo(Table table)
+		{
+			this(table.getColumnValue(TriggersTable.ID),
+				 table.getColumnValue(TriggersTable.TYPE),
+				 table.getColumnValue(TriggersTable.VALUE),
+				 table.getColumnValue(TriggersTable.COMMAND),
+				 table.getColumnValue(TriggersTable.EXTRA));
+		}
+		
+		public int getId()
+		{
+			return id;
+		}
+		
+		public String getType()
+		{
+			return type;
+		}
+		
+		public String getValue()
+		{
+			return value;
+		}
+		
+		public String getExtra()
+		{
+			return extra;
+		}
+		
+		public String getCommand()
+		{
+			return command;
+		}
+	}
+	
+	public static class FileInfo
+	{
+		private static final Map<String, String> FILE_TYPES_FONT_AWESOME = Map.ofEntries
 		(
-			new TableData(serverName),
-			new TableData(typeName),
-			new TableData(Attributes.ID.makeAttribute("status-" + serverID))
-					.addElements
-					(
-						new Span()
-							.addElements
-							(
-								Templates.createIcon("circle").addClasses("mr-2")
-							),
-						new Span("Unknown")
-					),
-			new TableData()
-				.addClasses("pb-3")
-				.addElements
-				(
-					Templates.generateConsoleLink(serverID).addClasses("mr-4"),
-					Templates.generateFilesLink(serverID, serverName).addClasses("mr-4"),
-					Templates.generateSettingsLink(serverID).addClasses("mr-4"),
-					Templates.generateDeleteLink(serverID, serverName)
-				),
-			new TableData()
-				.addClasses("float-right")
-				.addElements
-				(
-					generateStartButton()
-						.addAttributes
-						(
-							Attributes.ID.makeAttribute(String.format("start-%d", serverID)),
-							Attributes.OnClick.makeAttribute(String.format("startServer(%d)", serverID)),
-							Attributes.Disabled.makeAttribute(true)
-						)
-						.addClasses("mr-4"),
-					generateStopButton()
-						.addAttributes
-						(
-							Attributes.ID.makeAttribute(String.format("stop-%d", serverID)),
-							Attributes.OnClick.makeAttribute(String.format("stopServer(%d)", serverID)),
-							Attributes.Disabled.makeAttribute(true)
-						)
-						.addClasses("mr-4")
-				)
+				Map.entry("zip", "archive"),
+				Map.entry("tar", "archive"),
+				Map.entry("gz", "archive"),
+				Map.entry("rar", "archive"),
+				Map.entry("jar", "archive"),
+				Map.entry("mp3", "audio"),
+				Map.entry("ogg", "audio"),
+				Map.entry("wav", "audio"),
+				Map.entry("py", "code"),
+				Map.entry("java", "code"),
+				Map.entry("c", "code"),
+				Map.entry("cpp", "code"),
+				Map.entry("lua", "code"),
+				Map.entry("pl", "code"),
+				Map.entry("html", "code"),
+				Map.entry("css", "code"),
+				Map.entry("js", "code"),
+				Map.entry("xml", "code"),
+				Map.entry("md", "code"),
+				Map.entry("json", "code"),
+				Map.entry("jpg", "image"),
+				Map.entry("jpeg", "image"),
+				Map.entry("png", "image"),
+				Map.entry("svg", "image"),
+				Map.entry("mp4", "movie"),
+				Map.entry("ppt", "powerpoint"),
+				Map.entry("pptx", "powerpoint"),
+				Map.entry("doc", "word"),
+				Map.entry("docx", "word"),
+				Map.entry("txt", "alt"),
+				Map.entry("properties", "alt"),
+				Map.entry("log", "alt")
 		);
+		
+		private String name;
+		private boolean directory;
+		private String icon;
+		
+		public FileInfo(String name, boolean directory)
+		{
+			this.name = name;
+			this.directory = directory;
+			this.icon = FILE_TYPES_FONT_AWESOME.getOrDefault(FilenameUtils.getExtension(name), "file");
+		}
+		
+		public String getName()
+		{
+			return name;
+		}
+		
+		public boolean isDirectory()
+		{
+			return directory;
+		}
+		
+		public String getIcon()
+		{
+			return icon;
+		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	public static Button generateStartButton()
+	public static class DirectoryEntry
 	{
-		return new Button("Start Server", Attributes.ID.makeAttribute("start"), Attributes.OnClick.makeAttribute("startServer()"))
-				.addClasses("btn", "btn-primary")
-				.addElements(BootstrapTemplates.makeSpinner(null, true)
-								.addClasses("ml-2")	
-								.addAttributes(Attributes.Hidden.makeAttribute(true)));
+		private String name;
+		private String path;
+		
+		public DirectoryEntry(String name, String[] path)
+		{
+			this.name = name;
+			this.path = String.join(",", path);
+		}
+		
+		public String getName()
+		{
+			return name;
+		}
+		
+		public String getPath()
+		{
+			return path;
+		}
+		
+		public String getFullPath()
+		{
+			if(path.isBlank())
+			{
+				return name;
+			}
+			
+			return String.format("%s,%s", path, name);
+		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	public static Button generateStopButton()
+	public static String minecraftPropertyToInputType(Object prop)
 	{
-		return new Button("Stop Server", Attributes.ID.makeAttribute("stop"), Attributes.OnClick.makeAttribute("stopServer()"))
-				.addClasses("btn", "btn-danger")
-				.addElements(BootstrapTemplates.makeSpinner(null, true)
-								.addClasses("ml-2")
-								.addAttributes(Attributes.Hidden.makeAttribute(true)));
+		if(prop instanceof Integer)
+		{
+			return "number";
+		}
+		else if(prop instanceof Boolean)
+		{
+			return "checkbox";
+		}
+		
+		return "text";
 	}
 	
-	public static Icon createIcon(String fontAwesomeType)
+	public static class PropertyInfo
 	{
-		return createIcon("fas", fontAwesomeType);
+		private String name;
+		private String type;
+		private String value;
+		
+		public PropertyInfo(String name, String type, String value)
+		{
+			this.name = name;
+			this.type = type;
+			this.value = value;
+		}
+		
+		public String getName()
+		{
+			return name;
+		}
+		
+		public String getType()
+		{
+			return type;
+		}
+		
+		public String getValue()
+		{
+			return value;
+		}
 	}
 	
-	public static Icon createIcon(String preclass, String fontAwesomeType)
+	public static class NodeInfo
 	{
-		return new Icon().addClasses(preclass, "fa-" + fontAwesomeType);
+		private String name;
+		private long totalRam;
+		private long reservedRam;
+		
+		public NodeInfo(String name, long totalRam, long reservedRam)
+		{
+			this.name = name;
+			this.totalRam = totalRam;
+			this.reservedRam = reservedRam;
+		}
+		
+		public String getName()
+		{
+			return name;
+		}
+		
+		public long getTotalRam()
+		{
+			return totalRam;
+		}
+		
+		public long getReservedRam()
+		{
+			return reservedRam;
+		}
 	}
 }

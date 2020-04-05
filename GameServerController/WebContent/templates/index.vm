@@ -1,0 +1,30 @@
+#parse("linkMacros.vm")
+#set ($background = "images/material-back.jpeg")
+
+#define ($content)
+	<div id="inner-content" class="ml-5 mt-5">
+		<h1 class="text-light">
+			Current Servers
+			<a href="$urlMappings['frontend.GameTypeAdd']" title="Add game type" data-toggle="tooltip" data-placement="bottom" class="rounded-circle bg-light p-3 float-right addLink">
+				<i class="fas fa-plus mr-2"></i>
+				<i class="fas fa-gamepad"></i>
+			</a>
+			<a href="$urlMappings['frontend.GameServerAdd']" title="Add game server" data-toggle="tooltip" data-placement="bottom" class="rounded-circle bg-light p-3 float-right addLink mr-3">
+				<i class="fas fa-plus mr-2"></i>
+				<i class="fas fa-server"></i>
+			</a>
+		</h1>
+		<hr class="border border-light">
+		#serverList($servers)
+	</div>
+	
+	<script>
+		$javascriptUtils.getServerStartInteractAddresses()
+		$javascriptUtils.getServerStopInteractAddresses()
+		$javascriptUtils.getNodeOutputAddresses()
+	</script>
+	
+	<script src="js/index.js"></script>
+#end
+
+#parse("base.vm")

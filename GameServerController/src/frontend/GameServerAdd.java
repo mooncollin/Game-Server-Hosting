@@ -6,10 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
-import java.util.Map;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.logging.Level;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -19,12 +17,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
+
 import api.minecraft.MinecraftServer;
-import backend.api.ServerInteract;
-import backend.main.ControllerProperties;
 import backend.main.StartUpApplication;
+import frontend.templates.Templates.NodeInfo;
 import model.Query;
-import model.Table;
 import models.GameServerTable;
 import models.NodeTable;
 import nodeapi.ApiSettings;
@@ -55,37 +54,29 @@ public class GameServerAdd extends HttpServlet
 	public static ParameterURL postEndpoint(String serverName, String execName, String nodeName, String type)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_NAME_PARAMETER, serverName);
-		url.addQuery(ApiSettings.EXECUTABLE_NAME_PARAMETER, execName);
-		url.addQuery(ApiSettings.NODE_NAME_PARAMETER, nodeName);
-		url.addQuery(ApiSettings.SERVER_TYPE_PARAMETER, type);
+		url.addQuery(ApiSettings.SERVER_NAME.getName(), serverName);
+		url.addQuery(ApiSettings.EXECUTABLE_NAME.getName(), execName);
+		url.addQuery(ApiSettings.NODE_NAME.getName(), nodeName);
+		url.addQuery(ApiSettings.SERVER_TYPE.getName(), type);
 		
 		return url;
 	}
 	
-	private static final Pattern SERVER_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_  ]+");
-	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		List<Table> nodes;
-		Map<String, Long> ramAmounts;
+		var nodes = new LinkedList<NodeInfo>();
 		try
 		{
-			nodes = Query.query(StartUpApplication.database, NodeTable.class)
+			var nodeRows = Query.query(StartUpApplication.database, NodeTable.class)
 							 .all();
 			
-			ramAmounts = nodes.stream()
-							  .map(node -> node.getColumnValue(NodeTable.NAME))
-							  .collect(Collectors.toMap(nodeName -> nodeName, 
-									  nodeName -> {
-										try
-										{
-											return StartUpApplication.getNodeReservedRam(nodeName);
-										} catch (SQLException e)
-										{
-											throw new RuntimeException(e.getMessage());
-										}
-									}));
+			for(var node : nodeRows)
+			{
+				var name = node.getColumnValue(NodeTable.NAME);
+				nodes.add(new NodeInfo(name,
+									   node.getColumnValue(NodeTable.MAX_RAM_ALLOWED),
+									   StartUpApplication.getNodeReservedRam(name)));
+			}
 			
 		} catch (SQLException | RuntimeException e1)
 		{
@@ -94,37 +85,31 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		var template = new frontend.templates.GameServerAddTemplate(
-				SERVER_NAME_PATTERN,
-				ControllerProperties.NODE_NAMES.split(","),
-				nodes,
-				ramAmounts,
-				GameServer.PROPERTY_NAMES_TO_TYPE.keySet());
+		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
+		context.put("nodes", nodes);
+		context.put("serverTypes", GameServer.PROPERTY_NAMES_TO_TYPE.keySet());
+		context.put("minRamAmount", MinecraftServer.MINIMUM_HEAP_SIZE);
+		context.put("defaultRamAmount", MinecraftServer.MINIMUM_HEAP_SIZE);
+		context.put("ramStep", MinecraftServer.HEAP_STEP);
 		
-		response.setContentType("text/html");
-		response.getWriter().print(template);
+		var template = Velocity.getTemplate("addServer.vm");
+		template.merge(context, response.getWriter());
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = request.getParameter(ApiSettings.SERVER_NAME_PARAMETER);
-		var executableName = request.getParameter(ApiSettings.EXECUTABLE_NAME_PARAMETER);
-		var nodeName = request.getParameter(ApiSettings.NODE_NAME_PARAMETER);
-		var type = request.getParameter(ApiSettings.SERVER_TYPE_PARAMETER);
+		var serverName = ApiSettings.SERVER_NAME.parse(request);
+		var executableName = ApiSettings.EXECUTABLE_NAME.parse(request);
+		var nodeName = ApiSettings.NODE_NAME.parse(request);
+		var type = ApiSettings.SERVER_TYPE.parse(request);
 		
-		if(serverName == null || executableName == null || nodeName == null || type == null)
+		if(!Utils.optionalsPresent(serverName, executableName, nodeName, type))
 		{
 			doGet(request, response);
 			return;
 		}
 		
-		if(!SERVER_NAME_PATTERN.matcher(serverName).matches())
-		{
-			doGet(request, response);
-			return;
-		}
-		
-		var serverAddress = StartUpApplication.nodeIPAddresses.get(nodeName);
+		var serverAddress = StartUpApplication.nodeIPAddresses.get(nodeName.get());
 		
 		if(serverAddress == null)
 		{
@@ -135,7 +120,7 @@ public class GameServerAdd extends HttpServlet
 		try
 		{
 			var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
-								  .filter(GameServerTable.NAME.cloneWithValue(serverName))
+								  .filter(GameServerTable.NAME.cloneWithValue(serverName.get()))
 								  .first();
 			
 			if(gameServer.isPresent())
@@ -151,28 +136,22 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		var url = nodeapi.ServerAdd.postEndpoint(serverName, executableName, type);
+		var url = nodeapi.ServerAdd.postEndpoint(serverName.get(), executableName.get(), type.get());
 		url.setHost(serverAddress);
 		
-		if(type.equals("minecraft"))
+		if(type.get().equals("minecraft"))
 		{
-			var ram = Utils.fromString(Long.class, request.getParameter("ramAmount"));
-			if(ram == null)
+			var ram = ApiSettings.RAM_AMOUNT.parse(request);
+			if(ram.isEmpty())
 			{
 				doGet(request, response);
 				return;
 			}
 			
-			if(ram < MinecraftServer.MINIMUM_HEAP_SIZE || ram % 1024 != 0)
-			{
-				doGet(request, response);
-				return;
-			}
+			var restart = ApiSettings.RESTARTS_UNEXPECTED.parse(request);
 			
-			var restart = request.getParameter("restartsUnexpected") == null ? "no" : "yes";
-			
-			url.addQuery("ram", ram);
-			url.addQuery("restart", restart);
+			url.addQuery(ApiSettings.RAM_AMOUNT.getName(), ram.get());
+			url.addQuery(ApiSettings.RESTARTS_UNEXPECTED.getName(), restart.get());
 		}
 		
 		var fileParts = request.getParts()
@@ -189,13 +168,13 @@ public class GameServerAdd extends HttpServlet
 			
 			try
 			{
-				var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofString());
+				var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
 				if(httpResponse.statusCode() == 200)
 				{
 					var id = Integer.parseInt(httpResponse.body());
-					StartUpApplication.serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(type));
+					StartUpApplication.serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(type.get()));
 					StartUpApplication.serverIPAddresses.put(id, serverAddress);
-					response.sendRedirect(Index.URL);
+					response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 					return;
 				}
 			}

@@ -14,7 +14,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import api.minecraft.MinecraftServer;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
@@ -23,6 +22,7 @@ import nodemain.NodeProperties;
 import nodemain.StartUpApplication;
 import server.GameServerFactory;
 import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/ServerAdd")
 @MultipartConfig
@@ -40,18 +40,18 @@ public class ServerAdd extends HttpServlet
 	public static ParameterURL postEndpoint(String serverName, String execName, String type)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_NAME_PARAMETER, serverName);
-		url.addQuery(ApiSettings.EXECUTABLE_NAME_PARAMETER, execName);
-		url.addQuery(ApiSettings.SERVER_TYPE_PARAMETER, type);
+		url.addQuery(ApiSettings.SERVER_NAME.getName(), serverName);
+		url.addQuery(ApiSettings.EXECUTABLE_NAME.getName(), execName);
+		url.addQuery(ApiSettings.SERVER_TYPE.getName(), type);
 		return url;
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = request.getParameter(ApiSettings.SERVER_NAME_PARAMETER);
-		var execName = request.getParameter(ApiSettings.EXECUTABLE_NAME_PARAMETER);
-		var type = request.getParameter(ApiSettings.SERVER_TYPE_PARAMETER);
-		if(serverName == null || execName == null || type == null)
+		var serverName = ApiSettings.SERVER_NAME.parse(request);
+		var execName = ApiSettings.EXECUTABLE_NAME.parse(request);
+		var type = ApiSettings.SERVER_TYPE.parse(request);
+		if(!Utils.optionalsPresent(serverName, execName, type))
 		{
 			response.setStatus(400);
 			return;
@@ -61,7 +61,7 @@ public class ServerAdd extends HttpServlet
 		try
 		{
 			serverExists = Query.query(StartUpApplication.database, GameServerTable.class)
-									.filter(GameServerTable.NAME.cloneWithValue(serverName))
+									.filter(GameServerTable.NAME.cloneWithValue(serverName.get()))
 									.first();
 		} catch (SQLException e)
 		{
@@ -76,38 +76,21 @@ public class ServerAdd extends HttpServlet
 			return;
 		}
 		
-		if(type.equals("minecraft"))
+		if(type.get().equals("minecraft"))
 		{
-			var ramStr = request.getParameter("ram");
-			var restart = request.getParameter("restart");
-			if(ramStr == null || restart == null)
-			{
-				response.setStatus(400);
-				return;
-			}
-			
-			int ram;
-			try
-			{
-				ram = Integer.parseInt(ramStr);
-			}
-			catch(NumberFormatException e)
-			{
-				response.setStatus(400);
-				return;
-			}
-			
-			if(ram < MinecraftServer.MINIMUM_HEAP_SIZE || ram % 1024 != 0)
+			var ram = ApiSettings.RAM_AMOUNT.parse(request);
+			var restart = ApiSettings.RESTARTS_UNEXPECTED.parse(request);
+			if(!Utils.optionalsPresent(ram, restart))
 			{
 				response.setStatus(400);
 				return;
 			}
 			
 			var gameServer = new GameServerTable();
-			gameServer.setColumnValue(GameServerTable.NAME, serverName);
+			gameServer.setColumnValue(GameServerTable.NAME, serverName.get());
 			gameServer.setColumnValue(GameServerTable.NODE_OWNER, NodeProperties.NAME);
 			gameServer.setColumnValue(GameServerTable.SERVER_TYPE, "minecraft");
-			gameServer.setColumnValue(GameServerTable.EXECUTABLE_NAME, execName);
+			gameServer.setColumnValue(GameServerTable.EXECUTABLE_NAME, execName.get());
 			
 			try
 			{
@@ -120,8 +103,8 @@ public class ServerAdd extends HttpServlet
 			}
 			
 			var minecraft = new MinecraftServerTable();
-			minecraft.setColumnValue(MinecraftServerTable.MAX_HEAP_SIZE, ram);
-			minecraft.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, restart.equals("yes"));
+			minecraft.setColumnValue(MinecraftServerTable.MAX_HEAP_SIZE, ram.get());
+			minecraft.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, restart.get());
 			minecraft.setColumnValue(MinecraftServerTable.ARGUMENTS, "");
 			minecraft.setColumnValue(MinecraftServerTable.SERVER_ID, gameServer.getColumnValue(GameServerTable.ID));
 			
@@ -147,7 +130,7 @@ public class ServerAdd extends HttpServlet
 				var fileName = p.getSubmittedFileName();
 				if(fileName.endsWith(".zip"))
 				{
-					FileUpload.uploadFolder(Paths.get(NodeProperties.DEPLOY_FOLDER, serverName).toFile(), p.getInputStream());
+					FileUpload.uploadFolder(Paths.get(NodeProperties.DEPLOY_FOLDER, serverName.get()).toFile(), p.getInputStream());
 				}
 			}
 			

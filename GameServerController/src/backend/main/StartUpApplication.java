@@ -1,6 +1,10 @@
 package backend.main;
 
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpClient.Version;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -22,23 +26,51 @@ import models.GameServerTable;
 import models.MinecraftServerTable;
 import server.GameServer;
 
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
+
 
 @WebListener
 public class StartUpApplication implements ServletContextListener
 {
 	public static final Map<Integer, Class<? extends GameServer>> serverTypes = Collections.synchronizedMap(new HashMap<Integer, Class<? extends GameServer>>());
+	public static final Map<Class<? extends GameServer>, String> serverTypesToNames = Collections.synchronizedMap(new HashMap<Class<? extends GameServer>, String>());
 	public static final Map<Integer, String> serverIPAddresses = Collections.synchronizedMap(new HashMap<Integer, String>());
 	public static final Map<String, String> nodeIPAddresses = new HashMap<String, String>();
-	public static final String NODE_OUTPUT_URL = "/Output";
+	public static final Map<String, String> URL_MAPPINGS = new HashMap<String, String>();
 	public static String[] NODE_NAMES;
 	public static String[] NODE_ADDRESSES;
 	public static final Logger LOGGER = Logger.getGlobal();
 	public static Database database;
 	
 	public static String SERVLET_PATH;
+	public static final VelocityContext GLOBAL_CONTEXT = new VelocityContext();
+	public static HttpClient client = HttpClient.newBuilder()
+											    .version(Version.HTTP_1_1)
+											    .followRedirects(Redirect.NORMAL)
+											    .connectTimeout(Duration.ofSeconds(20))
+											    .build();
 
 	public void contextInitialized(ServletContextEvent sce)
 	{
+		Velocity.setProperty(Velocity.FILE_RESOURCE_LOADER_PATH, sce.getServletContext().getRealPath(ControllerProperties.TEMPLATES_PATH));
+		Velocity.init();
+		
+		SERVLET_PATH = sce.getServletContext().getContextPath();
+		var servlets = sce.getServletContext().getServletRegistrations();
+		for(var name : servlets.keySet())
+		{
+			var mappings = servlets.get(name).getMappings();
+			if(!mappings.isEmpty())
+			{
+				var mapping = servlets.get(name).getMappings().iterator().next();
+				URL_MAPPINGS.put(name, SERVLET_PATH + mapping);
+			}
+		}
+		
+		GLOBAL_CONTEXT.put("urlMappings", URL_MAPPINGS);
+		serverTypesToNames.put(MinecraftServer.class, "Minecraft");
+		
 		try
 		{
 			Database.registerDriver("com.mysql.jdbc.Driver");
@@ -53,8 +85,6 @@ public class StartUpApplication implements ServletContextListener
 		{
 			throw new RuntimeException("Is the database up?");
 		}
-		
-		SERVLET_PATH = sce.getServletContext().getContextPath();
 		
 		GameServer.setup(database);
 		MinecraftServer.setup(database);
@@ -109,8 +139,19 @@ public class StartUpApplication implements ServletContextListener
 							   .mapToLong(server -> server.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE).longValue())
 							   .sum();
 	}
+	
+	public static String getUrlMapping(String name)
+	{
+		return URL_MAPPINGS.get(name);
+	}
+	
+	public static <T> String getUrlMapping(Class<T> clazz)
+	{
+		return URL_MAPPINGS.get(clazz.getName());
+	}
 
 	public void contextDestroyed(ServletContextEvent sce)
 	{
+		client = null;
 	}
 }

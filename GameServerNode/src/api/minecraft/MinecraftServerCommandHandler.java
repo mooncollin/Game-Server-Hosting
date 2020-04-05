@@ -16,6 +16,7 @@ import model.Table;
 import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
+import nodeapi.ApiSettings;
 import nodemain.StartUpApplication;
 import server.GameServerCommandHandler;
 
@@ -105,7 +106,6 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler<Mine
 			return true;
 		}
 		
-		
 		Table minecraftServer;
 		try
 		{
@@ -136,7 +136,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler<Mine
 			throw new RuntimeException(e.getMessage());
 		}
 		
-		if(command.equals(PROPERTIES_COMMAND))
+		if(command.equals(ApiSettings.PROPERTIES.getName()))
 		{
 			var props = new Properties();
 			for(var key : MinecraftServer.MINECRAFT_PROPERTIES.keySet())
@@ -153,23 +153,6 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler<Mine
 				props.setProperty(key, property);
 			}
 			server.setProperties(props);
-		}
-		else if(command.equals(RESTARTS_COMMAND))
-		{
-			var restarts = request.getParameter("restartsUnexpected");
-			server.autoRestart(restarts != null);
-			minecraftServer.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, server.autoRestart());
-		}
-		else if(command.equals(MinecraftServer.ARGUMENTS_PARAMETER))
-		{
-			var arguments = request.getParameter(MinecraftServer.ARGUMENTS_PARAMETER);
-			if(arguments == null)
-			{
-				return false;
-			}
-			
-			minecraftServer.setColumnValue(MinecraftServerTable.ARGUMENTS, arguments);
-			server.setArguments(arguments);
 		}
 		else
 		{

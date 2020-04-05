@@ -5,12 +5,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.LocalTime;
-import java.time.format.DateTimeParseException;
-import java.util.Objects;
 import java.util.logging.Level;
-import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -23,10 +18,11 @@ import frontend.GameServerConsole;
 import frontend.Index;
 import model.Query;
 import model.Table;
-import models.GameServerTable;
 import models.TriggersTable;
 import nodeapi.ApiSettings;
 import server.TriggerHandler;
+import server.TriggerHandlerRecurring;
+import server.TriggerHandlerTime;
 import utils.ParameterURL;
 import utils.Utils;
 
@@ -34,8 +30,6 @@ import utils.Utils;
 public class GameServerTriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final Pattern RECURRING_PATTERN = Pattern.compile("(?<hour>[01]?[0-9]|2[0-3]):(?<minute>[0-5][0-9]):(?<second>[0-5][0-9])");
 	
 	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerTriggerEdit";
 	
@@ -47,76 +41,50 @@ public class GameServerTriggerEdit extends HttpServlet
 	public static ParameterURL postEndpoint(int serverID, int triggerID)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
-		url.addQuery(ApiSettings.TRIGGER_ID_PARAMETER, triggerID);
-		return url;
-	}
-	
-	public static ParameterURL postEndpoint(int serverID, int triggerID, String value, String command, String action, String type)
-	{
-		var url = postEndpoint(serverID, triggerID);
-		url.addQuery(ApiSettings.TRIGGER_VALUE_PARAMETER, value);
-		url.addQuery(ApiSettings.TRIGGER_TYPE_PARAMETER, type);
-		url.addQuery(ApiSettings.TRIGGER_COMMAND_PARAMETER, command);
-		url.addQuery(ApiSettings.TRIGGER_ACTION_PARAMETER, action);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
+		url.addQuery(ApiSettings.TRIGGER_ID.getName(), triggerID);
 		return url;
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var triggerID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.TRIGGER_ID_PARAMETER));
-		var value = request.getParameter(ApiSettings.TRIGGER_VALUE_PARAMETER);
-		var command = Objects.requireNonNullElse(request.getParameter(ApiSettings.TRIGGER_COMMAND_PARAMETER), "");
-		var action = Objects.requireNonNullElse(request.getParameter(ApiSettings.TRIGGER_ACTION_PARAMETER), "");
-		var type = request.getParameter(ApiSettings.TRIGGER_TYPE_PARAMETER);
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var triggerID = ApiSettings.TRIGGER_ID.parse(request);
+		var value = ApiSettings.TRIGGER_VALUE.parse(request);
+		var command = ApiSettings.TRIGGER_COMMAND.parse(request);
+		var action = ApiSettings.TRIGGER_ACTION.parse(request);
 		
-		if(serverID == null || value == null || triggerID == null || (triggerID == -1 && type == null))
+		if(!Utils.optionalsPresent(serverID, triggerID, value, command, action))
 		{
-			response.sendRedirect(Index.URL);
+			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 			return;
 		}
 		
-		var redirectUrl = GameServerConsole.getEndpoint(serverID);
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
 		
 		if(serverAddress == null)
 		{
-			response.sendRedirect(Index.URL);
+			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 			return;
 		}
+		
+		var redirectUrl = GameServerConsole.getEndpoint(serverID.get());
 		
 		Table trigger;
 		try
 		{
 			var option = Query.query(StartUpApplication.database, TriggersTable.class)
-							   .filter(TriggersTable.ID, triggerID)
+							   .filter(TriggersTable.ID, triggerID.get())
 							   .first();
 			
 			if(option.isEmpty())
 			{
-				var gameServer = Query.query(StartUpApplication.database, GameServerTable.class)
-									  .filter(GameServerTable.ID, serverID)
-									  .first();
-				
-				if(gameServer.isEmpty()) // Just checking if the server actually exists
-				{
-					response.sendRedirect(Index.URL);
-					return;
-				}
-				
-				trigger = new TriggersTable();
-				trigger.setColumnValue(TriggersTable.TYPE, type.toLowerCase());
-				trigger.setColumnValue(TriggersTable.COMMAND, "");
-				trigger.setColumnValue(TriggersTable.VALUE, "");
-				trigger.setColumnValue(TriggersTable.SERVER_OWNER, serverID);
-				trigger.setColumnValue(TriggersTable.EXTRA, "");
+				response.sendRedirect(redirectUrl.getURL());
+				return;
 			}
-			else
-			{
-				trigger = option.get();
-			}
+
+			trigger = option.get();
 			
 		} catch (SQLException e)
 		{
@@ -125,48 +93,35 @@ public class GameServerTriggerEdit extends HttpServlet
 			return;
 		}
 		
-		var parsedValue = value;
+		var parsedValue = value.get();
 		var triggerType = trigger.getColumnValue(TriggersTable.TYPE);
 		
 		if(triggerType.equals(TriggerHandler.RECURRING_TYPE))
-		{	
-			var matcher = RECURRING_PATTERN.matcher(value);
-			if(!matcher.matches())
+		{
+			var seconds = TriggerHandlerRecurring.convertFormatToSeconds(value.get());
+			if(seconds <= 0)
 			{
 				response.sendRedirect(redirectUrl.getURL());
 				return;
 			}
-			
-			var hour = Objects.requireNonNullElse(Utils.fromString(Integer.class, matcher.group("hour")), 0);
-			var minute = Objects.requireNonNullElse(Utils.fromString(Integer.class, matcher.group("minute")), 0);
-			var second = Objects.requireNonNullElse(Utils.fromString(Integer.class, matcher.group("second")), 0);
-			
-			if(hour == 0 && minute == 0 && second == 0)
-			{
-				response.sendRedirect(redirectUrl.getURL());
-				return;
-			}
-			
-			var dur = Duration.ZERO.plusHours(hour).plusMinutes(minute).plusSeconds(second);
-			parsedValue = String.valueOf(dur.getSeconds());
+
+			parsedValue = String.valueOf(seconds);
 		}
 		else if(triggerType.equals(TriggerHandler.TIME_TYPE))
 		{
-			try
-			{
-				var t = LocalTime.parse(value);
-				parsedValue = String.valueOf(t.toSecondOfDay());
-			}
-			catch(DateTimeParseException e)
+			var seconds = TriggerHandlerTime.convertFormatToSeconds(value.get());
+			if(seconds < 0)
 			{
 				response.sendRedirect(redirectUrl.getURL());
 				return;
 			}
+			
+			parsedValue = String.valueOf(seconds);
 		}
 		
 		trigger.setColumnValue(TriggersTable.VALUE, parsedValue);
-		trigger.setColumnValue(TriggersTable.COMMAND, command);
-		trigger.setColumnValue(TriggersTable.EXTRA, action);
+		trigger.setColumnValue(TriggersTable.COMMAND, command.get());
+		trigger.setColumnValue(TriggersTable.EXTRA, action.get());
 		
 		try
 		{
@@ -178,18 +133,16 @@ public class GameServerTriggerEdit extends HttpServlet
 		}
 		
 		
-		var url = nodeapi.TriggerEdit.getEndpoint(trigger.getColumnValue(TriggersTable.ID));
+		var url = nodeapi.TriggerEdit.getEndpoint(triggerID.get());
 		url.setHost(serverAddress);
 		
 		try
 		{
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
+			StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)
 		{
-			response.sendRedirect(Index.URL);
-			return;
 		}
 		
 		response.sendRedirect(redirectUrl.getURL());

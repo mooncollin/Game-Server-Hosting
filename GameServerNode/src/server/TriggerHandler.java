@@ -1,6 +1,10 @@
 package server;
 
+import java.io.IOException;
 import java.util.Objects;
+import java.util.logging.Level;
+
+import nodemain.StartUpApplication;
 
 abstract public class TriggerHandler
 {
@@ -8,9 +12,9 @@ abstract public class TriggerHandler
 	public static final String STOP_SERVER = "Stop Server";
 	public static final String RESTART_SERVER = "Restart Server";
 	
-	public static final String RECURRING_TYPE = "recurring";
-	public static final String TIME_TYPE = "time";
-	public static final String OUTPUT_TYPE = "output";
+	public static final String RECURRING_TYPE = "Recurring";
+	public static final String TIME_TYPE = "Time";
+	public static final String OUTPUT_TYPE = "Output";
 	
 	private GameServer server;
 	private String command;
@@ -70,7 +74,14 @@ abstract public class TriggerHandler
 		server.writeToServer(command);
 		if(getAction().equals(START_SERVER))
 		{
-			server.startServer();
+			try
+			{
+				server.startServer();
+			}
+			catch(IOException e)
+			{
+				StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			}
 		}
 		else if(getAction().equals(STOP_SERVER))
 		{
@@ -79,7 +90,14 @@ abstract public class TriggerHandler
 		else if(getAction().equals(RESTART_SERVER))
 		{
 			server.stopServer();
-			server.startServer();
+			try
+			{
+				server.startServer();
+			}
+			catch(IOException e)
+			{
+				StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			}
 		}
 	}
 }

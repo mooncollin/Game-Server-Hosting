@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Arrays;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -28,49 +29,39 @@ public class GameServerFileDownload extends HttpServlet
 		null, null, null, URL
 	);
 	
-	public static ParameterURL getEndpoint(int serverID, String directory)
+	public static ParameterURL getEndpoint(int serverID, String[] directories)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
 		return url;
 	}
 	
-	public static ParameterURL postEndpoint(int serverID, String directory)
+	public static ParameterURL postEndpoint(int serverID, String[] directories)
 	{
-		return getEndpoint(serverID, directory);
+		return getEndpoint(serverID, directories);
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		if(serverID == null || directory == null || directory.isEmpty())
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var directory = ApiSettings.DIRECTORY.parse(request);
+
+		if(serverID.isEmpty() && directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
 		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		var directories = directory.split(",");
-		
-		for(var d : directories)
-		{
-			if(d.contains(".."))
-			{
-				response.setStatus(400);
-				return;
-			}
-		}
-		
-		var fileName = directories[directories.length - 1];
-		if(fileName.indexOf('.') == -1)
+		var fileName = Utils.lastOf(directory.get(), 1);
+		if(!fileName.contains("."))
 		{
 			fileName += ".zip";
 		}
@@ -79,10 +70,10 @@ public class GameServerFileDownload extends HttpServlet
 		
 		try
 		{
-			var url = nodeapi.FileDownload.getEndpoint(directory);
+			var url = nodeapi.FileDownload.getEndpoint(directory.get());
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofInputStream());
+			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofInputStream());
 			if(httpResponse.statusCode() != 200)
 			{
 				response.setStatus(400);

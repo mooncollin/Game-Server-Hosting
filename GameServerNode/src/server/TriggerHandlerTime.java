@@ -1,6 +1,7 @@
 package server;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.Objects;
 import java.util.TimerTask;
 
@@ -11,6 +12,19 @@ public class TriggerHandlerTime extends TriggerHandler
 	public static String convertSecondsToFormat(long seconds)
 	{
 		return LocalTime.MIDNIGHT.plusSeconds(seconds).toString();
+	}
+	
+	public static long convertFormatToSeconds(String str)
+	{
+		try
+		{
+			var t = LocalTime.parse(str);
+			return t.toSecondOfDay();
+		}
+		catch(DateTimeParseException e)
+		{
+			return -1;
+		}
 	}
 	
 	private LocalTime timeExecuted;

@@ -27,7 +27,7 @@ public class NodeInfo extends HttpServlet
 	public static ParameterURL getEndpoint(String property)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.PROPERTY_PARAMETER, property);
+		url.addQuery(ApiSettings.PROPERTY.getName(), property);
 		return url;
 	}
 	
@@ -38,15 +38,15 @@ public class NodeInfo extends HttpServlet
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var property = request.getParameter(ApiSettings.PROPERTY_PARAMETER);
+		var property = ApiSettings.PROPERTY.parse(request);
 		
-		if(property == null)
+		if(property.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var responseValue = PROPERTY_COMMANDS.get(property);
+		var responseValue = PROPERTY_COMMANDS.get(property.get());
 		if(responseValue == null)
 		{
 			response.setStatus(400);

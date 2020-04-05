@@ -1,6 +1,7 @@
 package server;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.LinkedList;
@@ -38,8 +39,7 @@ abstract public class GameServer
 	private final Timer timer;
 	private final List<TimerTask> timerTasks;
 	private final List<OutputStream> outputConnectors;
-	private final List<Object> runningStateChangeNotifiers;
-	private final List<Object> outputNotifiers;
+	private final Object runningStateNotifier = new Object();
 	
 	public static void setup(Database db)
 	{
@@ -65,8 +65,6 @@ abstract public class GameServer
 	
 	public GameServer(File folderLocation, File fileName, int logSize)
 	{
-		runningStateChangeNotifiers = new LinkedList<Object>();
-		outputNotifiers = new LinkedList<Object>();
 		outputConnectors = new LinkedList<OutputStream>();
 		triggerHandlers = Collections.synchronizedList(new LinkedList<TriggerHandler>());
 		timerTasks = Collections.synchronizedList(new LinkedList<TimerTask>());
@@ -96,36 +94,6 @@ abstract public class GameServer
 		return new GameServerCommandHandler<GameServer>(this);
 	}
 	
-	public Object getOutputNotifier()
-	{
-		var notifier = new Object();
-		synchronized(outputNotifiers)
-		{
-			outputNotifiers.add(notifier);
-		}
-		
-		return notifier;
-	}
-	
-	public boolean removeOutputNotifier(Object n)
-	{
-		synchronized(outputNotifiers)
-		{
-			return outputNotifiers.remove(n);
-		}
-	}
-	
-	public Object getRunningStateNotifier()
-	{
-		var stateN = new Object();
-		synchronized(runningStateChangeNotifiers)
-		{
-			runningStateChangeNotifiers.add(stateN);
-		}
-
-		return stateN;
-	}
-	
 	public void registerOutputConnector(OutputStream s)
 	{
 		synchronized (outputConnectors)
@@ -139,14 +107,6 @@ abstract public class GameServer
 		synchronized (outputConnectors)
 		{
 			return outputConnectors.remove(s);
-		}
-	}
-	
-	public boolean removeRunningStateNotifier(Object n)
-	{
-		synchronized(runningStateChangeNotifiers)
-		{
-			return runningStateChangeNotifiers.remove(n);
 		}
 	}
 	
@@ -200,13 +160,19 @@ abstract public class GameServer
 		try
 		{
 			process.waitFor();
-			notifyRunningNotifiers();
 		} catch (InterruptedException e)
 		{
 		}
 		
-		StartUpApplication.LOGGER.log(Level.WARNING, "Server forced to stop");
-		return !process.isAlive();
+		var result = !process.isAlive();
+		
+		if(result)
+		{
+			notifyRunningNotifiers();
+			StartUpApplication.LOGGER.log(Level.WARNING, "Server forced to stop");
+		}
+		
+		return result;
 	}
 	
 	public boolean isRunning()
@@ -214,48 +180,25 @@ abstract public class GameServer
 		return process != null && process.isAlive();
 	}
 	
-	protected void notifyRunningNotifiers()
+	public Object getRunningStateNotifier()
 	{
-		synchronized(runningStateChangeNotifiers)
-		{
-			runningStateChangeNotifiers.parallelStream()
-			   .forEach(notifier -> {
-				   synchronized (notifier) {
-					   notifier.notifyAll();
-				   }
-			   });
-		}
+		return runningStateNotifier;
 	}
 	
-	protected void notifyOutputNotifiers()
+	protected void notifyRunningNotifiers()
 	{
-		synchronized (outputNotifiers)
+		synchronized(runningStateNotifier)
 		{
-			outputNotifiers.parallelStream()
-				.forEach(notifier -> {
-					synchronized (notifier) {
-						notifier.notifyAll();
-					}
-				});
+			runningStateNotifier.notifyAll();
 		}
 	}
 	
 	abstract public boolean stopServer();
-	abstract public boolean startServer();
+	abstract public boolean startServer() throws IOException;
 	abstract public boolean writeToServer(String out);
 	
 	protected List<OutputStream> getOutputConnectors()
 	{
 		return outputConnectors;
-	}
-	
-	protected List<Object> getRunningStateChangeNotifiers()
-	{
-		return runningStateChangeNotifiers;
-	}
-	
-	protected List<Object> getOutputNotifiers()
-	{
-		return outputNotifiers;
 	}
 }

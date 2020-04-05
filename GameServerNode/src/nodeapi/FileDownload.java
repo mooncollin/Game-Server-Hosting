@@ -3,7 +3,9 @@ package nodeapi;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -28,25 +30,23 @@ public class FileDownload extends HttpServlet
 		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL getEndpoint(String directory)
+	public static ParameterURL getEndpoint(String[] directories)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
 		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		if(directory == null || directory.isEmpty())
+		var directory = ApiSettings.DIRECTORY.parse(request);
+		if(directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var directories = directory.split(",");
-		
-		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
+		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get()).toFile();
 		if(!currentFile.exists())
 		{
 			response.setStatus(400);
@@ -64,36 +64,33 @@ public class FileDownload extends HttpServlet
 		{
 			try(var s = new ZipOutputStream(response.getOutputStream()))
 			{
-				for(var deeperFile : currentFile.listFiles())
+				for(var file : currentFile.listFiles())
 				{
-					zipDirectory(currentFile, deeperFile, s);
+					zipDirectory(null, file, s);
 				}
 			}
 		}
 	}
 	
-	private void zipDirectory(File currentDirectory, File currentFile, ZipOutputStream zipOut) throws IOException
+	private void zipDirectory(Path currentFolder, File currentFile, ZipOutputStream zipOut) throws IOException
 	{
+		var parentName = currentFolder == null ? "" : currentFolder.toString();
 		if(currentFile.isFile())
 		{
-			var fileName = Paths.get(currentDirectory.getAbsolutePath(), currentFile.getName()).toString();
-			zipOut.putNextEntry(new ZipEntry(fileName));
+			var parent = Paths.get(parentName, currentFile.getName());
+			zipOut.putNextEntry(new ZipEntry(parent.toString()));
 			try(var fileIn = new FileInputStream(currentFile))
 			{
 				fileIn.transferTo(zipOut);
 			}
 			zipOut.closeEntry();
 		}
-		else if(currentFile.isDirectory())
+		else
 		{
-			for(var deeperFile : currentFile.listFiles())
+			var parent = Paths.get(parentName, currentFile.getName());
+			for(var file : currentFile.listFiles())
 			{
-				var newDirectory = currentFile;
-				if(!deeperFile.equals(currentDirectory))
-				{
-					newDirectory = Paths.get(currentDirectory.getAbsolutePath(), currentFile.getName()).toFile();
-				}
-				zipDirectory(newDirectory, deeperFile, zipOut);
+				zipDirectory(parent, file, zipOut);
 			}
 		}
 	}

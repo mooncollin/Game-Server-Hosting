@@ -1,0 +1,64 @@
+#parse("linkMacros.vm")
+#set ($background = "images/material-back.jpeg")
+
+#define ($content)
+	<div id="inner-content" class="ml-5 mt-5">
+		<h1 class="text-light">Add Game Server</h1>
+		<hr class="border border-light">
+		<form method="POST" enctype="multipart/form-data">
+			<li class="list-group-item form-group form-inline">
+				<label for="name" class="d-inline-block w-25 align-middle">Server Name</label>
+				<input class="form-control" type="text" name="name" id="name" placeholder="Enter server name" required>
+				<small class="form-text text-muted">This name must be unique.</small>
+			</li>
+			<li class="list-group-item form-group form-inline">
+				<label for="execName" class="d-inline-block w-25 align-middle">Executable Name</label>
+				<input class="form-control" type="text" name="execName" id="execName" placeholder="Enter executable name" required>
+				<small class="form-text text-muted">This will be the file required to start the server.</small>
+			</li>
+			<li class="list-group-item form-group form-inline">
+				<label for="node" class="d-inline-block w-25 align-middle">Select Node</label>
+				<select id="node" name="node" required onChange="changeNode()" class="form-control">
+					#foreach($node in $nodes)
+						<option totalram="$node.totalRam" reservedram="$node.reservedRam">
+							$node.name
+						</option>
+					#end
+				</select>
+				<small class="form-text text-muted"></small>
+			</li>
+			<li class="form-group form-inline list-group-item">
+				<label class="d-inline-block w-25 align-middle">Server Type</label>
+				<select id="type" required name="type" onChange="changeType()" class="form-control">
+					#foreach($type in $serverTypes)
+						<option>
+							$type
+						</option>
+					#end
+				</select>
+			</li>
+			<li class="form-group form-inline list-group-item">
+				<label for="ramAmount" class="d-inline-block w-25 align-middle">Maximum RAM (MB)</label>
+				<input class="form-control" type="number" id="ramAmount" name="ramAmount" placeholder="Enter maximum amount of ram to use in MB" min="$minRamAmount" step="$ramStep" value="$defaultRamAmount" required>
+				<small class="form-text text-muted">RAM must be in 1024 increments</small>
+			</li>
+			<li class="form-group form-inline list-group-item">
+				<label for="restartsUnexpected" class="d-inline-block w-25 align-middle">Automatic Restart</label>
+				<input class="form-control" type="checkbox" id="restartsUnexpected" name="restartsUnexpected" placeholder="Enter maximum amount of ram to use in MB">
+				<small class="form-text text-muted">This will restart the server when it stops unexpectingly.</small>
+			</li>
+			<li class="form-group form-inline list-group-item">
+				<label for="files" class="d-inline-block w-25 align-middle">Starting Files</label>
+				<input class="form-control-file" type="file" id="files" name="files" accept=".zip">
+				<small class="form-text text-muted">The archive given will unzip in the parent directory.</small>
+			</li>
+			<li class="list-group-item">
+				<button class="btn btn-primary">Submit</button>
+			</li>
+		</form>
+	</div>
+	
+	<script src="js/addServer.js"></script>
+#end
+
+#parse("base.vm")

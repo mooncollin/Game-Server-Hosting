@@ -9,9 +9,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
+
 import backend.main.StartUpApplication;
-import frontend.templates.Templates;
-import util.Template;
 import utils.ParameterURL;
 
 @WebServlet("/GameTypeAdd")
@@ -32,14 +33,15 @@ public class GameTypeAdd extends HttpServlet
 		return url;
 	}
 	
+	@SuppressWarnings("unused")
 	private static final Pattern SERVER_TYPE_PATTERN = Pattern.compile("[A-Za-z0-9_]+");
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		Template template = Templates.getMainTemplate();
+		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
 		
-		response.setContentType("text/html");
-		response.getWriter().print(template);
+		var template = Velocity.getTemplate("addServerType.vm");
+		template.merge(context, response.getWriter());
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException

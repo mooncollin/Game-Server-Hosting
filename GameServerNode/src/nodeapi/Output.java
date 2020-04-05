@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,7 +18,6 @@ import javax.websocket.server.ServerEndpoint;
 import nodemain.StartUpApplication;
 import server.GameServer;
 import utils.ParameterURL;
-import utils.Utils;
 
 @ServerEndpoint("/Output")
 public class Output
@@ -25,7 +25,8 @@ public class Output
 	
 	private static final long WAIT_TIME = 50;
 	public static final ExecutorService OUTPUT_THREADS = Executors.newCachedThreadPool();
-	private static final Map<GameServer, Set<OutputContainer>> LISTENING_OUTPUT = new HashMap<GameServer, Set<OutputContainer>>();
+	private static final Map<GameServer, Set<Session>> SERVER_OUTPUT = new HashMap<GameServer, Set<Session>>();
+	private static final Map<GameServer, Set<Session>> RUNNING_OUTPUT = new HashMap<GameServer, Set<Session>>();
 	public static final String SERVER_ON_MESSAGE = "<on>";
 	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
@@ -41,14 +42,14 @@ public class Output
 	public static ParameterURL getEndpoint(int id)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
 		return url;
 	}
 	
 	public static ParameterURL getEndpoint(int id, String mode)
 	{
 		var url = getEndpoint(id);
-		url.addQuery(ApiSettings.OUTPUT_MODE_PARAMETER, mode);
+		url.addQuery(ApiSettings.OUTPUT_MODE.getName(), mode);
 		return url;
 	}
 	
@@ -62,122 +63,95 @@ public class Output
 			queryParameters.put(query[i], query[i+1]);
 		}
 		
-		var serverID = Utils.fromString(Integer.class, queryParameters.get(ApiSettings.SERVER_ID_PARAMETER));
-		var mode = queryParameters.get(ApiSettings.OUTPUT_MODE_PARAMETER);
+		var serverID = ApiSettings.SERVER_ID.parse(queryParameters.get(ApiSettings.SERVER_ID.getName()));
+		var mode = ApiSettings.OUTPUT_MODE.parse(queryParameters.get(ApiSettings.OUTPUT_MODE.getName()));
+		
+		if(serverID.isEmpty())
+		{
+			try
+			{
+				session.close();
+			} catch (IOException e)
+			{
+			}
+			
+			return;
+		}
 		
 		var outputOnly = false;
 		var runningOnly = false;
 		
 		
-		if(mode != null)
+		if(!mode.isEmpty())
 		{
-			if(mode.equals(OUTPUT_VALUE))
+			switch(mode.get())
 			{
-				outputOnly = true;
-			}
-			else if(mode.equals(RUNNING_VALUE))
-			{
-				runningOnly = true;
+				case OUTPUT_VALUE:
+					outputOnly = true;
+					break;
+				case RUNNING_VALUE:
+					runningOnly = true;
+					break;
 			}
 		}
 		
-		var foundServer = StartUpApplication.getServer(serverID);
+		var foundServer = StartUpApplication.getServer(serverID.get());
+		var neither = !outputOnly && !runningOnly;
 		
-		var container = new OutputContainer(session, outputOnly, runningOnly);
-		
-		synchronized(LISTENING_OUTPUT)
+		if(outputOnly || neither)
 		{
-			var absent = LISTENING_OUTPUT.putIfAbsent(foundServer, new HashSet<OutputContainer>());
-			LISTENING_OUTPUT.get(foundServer).add(container);
-			if(absent == null || LISTENING_OUTPUT.get(foundServer).size() == 1)
+			synchronized (SERVER_OUTPUT)
 			{
-				OUTPUT_THREADS.execute(() -> serveOutput(foundServer));
+				var set = SERVER_OUTPUT.computeIfAbsent(foundServer, k -> new HashSet<Session>());
+				set.add(session);
+				if(set.size() == 1)
+				{
+					OUTPUT_THREADS.execute(() -> serveOutput(foundServer));
+				}
+			}
+		}
+		if(runningOnly || neither)
+		{
+			synchronized (RUNNING_OUTPUT)
+			{
+				var set = RUNNING_OUTPUT.computeIfAbsent(foundServer, k -> new HashSet<Session>());
+				set.add(session);
+				if(set.size() == 1)
+				{
+					OUTPUT_THREADS.execute(() -> serveRunning(foundServer));
+				}
 			}
 		}
 	}
 	
-	private static void serveOutput(GameServer foundServer)
+	private static void serveRunning(GameServer server)
 	{
-		Set<OutputContainer> outputs;
-		var runningOnly = new HashSet<Session>();
-		var outputOnly = new HashSet<Session>();
-		var runningTracker = new HashMap<Session, Boolean>();
-		synchronized (LISTENING_OUTPUT)
-		{
-			outputs = LISTENING_OUTPUT.get(foundServer);
-		}
-		if(outputs == null)
-		{
-			return;
-		}
-		
-		var runningNotifier = foundServer.getRunningStateNotifier();
-		var outputNotifier = foundServer.getOutputNotifier();
-		var serverData = new ByteArrayOutputStream();
-		foundServer.registerOutputConnector(serverData);
+		var runningSessions = new HashMap<Session, Boolean>();
+		var runningNotifier = server.getRunningStateNotifier();
 		
 		while(!Thread.interrupted())
 		{
-			synchronized (outputs)
+			synchronized (RUNNING_OUTPUT)
 			{
-				if(outputs.isEmpty())
+				var set = RUNNING_OUTPUT.get(server);
+				var it = runningSessions.entrySet().iterator();
+				while(it.hasNext())
 				{
-					return;
+					var entry = it.next();
+					if(!set.contains(entry.getKey()))
+					{
+						it.remove();
+					}
 				}
-				
-				for(var output : outputs)
+				for(var session : set)
 				{
-					if(!output.session.isOpen())
-					{
-						runningOnly.remove(output.getSession());
-						runningTracker.remove(output.getSession());
-						outputOnly.remove(output.getSession());
-					}
-					else
-					{
-						if(output.isOutputOnly() || !output.isOutputOnly() && !output.isRunningOnly())
-						{
-							outputOnly.add(output.getSession());
-						}
-						if(output.isRunningOnly() || !output.isOutputOnly() && !output.isRunningOnly())
-						{
-							runningTracker.put(output.getSession(), null);
-							runningOnly.add(output.getSession());
-						}
-					}
+					runningSessions.putIfAbsent(session, null);
 				}
 			}
 			
-			synchronized (outputNotifier)
+			if(runningSessions.isEmpty())
 			{
-				try
-				{
-					outputNotifier.wait(WAIT_TIME);
-				} catch (InterruptedException e)
-				{
-					break;
-				}
-			}
-			
-			if(serverData.size() > 0)
-			{
-				for(var session : outputOnly)
-				{
-					if(session.isOpen())
-					{
-						synchronized (session)
-						{
-							try(var sessionStream = session.getBasicRemote().getSendStream())
-							{
-								serverData.writeTo(sessionStream);
-							} catch (IOException e1)
-							{
-								return;
-							}
-						}
-					}
-				}
-				serverData.reset();
+				break;
 			}
 			
 			synchronized (runningNotifier)
@@ -185,86 +159,112 @@ public class Output
 				try
 				{
 					runningNotifier.wait(WAIT_TIME);
-				} catch (InterruptedException e)
+				}
+				catch(InterruptedException e)
 				{
-					return;
+					break;
 				}
 			}
 			
-			var run = foundServer.isRunning();
+			var run = server.isRunning();
 			var text = run ? SERVER_ON_MESSAGE : SERVER_OFF_MESSAGE;
-			for(var session : runningOnly)
+			for(var entry : runningSessions.entrySet())
 			{
-				if(session.isOpen() && ( runningTracker.get(session) == null ||
-				   run != runningTracker.get(session)))
+				var session = entry.getKey();
+				var result = Objects.requireNonNullElse(entry.getValue(), !run);
+				if(run != result)
 				{
 					synchronized (session)
 					{
-						try
+						if(session.isOpen())
 						{
-							session.getBasicRemote().sendText(text);
-						} catch (IOException e)
-						{
-							return;
+							try
+							{
+								session.getBasicRemote().sendText(text);
+							} catch (IOException e)
+							{
+								return;
+							}
 						}
 					}
-					runningTracker.replace(session, run);
+					runningSessions.replace(session, run);
 				}
 			}
 		}
+	}
+	
+	private static void serveOutput(GameServer server)
+	{
+		var sessions = new HashSet<Session>();
+		var serverData = new ByteArrayOutputStream();
+		server.registerOutputConnector(serverData);
 		
-		foundServer.removeRunningStateNotifier(runningNotifier);
-		foundServer.removeOutputNotifier(outputNotifier);
+		while(!Thread.interrupted())
+		{
+			synchronized (SERVER_OUTPUT)
+			{
+				var set = RUNNING_OUTPUT.get(server);
+				sessions.addAll(set);
+				sessions.retainAll(set);
+			}
+			
+			if(sessions.isEmpty())
+			{
+				break;
+			}
+			
+			synchronized (serverData)
+			{
+				try
+				{
+					serverData.wait(WAIT_TIME);
+				}
+				catch(InterruptedException e)
+				{
+					break;
+				}
+			}
+			
+			if(serverData.size() > 0)
+			{
+				for(var session : sessions)
+				{
+					synchronized (session)
+					{
+						if(session.isOpen())
+						{
+							try(var sessionStream = session.getBasicRemote().getSendStream())
+							{
+								serverData.writeTo(sessionStream);
+							} catch (IOException e1)
+							{
+								continue;
+							}
+						}
+					}
+				}
+				serverData.reset();
+			}
+		}
 	}
 	
 	@OnClose
 	public void onClose(Session session)
 	{
-		synchronized (LISTENING_OUTPUT)
+		synchronized (SERVER_OUTPUT)
 		{
-			LISTENING_OUTPUT.values()
-				.stream()
-				.map(Set::iterator)
-				.forEach(it -> {
-					while(it.hasNext())
-					{
-						var container = it.next();
-						if(container.getSession().equals(session))
-						{
-							it.remove();
-							break;
-						}
-					}
-				});
-		}
-	}
-	
-	private static class OutputContainer
-	{
-		private final Session session;
-		private final boolean outputOnly;
-		private final boolean runningOnly;
-		
-		public OutputContainer(Session s, boolean outputOnly, boolean runningOnly)
-		{
-			this.session = s;
-			this.outputOnly = outputOnly;
-			this.runningOnly = runningOnly;
+			for(var values : SERVER_OUTPUT.values())
+			{
+				values.remove(session);
+			}
 		}
 		
-		public Session getSession()
+		synchronized (RUNNING_OUTPUT)
 		{
-			return session;
-		}
-		
-		public boolean isOutputOnly()
-		{
-			return outputOnly;
-		}
-		
-		public boolean isRunningOnly()
-		{
-			return runningOnly;
+			for(var values : RUNNING_OUTPUT.values())
+			{
+				values.remove(session);
+			}
 		}
 	}
 }

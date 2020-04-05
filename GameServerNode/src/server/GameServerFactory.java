@@ -8,7 +8,6 @@ import java.util.Objects;
 import api.minecraft.MinecraftServer;
 import model.Query;
 import model.Table;
-import model.Filter.FilterType;
 import models.GameServerTable;
 import models.MinecraftServerTable;
 import nodemain.NodeProperties;
@@ -28,7 +27,7 @@ public class GameServerFactory
 			try
 			{
 				var option = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-										   .join(server, GameServerTable.ID, FilterType.EQUAL, new MinecraftServerTable(), MinecraftServerTable.SERVER_ID)
+										   .filter(MinecraftServerTable.SERVER_ID, server.getColumnValue(GameServerTable.ID))
 										   .first();
 				if(option.isEmpty())
 				{

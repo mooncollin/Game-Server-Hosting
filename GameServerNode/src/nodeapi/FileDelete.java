@@ -26,25 +26,23 @@ public class FileDelete extends HttpServlet
 		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL getEndpoint(String directory)
+	public static ParameterURL getEndpoint(String[] directories)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
 		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		if(directory == null)
+		var directory = ApiSettings.DIRECTORY.parse(request);
+		if(directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var directories = directory.split(",");
-		
-		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
+		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get()).toFile();
 		if(!currentFile.exists() || currentFile.equals(Paths.get(NodeProperties.DEPLOY_FOLDER).toFile()))
 		{
 			response.setStatus(400);

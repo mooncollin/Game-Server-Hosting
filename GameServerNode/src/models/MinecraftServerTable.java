@@ -9,28 +9,28 @@ import model.Table;
 
 public class MinecraftServerTable extends Table
 {
-	public static final Column<Integer> ID = ColumnBuilder.start(Integer.class, Types.INTEGER)
+	public static final Column<Integer> ID = ColumnBuilder.<Integer>start(Types.INTEGER)
 														  .setName("id")
 														  .isPrimaryKey(true)
 														  .isAutoIncremented(true)
 														  .build();
 	
-	public static final Column<Integer> SERVER_ID = ColumnBuilder.start(Integer.class, Types.INTEGER)
+	public static final Column<Integer> SERVER_ID = ColumnBuilder.<Integer>start(Types.INTEGER)
 															 	  .setName("serverid")
 															 	  .setForeignKey(ForeignKeyBuilder.start(GameServerTable.ID)
 															 			  						  .setTableReference(new GameServerTable())
 															 			  		)
 															 	  .build();
 	
-	public static final Column<Integer> MAX_HEAP_SIZE = ColumnBuilder.start(Integer.class, Types.INTEGER)
+	public static final Column<Integer> MAX_HEAP_SIZE = ColumnBuilder.<Integer>start(Types.INTEGER)
 																	 .setName("maxheapsize")
 																	 .build();
 	
-	public static final Column<Boolean> AUTO_RESTARTS = ColumnBuilder.start(Boolean.class, Types.BOOLEAN)
+	public static final Column<Boolean> AUTO_RESTARTS = ColumnBuilder.<Boolean>start(Types.BOOLEAN)
 																	 .setName("restarts")
 																	 .build();
 	
-	public static final Column<String> ARGUMENTS = ColumnBuilder.start(String.class, Column.TEXT)
+	public static final Column<String> ARGUMENTS = ColumnBuilder.<String>start(Column.TEXT)
 																.setName("arguments")
 																.build();
 	

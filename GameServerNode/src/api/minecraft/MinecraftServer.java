@@ -134,12 +134,16 @@ public class MinecraftServer extends GameServer
 				{
 					for(var stream : outputConnectors)
 					{
-						try
+						synchronized (stream)
 						{
-							stream.write(lineTerminated.getBytes());
-						} catch (IOException e)
-						{
-							streamsToRemove.add(stream);
+							try
+							{
+								stream.write(lineTerminated.getBytes());
+							} catch (IOException e)
+							{
+								streamsToRemove.add(stream);
+							}
+							stream.notify();
 						}
 					}
 					
@@ -156,8 +160,6 @@ public class MinecraftServer extends GameServer
 				{
 					log = log.substring(getLogSize()/4);
 				}
-				
-				notifyOutputNotifiers();
 			}
 		}
 	};
@@ -244,22 +246,14 @@ public class MinecraftServer extends GameServer
 	}
 	
 	@Override
-	synchronized public boolean startServer()
+	synchronized public boolean startServer() throws IOException
 	{
 		if(!isRunning())
 		{
 			processBuilder.directory(getFolderLocation());
 			processBuilder.command(getRunCommand());
 			
-			try
-			{
-				process = processBuilder.start();				
-			}
-			catch(IOException e)
-			{
-				return false;
-			}
-			
+			process = processBuilder.start();
 			notifyRunningNotifiers();
 			expectedShutdown = false;
 			process.onExit().thenAcceptAsync(p -> {
@@ -270,8 +264,13 @@ public class MinecraftServer extends GameServer
 					{
 						Thread.sleep(5000);
 						startServer();
-					} catch (InterruptedException e)
+					}
+					catch (InterruptedException e)
 					{
+					}
+					catch(IOException e)
+					{
+						StartUpApplication.LOGGER.log(Level.WARNING, e.getMessage());
 					}
 				}
 			});

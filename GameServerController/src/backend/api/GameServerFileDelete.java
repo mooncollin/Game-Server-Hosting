@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Arrays;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -15,7 +16,6 @@ import backend.main.StartUpApplication;
 import frontend.GameServerFiles;
 import nodeapi.ApiSettings;
 import utils.ParameterURL;
-import utils.Utils;
 
 @WebServlet("/GameServerFileDelete")
 public class GameServerFileDelete extends HttpServlet
@@ -29,49 +29,41 @@ public class GameServerFileDelete extends HttpServlet
 		null, null, null, URL
 	);
 	
-	public static ParameterURL getEndpoint(int serverID, String directory)
+	public static ParameterURL getEndpoint(int serverID, String[] directories)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
 		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		if(serverID == null || directory == null)
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var directory = ApiSettings.DIRECTORY.parse(request);
+		
+		if(serverID.isEmpty() || directory.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
-		if(serverAddress == null || directory.isEmpty())
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		for(var d : directory.split(","))
-		{
-			if(d.contains(".."))
-			{
-				response.setStatus(400);
-				return;
-			}
-		}
-		
-		var redirectURL = GameServerFiles.getEndpoint(serverID, directory.substring(0, directory.lastIndexOf(',')));
+		var redirectURL = GameServerFiles.getEndpoint(serverID.get(), Arrays.copyOfRange(directory.get(), 0, directory.get().length - 1));
 		
 		try
 		{
-			var url = nodeapi.FileDelete.getEndpoint(directory);
+			var url = nodeapi.FileDelete.getEndpoint(directory.get());
 			url.setHost(serverAddress);
 			
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			var httpResponse = ServerInteract.client.send(httpRequest, BodyHandlers.ofString());
+			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
 			if(httpResponse.statusCode() != 200)
 			{
 				response.sendRedirect(redirectURL.getURL());

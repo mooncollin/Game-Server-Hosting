@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
@@ -33,52 +34,43 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 		null, null, null, URL
 	);
 	
-	public static ParameterURL getEndpoint(int serverID, String directory, String files)
+	public static ParameterURL getEndpoint(int serverID, String[] directories, String files)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
-		url.addQuery(ApiSettings.FILES_PARAMETER, files);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
+		url.addQuery(ApiSettings.FILES.getName(), files);
 		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		var files = request.getParameter(ApiSettings.FILES_PARAMETER);
-		if(serverID == null || directory == null || files == null)
+	{	
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var directory = ApiSettings.DIRECTORY.parse(request);
+		var files = ApiSettings.FILES.parse(request);
+		if(!Utils.optionalsPresent(serverID, directory, files))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
-		if(serverAddress == null || directory.isEmpty() || files.isEmpty())
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		for(var d : directory.split(","))
-		{
-			if(d.contains(".."))
-			{
-				response.setStatus(400);
-				return;
-			}
-		}
-		
-		var redirectURL = GameServerFiles.getEndpoint(serverID, directory);
+		var redirectURL = GameServerFiles.getEndpoint(serverID.get(), directory.get());
 		
 		var futures = new LinkedList<CompletableFuture<HttpResponse<Void>>>();
 		
-		for(var file : files.split(","))
+		for(var file : files.get())
 		{
-			var url = nodeapi.FileDelete.getEndpoint(String.format("%s,%s", directory, file));
+			var url = nodeapi.FileDelete.getEndpoint(Utils.concatenate(directory.get(), file));
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			futures.add(ServerInteract.client.sendAsync(httpRequest, BodyHandlers.discarding()));
+			futures.add(StartUpApplication.client.sendAsync(httpRequest, BodyHandlers.discarding()));
 		}
 		
 		try

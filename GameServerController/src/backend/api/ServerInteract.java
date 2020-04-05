@@ -2,12 +2,8 @@ package backend.api;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpClient.Redirect;
-import java.net.http.HttpClient.Version;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpRequest;
-import java.time.Duration;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -36,10 +32,10 @@ public class ServerInteract extends HttpServlet
 	public static ParameterURL getEndpoint(int serverID, String command)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
 		if(command != null && !command.isBlank())
 		{
-			url.addQuery(ApiSettings.COMMAND_PARAMETER, command);
+			url.addQuery(ApiSettings.COMMAND.getName(), command);
 		}
 		return url;
 	}
@@ -48,35 +44,25 @@ public class ServerInteract extends HttpServlet
 	{
 		return getEndpoint(serverID, command);
 	}
-	
-	public static final HttpClient client;
-	
-	static
-	{
-		client = HttpClient.newBuilder()
-				.version(Version.HTTP_1_1)
-				.followRedirects(Redirect.NORMAL)
-				.connectTimeout(Duration.ofSeconds(20))
-				.build();
-	}
        
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var serverCommand = request.getParameter(ApiSettings.COMMAND_PARAMETER);
-		if(serverID == null || serverCommand == null)
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var serverCommand = ApiSettings.COMMAND.parse(request);
+		if(!Utils.optionalsPresent(serverID, serverCommand))
 		{
-			response.sendRedirect(Index.URL);
+			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
 		if(serverAddress == null)
 		{
 			response.setStatus(400);
 			return;
 		}
-		var url = nodeapi.ServerInteract.getEndpoint(serverID, serverCommand);
+		
+		var url = nodeapi.ServerInteract.getEndpoint(serverID.get(), serverCommand.get());
 		url.setHost(serverAddress);
 		
 		for(var entry : request.getParameterMap().entrySet())
@@ -90,7 +76,7 @@ public class ServerInteract extends HttpServlet
 
 		try
 		{
-			var httpResponse = client.send(httpRequest, BodyHandlers.ofString());
+			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
 			response.setStatus(httpResponse.statusCode());
 			response.getWriter().print(httpResponse.body());
 		} catch (InterruptedException e)

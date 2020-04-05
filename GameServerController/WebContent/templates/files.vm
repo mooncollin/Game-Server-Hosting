@@ -1,0 +1,100 @@
+#parse("linkMacros.vm")
+#set ($background = "images/minecraft/files_background.jpg")
+
+#define ($content)
+	<h1 class="ml-5 mt-4 text-light d-inline-block">$serverName</h1>
+	<div class="float-right mt-5 mr-5">
+		#consoleLink($serverID)
+		#filesLink($serverID, $serverName)
+		#settingsLink($serverID)
+	</div>
+	<hr>
+	<nav>
+		<ol class="breadcrumb">
+			#foreach($dir in $directoryList)
+				<li class="breadcrumb-item #if(!$foreach.hasNext) active #end">
+					#if(!$foreach.hasNext)
+						$dir.name
+					#else
+						<a href="$urlMappings['frontend.GameServerFiles']?id=$serverID&directory=$dir.fullPath">
+							$dir.name
+						</a>
+					#end
+				</li>
+			#end
+		</ol>
+	</nav>
+	<div class="d-flex flex-row mb-3">
+		<button title="Upload files" onClick="upload('file')" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
+			<i class="fas fa-file-upload"></i>
+		</button>
+		<button title="Upload folder" onClick="upload('folder')" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
+			<i class="fas fa-upload"></i>
+		</button>
+		<a  title="Download current folder" href="$urlMappings['backend.api.GameServerFileDownload']?id=$serverID&directory=$directories" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
+			<i class="fas fa-download"></i>
+		</a>
+		<button title="Delete multiple files" onClick="startDeleteMultiple(this)" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
+			<i class="fas fa-fire"></i>
+		</button>
+		<button hidden="true" title="Submit delete" onClick="submitDeleteMultiple(this)" link="$urlMappings['backend.api.GameServerFileDeleteMultiple']?id=$serverID&directory=$directories" id="deleteMultipleSubmit" data-toggle="tooltip" data-placement="top" class="btn bg-success rounded ml-3">
+			<i class="fas fa-check"></i>
+		</button>
+		<button title="Create new folder" onClick="showFolderField()" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
+			<i class="fas fa-folder-plus"></i>
+		</button>
+		<div class="form-inline">
+			<input type="text" name="folderName" id="folderName" hidden="true" placeholder="Enter new folder name" class="ml-3 form-control">
+		</div>
+		<button hidden="true" id="submitFolder" onClick="submitFolder('$urlMappings['backend.api.GameServerFileRename']?id=$serverID&directory=$directories')" class="btn bg-success rounded ml-3">
+			Submit
+		</button>
+	</div>
+	<div id="fileListing" class="list-group list-group-flush">
+		#foreach($file in $files)
+			#if($file.directory)
+				#define($fileHref)
+				$urlMappings['frontend.GameServerFiles']?id=$serverID&directory=$directories,$file.name
+				#end
+			#else
+				#define($fileHref)
+				$urlMappings['backend.api.GameServerFileDownload']?id=$serverID&directory=$directories,$file.name
+				#end
+			#end
+			<div class="d-flex justify-content-between">
+				<a id="file-$file.name" href="$fileHref" class="list-group-item list-group-item-action bg-dark text-light form-inline input-group input-group-sm col-lg-11">
+					#if($file.directory)
+						<i class="fas fa-folder mr-2"></i>
+					#elseif($file.icon == "file")
+						<i class="far fa-file mr-2"></i>
+					#else
+						<i class="far fa-file-$file.icon mr-2"></i>
+					#end
+					<span>$file.name</span>
+				</a>
+				<button onClick="editName('$file.name', this)" style="max-width: 5%;" linkLocation="$fileHref" location="$urlMappings['backend.api.GameServerFileRename']?id=$serverID&directory=$directories,$file.name" class="list-group-item list-group-item-action bg-warning text-light">
+					<i class="fas fa-edit"></i>
+				</button>
+				<button onClick="deleteFile(this)" style="max-width: 5%;" fileName="$file.name" location="$urlMappings['backend.api.GameServerFileDelete']?id=$serverID&directory=$directories,$file.name" class="list-group-item list-group-item-action bg-danger text-light">
+					<i class="fas fa-trash"></i>
+				</button>
+			</div>
+		#end
+	</div>
+	<hr>
+	<form method="POST" id="form" enctype="multipart/form-data">
+		<input type="file" multiple="true" hidden="true" id="fileUpload" name="fileUpload">
+	</form>
+	<form method="POST" id="zipForm" enctype="multipart/form-data" action="$redirectURL&folder=true">
+		<input type="file" hidden="true" id="zipUpload" name="zipUpload" accept=".zip">
+	</form>
+	
+	<script>
+		var serverName = "$serverName";
+		var directory = "$directories";
+	</script>
+	
+	<script src="js/GameServerFile.js"></script>
+#end
+
+#parse("base.vm")

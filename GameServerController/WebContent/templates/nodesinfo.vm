@@ -1,0 +1,35 @@
+#parse("linkMacros.vm")
+#set ($background = "images/blackdots.jpg")
+
+#define ($content)
+	<div class="container mt-5">
+		<ul class="list-group">
+			#foreach($name in $nodesToServers.keySet())
+				<li class="bg-dark shadow-lg text-light list-group-item">
+					<h1 class="text-center">$name</h1>
+					<hr>
+					<div width="200" height="200">
+						<canvas id="$name-data"><canvas>
+					</div>
+					#serverList($nodesToServers.get($name))
+				</li>
+			#end
+		</ul>
+	</div>
+	
+	<script>
+		$javascriptUtils.getServerStartInteractAddresses()
+		$javascriptUtils.getServerStopInteractAddresses()
+		$javascriptUtils.getNodeOutputAddresses()
+		var nodeNames = [#foreach($node in $nodeNames)"$node",#end];
+		var nodeUsageAddresses = [#foreach($nodeAddress in $nodeUsageAddresses)"$nodeAddress",#end];
+	</script>
+	
+	<script src="js/moment.js"></script>
+	<script src="js/Chart.min.js"></script>
+	<script src="js/chartjs-plugin-streaming.js"></script>
+	<script src="js/nodeUsage.js"></script>
+	<script src="js/index.js"></script>
+#end
+
+#parse("base.vm")

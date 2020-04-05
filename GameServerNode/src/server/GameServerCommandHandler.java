@@ -3,9 +3,12 @@ package server;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import nodemain.StartUpApplication;
 
 public class GameServerCommandHandler<T extends GameServer> extends CommandHandler<T>
 {
@@ -37,7 +40,14 @@ public class GameServerCommandHandler<T extends GameServer> extends CommandHandl
 		
 		if(command.equals(START_COMMAND))
 		{
-			server.startServer();
+			try
+			{
+				server.startServer();
+			}
+			catch(IOException e)
+			{
+				StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Unable to start server:\n%s", e.getMessage()));
+			}
 		}
 		else if(command.equals(STOP_COMMAND))
 		{

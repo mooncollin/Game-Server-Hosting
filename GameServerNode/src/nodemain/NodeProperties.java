@@ -47,7 +47,7 @@ public class NodeProperties
 		DATABASE_USERNAME = properties.getProperty("database_username");
 		DATABASE_PASSWORD = properties.getProperty("database_password");
 		
-		var ramAmount = Utils.fromString(Long.class, properties.getProperty("max_ram"), -1L);
+		var ramAmount = Utils.fromString(Long.class, properties.getProperty("max_ram")).orElseGet(() -> -1L);
 		
 		if(ramAmount < 0)
 		{

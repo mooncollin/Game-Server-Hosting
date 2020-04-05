@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -18,6 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import nodemain.NodeProperties;
 import utils.ParameterURL;
+import utils.Utils;
 
 @WebServlet("/FileUpload")
 @MultipartConfig
@@ -32,14 +34,11 @@ public class FileUpload extends HttpServlet
 		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL postEndpoint(String directory, boolean isFolder)
+	public static ParameterURL postEndpoint(String[] directories, boolean isFolder)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
-		if(isFolder)
-		{
-			url.addQuery(ApiSettings.FOLDER_PARAMETER, "true");
-		}
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
+		url.addQuery(ApiSettings.FOLDER.getName(), isFolder);
 		return url;
 	}
 
@@ -50,16 +49,14 @@ public class FileUpload extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		var folder = request.getParameter(ApiSettings.FOLDER_PARAMETER);
+		var directory = ApiSettings.DIRECTORY.parse(request);
+		var folder = ApiSettings.FOLDER.parse(request);
 		
-		if(directory == null)
+		if(!Utils.optionalsPresent(directory, folder))
 		{
 			response.setStatus(400);
 			return;
 		}
-		
-		var directories = directory.split(",");
 		
 		var fileParts = request.getParts()
 							   .parallelStream()
@@ -70,7 +67,7 @@ public class FileUpload extends HttpServlet
 		{
 			var fileName = p.getSubmittedFileName();
 			
-			var directoryPath = Paths.get(NodeProperties.DEPLOY_FOLDER, directories);
+			var directoryPath = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get());
 			
 			if(folder != null && fileName.endsWith(".zip"))
 			{

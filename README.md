@@ -12,14 +12,14 @@ The Node application is what gets installed into Tomcat on the computer that you
 
 The reason I called the Node application "Node" is because it can be deployed on multiple computers, and allow easy deployment of game servers to any installed computer. This greatly increases productivity of managing servers.
 
-The Controller application gets installed into Tomcat on any computer. This may be the same computer a Node is deployed on or not. This application handles a bulk of the communication to the browser. It is what serves the browser experience. It is the central location for all Node communication. This is possible because in the properties file of the Controller (which is explained in the Installation and Run Guide section), there is the ip addresses of the Nodes.
+The Controller application gets installed into Tomcat on any computer. This may be the same computer a Node is deployed on or not. This application handles a bulk of the communication to the browser. It is what serves the browser experience. It is the central location for all Node communication.
 
 Current features of this project:
 
 * Easy to use browser experience
 * Easy to deploy game servers to any installed computer
 * Remotely turn on and off any game server
-* File explorer to the the deployed servers
+* File explorer to the deployed servers
 	* Make folders
 	* Upload files
 	* Download files
@@ -41,7 +41,7 @@ Since this project was mainly created for hosting Minecraft servers, some of the
 Current dependencies:
 * Tomcat 8/9 (http://tomcat.apache.org/): This is used both as a platform to run the applications and as a library dependency for http/web socket programming.
 * Java-ORM (https://github.com/mooncollin/Java-ORM): These may require jarring this project up and putting it into Tomcat's lib directory. So far, I haven't put it anywhere and it somehow works.
-* Html Rendering Tool (https://github.com/mooncollin/HTMLRenderingTool): This is used to generate the HTML from the controller's frontend section. A jar of this project must be either in Tomcat's lib directory or the lib directory of the Controller.
+* Apache Velocity (http://velocity.apache.org/): I use this to generate the HTML pages. This and its dependencies need to be placed in the lib directory of the GameServerController.
 * MYSQL Connector: I have included the jar that I currently use in this repo. This is just easier to manage. This is used in both the controller and node applications to communicate with the database. Place this inside the lib folder of the Tomcat installation directory.
 * GameServerNode: So this is more a dependency for the Controller. The controller uses code from the GameServerNode section for various things. For this reason, it must be placed in the lib folder of the Controller application and NOT in the lib folder of Tomcat. If placed in the lib folder of Tomcat, it will break.
 
@@ -54,6 +54,24 @@ The installation instructions require a .war file of both the GameServerControll
 Network factors such as firewalls, port forwarding, and static IPs are not managed by this application and will need to be done by the user manually.
 
 # Changelog
+
+## Version 1.3
+Major bug fix update!
+
+### Front-end Fixes:
+* Auto-restart is now set to off by default
+* Adding a server now does not just copy properties from another existing server
+* Can change server properties correctly
+* Can delete files correctly
+
+### Front-end Changes:
+* Now using Apache Velocity to generate HTML instead of HTMLRenderingTool
+
+### Back-end Fixes:
+* Using standard way of authenticating request data
+
+### Back-end Changes:
+* Output from server now dealt differently (hopefully a bit more efficient)
 
 ## Version 1.2.2
 Fixed a major bug that disallowed server starting

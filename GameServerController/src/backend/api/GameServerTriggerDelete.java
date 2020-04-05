@@ -33,42 +33,42 @@ public class GameServerTriggerDelete extends HttpServlet
 	public static ParameterURL getEndpoint(int serverID, int triggerID)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, serverID);
-		url.addQuery(ApiSettings.TRIGGER_ID_PARAMETER, triggerID);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
+		url.addQuery(ApiSettings.TRIGGER_ID.getName(), triggerID);
 		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var triggerID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.TRIGGER_ID_PARAMETER));
+	{		
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var triggerID = ApiSettings.TRIGGER_ID.parse(request);
 		
-		if(serverID == null || triggerID == null)
+		if(!Utils.optionalsPresent(serverID, triggerID))
 		{
-			response.sendRedirect(Index.URL);
+			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 			return;
 		}
 		
-		var redirectUrl = GameServerConsole.getEndpoint(serverID);
-		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID);
+		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
 		if(serverAddress == null)
 		{
-			response.sendRedirect(Index.URL);
+			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 			return;
 		}
 		
-		var url = nodeapi.TriggerDelete.getEndpoint(triggerID);
+		var redirectUrl = GameServerConsole.getEndpoint(serverID.get());
+		
+		var url = nodeapi.TriggerDelete.getEndpoint(triggerID.get());
 		url.setHost(serverAddress);
 		
 		try
 		{
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			ServerInteract.client.send(httpRequest, BodyHandlers.discarding());
+			StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
 		}
 		catch(InterruptedException e)
 		{
-			response.sendRedirect(Index.URL);
+			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
 			return;
 		}
 		

@@ -16,10 +16,7 @@ var editMode = false;
 
 function edit() {
 	for(let i = 0; i < fields.length; i++) {
-		fields[i].readOnly = editMode;
-		if(fields[i].type === "checkbox") {
-			fields[i].disabled = editMode;
-		}
+		fields[i].disabled = editMode;
 	}
 	submitButton.hidden = editMode;
 	editMode = !editMode;

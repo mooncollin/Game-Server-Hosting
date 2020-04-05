@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 
 import javax.servlet.ServletException;
@@ -14,8 +13,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.Velocity;
+
 import backend.main.StartUpApplication;
-import frontend.templates.NodesInfoTemplate;
+import frontend.javascript.JavaScriptUtils;
+import frontend.templates.Templates.ServerInfo;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
@@ -41,11 +44,11 @@ public class NodesInfo extends HttpServlet
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		Map<String, List<Table>> nodesToServers = new HashMap<String, List<Table>>();
+		var nodesToServers = new HashMap<String, List<ServerInfo>>();
 		
 		for(var nodeName : StartUpApplication.NODE_NAMES)
 		{
-			nodesToServers.put(nodeName, new LinkedList<Table>());
+			nodesToServers.put(nodeName, new LinkedList<ServerInfo>());
 		}
 		
 		List<Table> servers;
@@ -64,12 +67,27 @@ public class NodesInfo extends HttpServlet
 		for(var server : servers)
 		{
 			var nodeOwner = server.getColumnValue(GameServerTable.NODE_OWNER);
-			nodesToServers.get(nodeOwner).add(server);
+			var serverID = server.getColumnValue(GameServerTable.ID);
+			var serverName = server.getColumnValue(GameServerTable.NAME);
+			var serverTypeName = StartUpApplication.serverTypesToNames.get(StartUpApplication.serverTypes.get(serverID));
+			nodesToServers.get(nodeOwner).add(new ServerInfo(serverID, serverName, serverTypeName));
 		}
 		
-		var template = new NodesInfoTemplate(nodesToServers);
+		var nodeUsageAddresses = new LinkedList<String>();
+		for(var ipAddress : StartUpApplication.nodeIPAddresses.values())
+		{
+			var url = nodeapi.NodeUsage.getEndpoint();
+			url.setHost(ipAddress);
+			nodeUsageAddresses.add(url.getURL());
+		}
 		
-		response.setContentType("text/html");
-		response.getWriter().print(template);
+		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
+		context.put("nodesToServers", nodesToServers);
+		context.put("javascriptUtils", JavaScriptUtils.class);
+		context.put("nodeNames", StartUpApplication.NODE_NAMES);
+		context.put("nodeUsageAddresses", nodeUsageAddresses);
+		
+		var template = Velocity.getTemplate("nodesinfo.vm");
+		template.merge(context, response.getWriter());
 	}
 }

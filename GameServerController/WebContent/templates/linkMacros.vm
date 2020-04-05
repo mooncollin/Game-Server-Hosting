@@ -1,0 +1,74 @@
+#macro(consoleLink $id)
+	<a href="$urlMappings['frontend.GameServerConsole']?id=$id" class="rounded-circle bg-light p-2 mr-4" data-toggle="tooltip" data-placement="bottom" title="Open server console">
+		<i class="fas fa-terminal"></i>
+	</a>
+#end
+
+#macro(filesLink $id $name)
+	<a href="$urlMappings['frontend.GameServerFiles']?id=$id&directory=$name" class="rounded-circle bg-light p-2 mr-4" data-toggle="tooltip" data-placement="bottom" title="View server files">
+		<i class="fas fa-file fa-lg"></i>
+	</a>
+#end
+
+#macro(settingsLink $id)
+	<a href="$urlMappings['frontend.GameServerSettings']?id=$id" class="rounded-circle bg-light p-2 mr-4" data-toggle="tooltip" data-placement="bottom" title="Edit server settings">
+		<i class="fas fa-edit"></i>
+	</a>
+#end
+
+#macro(deleteLink $id $name)
+	<a href="#" link="$urlMappings['backend.api.GameServerDelete']?id=$id" onClick="deleteServer(this, '$name')" class="rounded-circle bg-light p-2" data-toggle="tooltip" data-placement="bottom" title="Delete Server">
+		<i class="fas fa-trash-alt"></i>
+	</a>
+#end
+
+#macro(startButton $id $extra)
+	<button id="start#if($id != "")-#end$id" onClick="startServer($id)" class="btn btn-primary $extra">
+		Start Server
+		<span class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
+	</button>
+#end
+
+#macro(stopButton $id $extra)
+	<button id="stop#if($id != "")-#end$id" onClick="stopServer($id)" class="btn btn-danger $extra">
+		Stop Server
+		<span class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
+	</button>
+#end
+
+#macro(serverList $servers)
+	<table class="table table-striped table-hover table-dark">
+		<thead>
+			<tr>
+				<th scope="col">Name</th>
+				<th scope="col">Type</th>
+				<th scope="col">Status</th>
+				<th scope="col">Options</th>
+			</tr>
+		</thead>
+		<tbody>
+			#foreach ($server in $servers)
+				<tr>
+					<td>$server.Name</td>
+					<td>$server.ServerType</td>
+					<td id="status-$server.Id">
+						<span>
+							<i class="fas fa-circle mr-2"></i>
+						</span>
+						<span>Unknown</span>
+					</td>
+					<td class="pb-3">
+						#consoleLink($server.Id)
+						#filesLink($server.Id, $server.Name)
+						#settingsLink($server.Id)
+						#deleteLink($server.Id, $server.Name)
+					</td>
+					<td class="float-right">
+						#startButton($server.Id "mr-4")
+						#stopButton($server.Id "mr-4")
+					</td>
+				</tr>
+			#end
+		</tbody>
+	</table>
+#end

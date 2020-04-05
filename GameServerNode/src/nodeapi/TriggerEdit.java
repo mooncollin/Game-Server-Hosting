@@ -32,15 +32,14 @@ public class TriggerEdit extends HttpServlet
 	public static ParameterURL getEndpoint(int triggerID)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.TRIGGER_ID_PARAMETER, triggerID);
+		url.addQuery(ApiSettings.TRIGGER_ID.getName(), triggerID);
 		return url;
 	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var id = Utils.fromString(Integer.class, request.getParameter(ApiSettings.TRIGGER_ID_PARAMETER));
-		
-		if(id == null)
+		var id = ApiSettings.TRIGGER_ID.parse(request);
+		if(!Utils.optionalsPresent(id))
 		{
 			response.setStatus(400);
 			return;
@@ -49,7 +48,7 @@ public class TriggerEdit extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, TriggersTable.class)
-							   .filter(TriggersTable.ID.cloneWithValue(id))
+							   .filter(TriggersTable.ID.cloneWithValue(id.get()))
 							   .first();
 			
 			Table trigger;

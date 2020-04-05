@@ -1,0 +1,7 @@
+#parse("linkMacros.vm")
+#set ($background = "images/material-back.jpeg")
+
+#define ($content)
+#end
+
+#parse("base.vm")

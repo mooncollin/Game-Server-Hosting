@@ -6,30 +6,7 @@ import server.TriggerHandler;
 import utils.StringUtils;
 
 public class JavaScriptUtils
-{	
-	public static String getNodeNames()
-	{
-		var nodeNames = new JavascriptArray<String>("nodeNames");
-		
-		nodeNames.addElements(StartUpApplication.NODE_NAMES);
-		
-		return nodeNames.toString();
-	}
-	
-	public static String getNodeUsageAddresses()
-	{
-		var nodeUsageAddresses = new JavascriptArray<String>("nodeUsageAddresses");
-		
-		for(var ipAddress : StartUpApplication.nodeIPAddresses.values())
-		{
-			var url = nodeapi.NodeUsage.getEndpoint();
-			url.setHost(ipAddress);
-			nodeUsageAddresses.add(url.getURL());
-		}
-		
-		return nodeUsageAddresses.toString();
-	}
-	
+{
 	public static JavascriptMap<Integer, String> getServerStartInteractAddresses()
 	{
 		var startServerAddressMap = new JavascriptMap<Integer, String>("startServerAddresses");

@@ -2,6 +2,7 @@ package nodeapi;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -24,42 +25,40 @@ public class FileRename extends HttpServlet
 		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL getEndpoint(String directory, String rename, boolean newFolder)
+	public static ParameterURL getEndpoint(String[] directories, String rename, boolean newFolder)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY_PARAMETER, directory);
-		url.addQuery(newFolder ? ApiSettings.NEW_FOLDER_PARAMETER : ApiSettings.RENAME_PARAMETER, rename);
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
+		url.addQuery(newFolder ? ApiSettings.NEW_FOLDER.getName() : ApiSettings.RENAME.getName(), rename);
 		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var directory = request.getParameter(ApiSettings.DIRECTORY_PARAMETER);
-		var rename = request.getParameter(ApiSettings.RENAME_PARAMETER);
-		var newFolder = request.getParameter(ApiSettings.NEW_FOLDER_PARAMETER);
-		if((directory == null || (rename == null && newFolder == null)) && !newFolder.isBlank())
+		var directory = ApiSettings.DIRECTORY.parse(request);
+		var rename = ApiSettings.RENAME.parse(request);
+		var newFolder = ApiSettings.NEW_FOLDER.parse(request);
+		if((directory.isEmpty() || (rename.isEmpty() && newFolder.isEmpty())))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var directories = directory.split(",");
-		
-		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directories).toFile();
+		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get()).toFile();
 		if(currentFile.equals(Paths.get(NodeProperties.DEPLOY_FOLDER).toFile()))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		if(newFolder != null)
+		if(newFolder.isPresent())
 		{
-			currentFile = Paths.get(currentFile.getAbsolutePath(), newFolder).toFile();
+			currentFile = Paths.get(currentFile.getAbsolutePath(), newFolder.get()).toFile();
 			currentFile.mkdir();
 		}
 		else if(currentFile.exists())
 		{
-			currentFile.renameTo(Paths.get(currentFile.getParent(), rename).toFile());	
+			currentFile.renameTo(Paths.get(currentFile.getParent(), rename.get()).toFile());	
 		}
 	}
 }

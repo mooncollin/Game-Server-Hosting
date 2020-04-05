@@ -27,8 +27,8 @@ public class ServerInteract extends HttpServlet
 	public static ParameterURL getEndpoint(int id, String command)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
-		url.addQuery(ApiSettings.COMMAND_PARAMETER, command);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
+		url.addQuery(ApiSettings.COMMAND.getName(), command);
 		return url;
 	}
 	
@@ -39,16 +39,16 @@ public class ServerInteract extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var command = request.getParameter(ApiSettings.COMMAND_PARAMETER);
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var command = ApiSettings.COMMAND.parse(request);
 		
-		if(serverID == null || command == null)
+		if(!Utils.optionalsPresent(serverID, command))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var foundServer = StartUpApplication.getServer(serverID);
+		var foundServer = StartUpApplication.getServer(serverID.get());
 		
 		if(foundServer == null)
 		{
@@ -56,7 +56,7 @@ public class ServerInteract extends HttpServlet
 			return;
 		}
 		
-		if(!foundServer.getCommandHandler().commandGET(command, request, response))
+		if(!foundServer.getCommandHandler().commandGET(command.get(), request, response))
 		{
 			response.setStatus(400);
 		}
@@ -64,16 +64,16 @@ public class ServerInteract extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
-		var command = request.getParameter(ApiSettings.COMMAND_PARAMETER);
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		var command = ApiSettings.COMMAND.parse(request);
 		
-		if(serverID == null || command == null)
+		if(!Utils.optionalsPresent(serverID, command))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var foundServer = StartUpApplication.getServer(serverID);
+		var foundServer = StartUpApplication.getServer(serverID.get());
 		
 		if(foundServer == null)
 		{
@@ -81,7 +81,7 @@ public class ServerInteract extends HttpServlet
 			return;
 		}
 		
-		if(!foundServer.getCommandHandler().commandPOST(command, request, response))
+		if(!foundServer.getCommandHandler().commandPOST(command.get(), request, response))
 		{
 			response.setStatus(400);
 		}

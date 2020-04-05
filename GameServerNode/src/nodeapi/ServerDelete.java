@@ -14,7 +14,6 @@ import model.Table;
 import models.GameServerTable;
 import nodemain.StartUpApplication;
 import utils.ParameterURL;
-import utils.Utils;
 
 @WebServlet("/ServerDelete")
 public class ServerDelete extends HttpServlet
@@ -31,22 +30,22 @@ public class ServerDelete extends HttpServlet
 	public static ParameterURL getEndpoint(int id)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID_PARAMETER, id);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
 		return url;
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverID = Utils.fromString(Integer.class, request.getParameter(ApiSettings.SERVER_ID_PARAMETER));
+		var serverID = ApiSettings.SERVER_ID.parse(request);
 		
-		if(serverID == null)
+		if(serverID.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
 		
-		var serverFound = StartUpApplication.getServer(serverID);
+		var serverFound = StartUpApplication.getServer(serverID.get());
 		if(serverFound == null)
 		{
 			response.setStatus(400);
@@ -56,7 +55,7 @@ public class ServerDelete extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-								  .filter(GameServerTable.ID.cloneWithValue(serverID))
+								  .filter(GameServerTable.ID, serverID.get())
 								  .first();
 			
 			Table gameServer;
@@ -80,6 +79,6 @@ public class ServerDelete extends HttpServlet
 		}
 		
 		FileDelete.deleteDirectoryOrFile(serverFound.getFolderLocation());
-		StartUpApplication.removeServer(serverID);
+		StartUpApplication.removeServer(serverID.get());
 	}
 }

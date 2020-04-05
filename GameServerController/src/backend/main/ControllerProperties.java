@@ -8,6 +8,7 @@ import java.util.Properties;
 public class ControllerProperties
 {
 	public static final String PROPERTIES_LOCATION = System.getenv("GAME_SERVER_CONTROLLER_PROPERTIES");
+	public static final String TEMPLATES_PATH = "/templates";
 	public static final String NODE_NAMES;
 	public static final String NODE_ADDRESSES;
 	public static final String DATABASE_URL;
