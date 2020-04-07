@@ -21,7 +21,7 @@ public class GameServerFactory
 		GameServer specificServer = null;
 		var folderLocation = new File(Paths.get(NodeProperties.DEPLOY_FOLDER, server.getColumnValue(GameServerTable.NAME)).toString());
 		var fileName = Paths.get(folderLocation.getAbsolutePath(), server.getColumnValue(GameServerTable.EXECUTABLE_NAME)).toFile();
-		if(server.getColumn(GameServerTable.SERVER_TYPE).getValue().equals("minecraft"))
+		if(server.getColumn(GameServerTable.SERVER_TYPE).getValue().equals(MinecraftServer.SERVER_TYPE))
 		{
 			Table minecraftServer;
 			try

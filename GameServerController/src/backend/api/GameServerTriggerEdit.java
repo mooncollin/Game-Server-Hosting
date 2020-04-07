@@ -5,17 +5,17 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
-import frontend.GameServerConsole;
-import frontend.Index;
+import frontend.Endpoints;
 import model.Query;
 import model.Table;
 import models.TriggersTable;
@@ -23,28 +23,19 @@ import nodeapi.ApiSettings;
 import server.TriggerHandler;
 import server.TriggerHandlerRecurring;
 import server.TriggerHandlerTime;
-import utils.ParameterURL;
 import utils.Utils;
 
-@WebServlet("/GameServerTriggerEdit")
+@WebServlet(
+		name = "GameServerTriggerEdit",
+		urlPatterns = "/GameServerTriggerEdit",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = @HttpMethodConstraint(value = "POST")
+)
 public class GameServerTriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerTriggerEdit";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL postEndpoint(int serverID, int triggerID)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
-		url.addQuery(ApiSettings.TRIGGER_ID.getName(), triggerID);
-		return url;
-	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -56,20 +47,20 @@ public class GameServerTriggerEdit extends HttpServlet
 		
 		if(!Utils.optionalsPresent(serverID, triggerID, value, command, action))
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		
 		if(serverAddress == null)
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		var redirectUrl = GameServerConsole.getEndpoint(serverID.get());
+		var redirectUrl = Endpoints.GAME_SERVER_CONSOLE.get(serverID.get());
 		
 		Table trigger;
 		try
@@ -88,7 +79,7 @@ public class GameServerTriggerEdit extends HttpServlet
 			
 		} catch (SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}

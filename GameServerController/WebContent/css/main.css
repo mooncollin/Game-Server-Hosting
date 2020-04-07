@@ -1,46 +1,57 @@
-html, body
+@import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
+
+body
 {
-	height: 100%;
+	font-family: 'Poppins', sans-serif;
 }
 
-body, #wrapper
+.terminal .terminal-output div div span
 {
-	min-height: 100%;
-}
-
-textarea
-{
-	resize: none;
-	font-family: monospace;
+	font-size: 15px;
+	line-height: 24px;
 }
 
 #content
 {
 	background-repeat: none;
 	background-size: cover;
-	min-height: 100%;
-}
-
-#left-elements
-{
-	width: 80%;
 }
 
 #sidebar
 {
-	background-image: url("../images/blacksquares.jpg");
-	width: 15%;
+	min-width: 250px;
+	max-width: 250px;
+	min-height: 100vh;
+    transition: all 0.3s;
 }
 
-#options
+#sidebar ul.components
 {
-	margin-top: 4%;
-	height: 90%;
+	padding: 20px 0;
+    border-bottom: 1px solid #242222;
 }
 
-#homeLink
+#sidebar.active
+{
+	margin-left: -250px;
+}
+
+#sidebar .sidebar-header
+{
+	background: #302e2e;
+}
+
+#sidebar ul li:not(.active):hover>a 
+{
+	color: #242222 !important;
+	background: #fff;
+}
+
+#sidebar ul li a, #sidebar ul li div
 {
 	text-decoration: none;
+	display: block;
+	padding: 1rem;
 }
 
 .status-image
@@ -48,6 +59,13 @@ textarea
 	position: relative;
 	left: 75%;
 	top: 20%;
+}
+
+.wrapper
+{
+	display: flex;
+	width: 100%;
+	align-items: stretch;
 }
 
 .server-title
@@ -63,4 +81,49 @@ textarea
 .addLink
 {
 	font-size: 0.5em;
+}
+
+a[data-toggle="collapse"]
+{
+	position: relative;
+}
+
+.dropdown-toggle::after
+{
+	display: block;
+	position: absolute;
+	top: 50%;
+	right: 20px;
+	transform: translateY(-50%);
+}
+
+#sidebar ul li.active>a, #sidebar ul li.active>div
+{
+	background: #404042;
+}
+
+@media (max-width: 768px)
+{
+	#sidebar
+	{
+		margin-left: -250px;
+	}
+	
+	#sidebar.active
+	{
+		margin-left: 0;
+	}
+	
+	#sidebarCollapse
+	{
+		display: block;
+	}
+}
+
+@media (min-width: 768px)
+{
+	#sidebarCollapse
+	{
+		display: none;
+	}
 }

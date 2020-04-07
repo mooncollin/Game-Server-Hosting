@@ -1,0 +1,7 @@
+#parse("javascript.vm")
+<script>
+	#javascriptVariable("nodeOutputAddresses", 	$nodeOutputAddresses)
+	#javascriptVariable("serverCommandEndpoint", $serverCommandEndpoint)
+</script>
+	
+<script src="js/server.js"></script>

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -21,8 +20,9 @@ import models.MinecraftServerTable;
 import nodemain.NodeProperties;
 import nodemain.StartUpApplication;
 import server.GameServerFactory;
-import utils.ParameterURL;
 import utils.Utils;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/ServerAdd")
 @MultipartConfig
@@ -34,7 +34,7 @@ public class ServerAdd extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL postEndpoint(String serverName, String execName, String type)
@@ -65,7 +65,7 @@ public class ServerAdd extends HttpServlet
 									.first();
 		} catch (SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}

@@ -6,44 +6,29 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpRequest;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
-import frontend.Index;
+import frontend.Endpoints;
 import nodeapi.ApiSettings;
-import utils.ParameterURL;
 import utils.Utils;
 
-@WebServlet("/ServerInteract")
+@WebServlet(
+		name = "ServerInteract",
+		urlPatterns = "/ServerInteract",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
+)
 public class ServerInteract extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/ServerInteract";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint(int serverID, String command)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
-		if(command != null && !command.isBlank())
-		{
-			url.addQuery(ApiSettings.COMMAND.getName(), command);
-		}
-		return url;
-	}
-	
-	public static ParameterURL postEndpoint(int serverID, String command)
-	{
-		return getEndpoint(serverID, command);
-	}
        
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -51,11 +36,11 @@ public class ServerInteract extends HttpServlet
 		var serverCommand = ApiSettings.COMMAND.parse(request);
 		if(!Utils.optionalsPresent(serverID, serverCommand))
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		if(serverAddress == null)
 		{
 			response.setStatus(400);
@@ -83,10 +68,5 @@ public class ServerInteract extends HttpServlet
 		{
 			response.setStatus(500);
 		}
-	}
-
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		doGet(request, response);
 	}
 }

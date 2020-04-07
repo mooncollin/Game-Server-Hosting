@@ -5,9 +5,10 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -17,30 +18,23 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 
 import backend.main.StartUpApplication;
-import frontend.javascript.JavaScriptUtils;
+import frontend.templates.Templates;
 import frontend.templates.Templates.ServerInfo;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
-import utils.ParameterURL;
 
-@WebServlet("/NodesInfo")
+@WebServlet(
+		name = "NodesInfo",
+		urlPatterns = "/NodesInfo",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
+)
 public class NodesInfo extends HttpServlet
-{
+{	
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/NodesInfo";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint()
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		return url;
-	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -59,7 +53,7 @@ public class NodesInfo extends HttpServlet
 			
 		} catch (SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}
@@ -69,23 +63,25 @@ public class NodesInfo extends HttpServlet
 			var nodeOwner = server.getColumnValue(GameServerTable.NODE_OWNER);
 			var serverID = server.getColumnValue(GameServerTable.ID);
 			var serverName = server.getColumnValue(GameServerTable.NAME);
-			var serverTypeName = StartUpApplication.serverTypesToNames.get(StartUpApplication.serverTypes.get(serverID));
+			var serverTypeName = server.getColumnValue(GameServerTable.SERVER_TYPE);
 			nodesToServers.get(nodeOwner).add(new ServerInfo(serverID, serverName, serverTypeName));
 		}
 		
 		var nodeUsageAddresses = new LinkedList<String>();
-		for(var ipAddress : StartUpApplication.nodeIPAddresses.values())
+		for(var nodeName : StartUpApplication.NODE_NAMES)
 		{
 			var url = nodeapi.NodeUsage.getEndpoint();
+			var ipAddress = StartUpApplication.getNodeIPAddress(nodeName);
 			url.setHost(ipAddress);
 			nodeUsageAddresses.add(url.getURL());
 		}
 		
 		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
 		context.put("nodesToServers", nodesToServers);
-		context.put("javascriptUtils", JavaScriptUtils.class);
 		context.put("nodeNames", StartUpApplication.NODE_NAMES);
 		context.put("nodeUsageAddresses", nodeUsageAddresses);
+		context.put("serverCommandEndpoint", Templates.getServerCommandEndpoint());
+		context.put("nodeOutputAddresses", StartUpApplication.getNodeOutputAddresses("running"));
 		
 		var template = Velocity.getTemplate("nodesinfo.vm");
 		template.merge(context, response.getWriter());

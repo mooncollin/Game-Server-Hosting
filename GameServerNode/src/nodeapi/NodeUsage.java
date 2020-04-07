@@ -13,7 +13,8 @@ import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
 import nodemain.StartUpApplication;
-import utils.ParameterURL;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @ServerEndpoint("/NodeUsage")
 public class NodeUsage
@@ -22,7 +23,7 @@ public class NodeUsage
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.WEB_SOCKET_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.WEB_SOCKET, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL getEndpoint()

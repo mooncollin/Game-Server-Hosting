@@ -1,15 +1,16 @@
 #parse("linkMacros.vm")
 #set ($background = "images/material-back.jpeg")
+#set ($active = 'Servers')
 
 #define ($content)
 	<div id="inner-content" class="ml-5 mt-5">
 		<h1 class="text-light">
 			Current Servers
-			<a href="$urlMappings['frontend.GameTypeAdd']" title="Add game type" data-toggle="tooltip" data-placement="bottom" class="rounded-circle bg-light p-3 float-right addLink">
+			<a href="$Endpoints.GAME_TYPE_ADD.get()" title="Add game type" data-toggle="tooltip" data-placement="bottom" class="rounded-circle bg-light p-3 float-right addLink text-decoration-none">
 				<i class="fas fa-plus mr-2"></i>
 				<i class="fas fa-gamepad"></i>
 			</a>
-			<a href="$urlMappings['frontend.GameServerAdd']" title="Add game server" data-toggle="tooltip" data-placement="bottom" class="rounded-circle bg-light p-3 float-right addLink mr-3">
+			<a href="$Endpoints.GAME_SERVER_ADD.get()" title="Add game server" data-toggle="tooltip" data-placement="bottom" class="rounded-circle bg-light p-3 float-right addLink mr-3 text-decoration-none">
 				<i class="fas fa-plus mr-2"></i>
 				<i class="fas fa-server"></i>
 			</a>
@@ -18,12 +19,7 @@
 		#serverList($servers)
 	</div>
 	
-	<script>
-		$javascriptUtils.getServerStartInteractAddresses()
-		$javascriptUtils.getServerStopInteractAddresses()
-		$javascriptUtils.getNodeOutputAddresses()
-	</script>
-	
+	#parse("server.vm")
 	<script src="js/index.js"></script>
 #end
 

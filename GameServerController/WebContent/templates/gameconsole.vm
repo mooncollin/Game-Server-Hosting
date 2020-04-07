@@ -1,5 +1,11 @@
+#parse("utils.vm")
 #parse("linkMacros.vm")
+#parse("javascript.vm")
 #set ($background = "$randomBackground")
+#set ($active = 'Console')
+
+#addCSS("css/jquery.terminal-2.15.2.min.css")
+#addJS("js/jquery.terminal-2.15.2.min.js")
 
 #macro(triggerTab $serverID $triggers $filterType)
 	<div id="$filterType" class="tab-pane fade #if($filterType == 'allTriggers') show active #end">
@@ -26,7 +32,7 @@
 							<td>$trigger.command</td>
 							<td>$trigger.extra</td>
 							<td>
-								<button link="$urlMappings['backend.api.GameServerTriggerDelete']?id=$serverID&triggerID=$trigger.id" onClick="deleteRow(this)" class="btn-danger text-light btn float-right">
+								<button link="$Endpoints.GAME_SERVER_TRIGGER_DELETE.get($serverID, $trigger.id)" onClick="deleteRow(this)" class="btn-danger text-light btn float-right">
 									<i class="fas fa-trash"></i>
 								</button>
 								<button onClick="editRow(this, $trigger.id, '$filterType')" class="btn-warning text-light btn float-right mr-2">
@@ -39,24 +45,29 @@
 			</tbody>
 			#foreach($trigger in $triggers)
 				#if($filterType == $trigger.type || $filterType == "allTriggers")
-					<form method="POST" action="$urlMappings['backend.api.GameServerTriggerEdit']?id=$serverID&triggerID=$trigger.id" id="$filterType$trigger.id">
+					<form method="POST" action="$Endpoints.GAME_SERVER_TRIGGER_EDIT.post($serverID, $trigger.id)" id="$filterType$trigger.id">
 					</form>
 				#end
 			#end
-			<form method="POST" action="$urlMappings['backend.api.GameServerTriggerAdd']?id=$serverID" id="newTrigger">
+			<form method="POST" action="$Endpoints.GAME_SERVER_TRIGGER_ADD.post($serverID)" id="newTrigger">
 			</form>
 		</table>
 	</div>
 #end
 
 #define ($content)
-	<div id="left-elements" class="float-left ml-5">
-		<h1 id="title" class="text-light">
+	<div class="ml-5">
+		<h1 id="title" class="text-light mt-3">
 			$serverName
 		</h1>
 		<hr>
-		<textarea id="log" rows="20" cols="50" readonly="true" value="" class="form-control text-light bg-dark"></textarea>
-		<input type="text" id="command" autofocus="true" onKeyDown="history(event)" onKeyPress="command(event)" class="form-control">
+		<div id="terminal" class="form-control"></div>
+		<div class="rounded bg-dark mw-100 p-2 my-4">
+			#startButton($serverID, "mr-2")
+			#restartButton($serverID, "mr-2")
+			#stopButton($serverID)
+			<span class="float-lg-right">#ipAddressButton($serverID)</span>
+		</div>
 		<ul class="nav nav-tabs mt-5 bg-dark">
 			<li class="nav-item">
 				<a href="#allTriggers" data-toggle="tab" class="nav-link active">All Triggers</a>
@@ -78,45 +89,16 @@
 			#triggerTab($serverID, $triggers, "outputTriggers")
 		</div>
 	</div>
-	<ul id="options" class="float-right list-group list-group-flush mr-3 bg-dark text-center mb-5">
-		<li class="list-group-item bg-dark">
-			#startButton("")
-		</li>
-		<li class="list-group-item bg-dark">
-			#stopButton("")
-		</li>
-		<li class="list-group-item bg-dark">
-			<a href="$urlMappings['frontend.GameServerFiles']?id=$serverID&directory=$serverName" class="btn btn-info">View Files</a>
-		</li>
-		<li class="list-group-item bg-dark">
-			<a href="$urlMappings['frontend.GameServerSettings']?id=$serverID" class="btn btn-warning">View Settings</a>
-		</li>
-	</ul>
 	
 	<script>
-		var serverID = $serverID;
-		var socketAddress = "$socketAddress";
-		var serverCommandRequest = "$serverCommandRequest";
-		var serverStartRequest = "$serverStartRequest";
-		var serverStopRequest = "$serverStopRequest";
-		var serverLastRequest = "$serverLastRequest";
-		var serverCommandEnd = "$serverCommandEnd";
-		var triggerTypes = [#foreach($trigger in $triggerTypes) "$trigger",#end];
-		var actionTypes = [#foreach($action in $actionTypes) "$action",#end];
-		
-		var triggerOldValues = 
-		{
-			#foreach($id in $triggerOldValues.keySet())
-				$id: {
-						#foreach($key in $triggerOldValues[$id].keySet())
-							'$key': '$triggerOldValues[$id][$key]',
-						#end
-					 },
-			#end
-		};
+		#javascriptVariable("serverID", $serverID)
+		#javascriptVariable("triggerTypes", $triggerTypes)
+		#javascriptVariable("actionTypes", $actionTypes)
+		#javascriptVariable("triggerOldValues", $triggerOldValues)
 	</script>
 	
-	<script src="js/server.js"></script>
+	#parse("server.vm")
+	<script src="js/console.js"></script>
 #end
 
 #parse("base.vm")

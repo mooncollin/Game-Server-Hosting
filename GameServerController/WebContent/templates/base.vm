@@ -1,34 +1,82 @@
+#parse("utils.vm")
+
+<!DOCTYPE html>
 <html>
 	<head>
 		<meta charset="UTF-8">
 		<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
 		<link rel="stylesheet" type="text/css" href="css/main.css">
+		#foreach($cssFile in $css)
+			<link rel="stylesheet" type="text/css" href="$cssFile">
+		#end
 		
 		<script src="js/jquery-3.3.1.min.js"></script>
 		<script src="js/popper.min.js"></script>
 		<script src="js/bootstrap.min.js"></script>
 		<script src="js/all.js"></script>
+		<script src="js/base.js"></script>
+		#foreach($jsFile in $js)
+			<script src="$jsFile"></script>
+		#end
 	</head>
 	<body>
-		<div id="wrapper" class="d-flex justify-content-between">
-			<nav id="sidebar" class="p-3 flex-fill">
-				<a href='$urlMappings["frontend.Index"]' id="homeLink">
-					<div id="sidebar-header" class="text-center text-light overflow-hidden bg-secondary rounded">
-						<h2>GameServer Hosting</h2>
-					</div>
-				</a>
-				<div class="list-group list-group-flush mt-5 text-center">
-					<a href='$urlMappings["frontend.Index"]' class="list-group-item bg-secondary text-light">
-						<i class="fas fa-server mr-2"></i>
-						<span>Servers</span>
-					</a>
-					<a href='$urlMappings["frontend.NodesInfo"]' class="list-group-item bg-secondary text-light mt-3">
-						<i class="fas fa-project-diagram mr-2"></i>
-						<span>Nodes</span>
-					</a>
+		<div class="wrapper">
+			<nav id="sidebar" class="bg-dark text-white">
+				<div class="sidebar-header p-3">
+					<h2>GameServer Hosting</h2>
 				</div>
+				<ul class="list-unstyled components">
+					<li class="#if($active=='Servers')active#end">
+						<a href='$Endpoints.INDEX.get()' class="text-white">
+							<i class="fas fa-server mr-2"></i>
+							<span>Servers</span>
+						</a>
+					</li>
+					<li class="#if($active=='Nodes')active#end">
+						<a href='$Endpoints.NODES_INFO.get()' class="text-white">
+							<i class="fas fa-project-diagram mr-2"></i>
+							<span>Nodes</span>
+						</a>
+					</li>
+					#if($serverName && $serverID)
+					<li class="active">
+						<a href="#serverSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle text-white">
+							<span class="ml-5">$serverName</span>
+						</a>
+						<ul class="list-unstyled collapse" id="serverSubmenu">
+							<li class="#if($active=='Console')active#end">
+								<a href="$Endpoints.GAME_SERVER_CONSOLE.get($serverID)" class="text-white">
+									<span class="ml-5">
+										<i class="fas fa-terminal mr-2"></i>
+										Console
+									</span>
+								</a>
+							</li>
+							<li class="#if($active=='Files')active#end">
+								<a href="$Endpoints.GAME_SERVER_FILES.get($serverID, [$serverName])" class="text-white">
+									<span class="ml-5">
+										<i class="fas fa-folder-open fa-lg mr-2"></i>
+										Files
+									</span>
+								</a>
+							</li>
+							<li class="#if($active=='Settings')active#end">
+								<a href="$Endpoints.GAME_SERVER_SETTINGS.get($serverID)" class="text-white">
+									<span class="ml-5">
+										<i class="fas fa-edit mr-2"></i>
+										Settings
+									</span>
+								</a>
+							</li>
+						</ul>
+					</li>
+					#end
+				</ul>
 			</nav>
-			<div id="content" class="w-100 flex-fill" style="background-image: url('$background')">
+			<div id="content" class="container-fluid" style="background-image: url('$background')">
+				<button type="button" id="sidebarCollapse" class="btn btn-info my-4">
+					<i class="fas fa-align-left"></i>
+				</button>
 				$content
 			</div>
 		</div>

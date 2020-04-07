@@ -17,8 +17,9 @@ import models.GameServerTable;
 import models.MinecraftServerTable;
 import nodemain.NodeProperties;
 import nodemain.StartUpApplication;
-import utils.ParameterURL;
 import utils.Utils;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/ServerEdit")
 public class ServerEdit extends HttpServlet
@@ -29,7 +30,7 @@ public class ServerEdit extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL postEndpoint(int id)

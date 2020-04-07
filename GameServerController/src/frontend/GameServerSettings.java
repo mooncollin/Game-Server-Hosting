@@ -7,13 +7,15 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -32,46 +34,37 @@ import models.GameServerTable;
 import models.MinecraftServerTable;
 import models.NodeTable;
 import nodeapi.ApiSettings;
-import utils.ParameterURL;
 import utils.Utils;
 
-@WebServlet("/GameServerSettings")
+@WebServlet(
+		name = "GameServerSettings",
+		urlPatterns = "/GameServerSettings",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = {
+				@HttpMethodConstraint(value = "GET"),
+				@HttpMethodConstraint(value = "POST")
+		}
+)
 public class GameServerSettings extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerSettings";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint(int id)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
-		return url;
-	}
-	
-	public static ParameterURL postEndpoint(int id)
-	{
-		return getEndpoint(id);
-	}
-	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
+		StartUpApplication.LOGGER.info("WE ARE GETTING TO GAMESERVERCONTROLLER SETTINGS GET");
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		if(!Utils.optionalsPresent(serverID))
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		if(serverAddress == null)
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
@@ -83,7 +76,7 @@ public class GameServerSettings extends HttpServlet
 					   			   .first();
 			if(option.isEmpty())
 			{
-				response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+				response.sendRedirect(Endpoints.INDEX.get().getURL());
 				return;
 			}
 			else
@@ -92,7 +85,7 @@ public class GameServerSettings extends HttpServlet
 			}
 		} catch (SQLException e)
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
@@ -104,7 +97,7 @@ public class GameServerSettings extends HttpServlet
 										.first();
 			if(option.isEmpty())
 			{
-				response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+				response.sendRedirect(Endpoints.INDEX.get().getURL());
 				return;
 			}
 			else
@@ -113,7 +106,7 @@ public class GameServerSettings extends HttpServlet
 			}
 		} catch (SQLException e2)
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
@@ -128,7 +121,7 @@ public class GameServerSettings extends HttpServlet
 			
 			if(option.isEmpty())
 			{
-				response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+				response.sendRedirect(Endpoints.INDEX.get().getURL());
 				return;
 			}
 			
@@ -157,13 +150,12 @@ public class GameServerSettings extends HttpServlet
 			return;
 		}
 		
-		var defaultProperties = new TreeMap<String, Object>(MinecraftServer.MINECRAFT_PROPERTIES);
+		var defaultProperties = new TreeMap<String, Object>();
 		
 		defaultProperties.putAll(
 			Stream.of(nodeResponse.split("\r\n"))
 				  .map(line -> line.split("=", 2))
-				  .filter(keyValue -> keyValue.length == 2)
-				  .collect(Collectors.toMap(key -> key[0], value -> value[1]))
+				  .collect(Collectors.toMap(key -> key[0], value -> value.length > 1 ? value[1] : ""))
 		);
 		
 		var properties = new LinkedList<PropertyInfo>();
@@ -191,27 +183,31 @@ public class GameServerSettings extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
+		StartUpApplication.LOGGER.info("WE ARE GETTING TO GAMESERVERCONTROLLER SETTINGS POST");
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		var execName = ApiSettings.EXECUTABLE_NAME.parse(request);
 		if(!Utils.optionalsPresent(serverID))
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
-		var serverType = StartUpApplication.serverTypes.get(serverID.get());
-		if(serverAddress == null)
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
+		String serverType;
+		try
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			serverType = models.Utils.getServerType(serverID.get());
+		} catch (NoSuchElementException | SQLException e1)
+		{
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		var redirectURL = getEndpoint(serverID.get());
+		var redirectURL = Endpoints.GAME_SERVER_SETTINGS.get(serverID.get());
 		
 		if(!Utils.optionalsPresent(execName))
 		{
-			response.sendRedirect(redirectURL.getURL());
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
@@ -223,8 +219,8 @@ public class GameServerSettings extends HttpServlet
 			
 			if(option.isEmpty())
 			{
-				StartUpApplication.LOGGER.log(Level.SEVERE, "Server exists in cache, but not in the database!");
-				response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+				StartUpApplication.LOGGER.error("Server exists in cache, but not in the database!");
+				response.sendRedirect(Endpoints.INDEX.get().getURL());
 				return;
 			}
 			
@@ -232,7 +228,7 @@ public class GameServerSettings extends HttpServlet
 			
 			gameServer.setColumnValue(GameServerTable.EXECUTABLE_NAME, execName.get());
 			
-			if(serverType.equals(MinecraftServer.class))
+			if(serverType.equals(MinecraftServer.SERVER_TYPE))
 			{
 				var ramAmount = ApiSettings.RAM_AMOUNT.parse(request);
 				var arguments = ApiSettings.ARGUMENTS.parse(request);
@@ -249,8 +245,8 @@ public class GameServerSettings extends HttpServlet
 				
 				if(option2.isEmpty())
 				{
-					StartUpApplication.LOGGER.log(Level.SEVERE, "Minecraft Server exists in cache, but not in the database!");
-					response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+					StartUpApplication.LOGGER.error("Minecraft Server exists in cache, but not in the database!");
+					response.sendRedirect(Endpoints.INDEX.get().getURL());
 					return;
 				}
 				
@@ -266,7 +262,7 @@ public class GameServerSettings extends HttpServlet
 		}
 		catch(SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, "Failure to query/update database in [GameServerSettings]");
+			StartUpApplication.LOGGER.error("Failure to query/update database in [GameServerSettings]");
 			response.sendRedirect(redirectURL.getURL());
 			return;
 		}
@@ -274,7 +270,7 @@ public class GameServerSettings extends HttpServlet
 		var sendURL = nodeapi.ServerEdit.postEndpoint(serverID.get());
 		sendURL.setHost(serverAddress);
 		
-		if(serverType.equals(MinecraftServer.class))
+		if(serverType.equals(MinecraftServer.SERVER_TYPE))
 		{	
 			// Server Properties
 			var propertiesPost = MinecraftServer.MINECRAFT_PROPERTIES.keySet()

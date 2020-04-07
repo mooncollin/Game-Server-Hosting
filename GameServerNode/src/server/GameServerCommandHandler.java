@@ -3,7 +3,6 @@ package server;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -14,15 +13,19 @@ public class GameServerCommandHandler<T extends GameServer> extends CommandHandl
 {
 	public static final String START_COMMAND = "start";
 	public static final String STOP_COMMAND = "stop";
+	public static final String RESTART_COMMAND = "restart";
 	public static final String LOG_COMMAND = "log";
 	public static final String RUNNING_COMMAND = "running";
+	public static final String IP_COMMAND = "ipaddress";
 	
 	public static final List<String[]> COMMANDS = List.of
 	(
 		new String[] {START_COMMAND},
 		new String[] {STOP_COMMAND},
+		new String[] {RESTART_COMMAND},
 		new String[] {LOG_COMMAND},
-		new String[] {RUNNING_COMMAND}
+		new String[] {RUNNING_COMMAND},
+		new String[] {IP_COMMAND}
 	);
 	
 	public GameServerCommandHandler(T server)
@@ -46,12 +49,23 @@ public class GameServerCommandHandler<T extends GameServer> extends CommandHandl
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Unable to start server:\n%s", e.getMessage()));
+				StartUpApplication.LOGGER.error(String.format("Unable to start server:\n%s", e.getMessage()));
 			}
 		}
 		else if(command.equals(STOP_COMMAND))
 		{
 			server.stopServer();
+		}
+		else if(command.equals(RESTART_COMMAND))
+		{
+			try
+			{
+				server.restartServer();
+			}
+			catch(IOException e)
+			{
+				StartUpApplication.LOGGER.error(String.format("Unable to restart server:\n%s", e.getMessage()));
+			}
 		}
 		else if(command.equals(LOG_COMMAND))
 		{
@@ -60,6 +74,10 @@ public class GameServerCommandHandler<T extends GameServer> extends CommandHandl
 		else if(command.equals(RUNNING_COMMAND))
 		{
 			response.getWriter().print(server.isRunning() ? "yes" : "no");
+		}
+		else if(command.equals(IP_COMMAND))
+		{
+			response.getWriter().print(server.getPublicIPAddress());
 		}
 		else
 		{

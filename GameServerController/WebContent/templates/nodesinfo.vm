@@ -1,14 +1,16 @@
 #parse("linkMacros.vm")
+#parse("javascript.vm")
 #set ($background = "images/blackdots.jpg")
+#set ($active = 'Nodes')
 
 #define ($content)
-	<div class="container mt-5">
+	<div class="container my-5">
 		<ul class="list-group">
 			#foreach($name in $nodesToServers.keySet())
 				<li class="bg-dark shadow-lg text-light list-group-item">
 					<h1 class="text-center">$name</h1>
 					<hr>
-					<div width="200" height="200">
+					<div class="mh-100 mw-100">
 						<canvas id="$name-data"><canvas>
 					</div>
 					#serverList($nodesToServers.get($name))
@@ -18,17 +20,16 @@
 	</div>
 	
 	<script>
-		$javascriptUtils.getServerStartInteractAddresses()
-		$javascriptUtils.getServerStopInteractAddresses()
-		$javascriptUtils.getNodeOutputAddresses()
-		var nodeNames = [#foreach($node in $nodeNames)"$node",#end];
-		var nodeUsageAddresses = [#foreach($nodeAddress in $nodeUsageAddresses)"$nodeAddress",#end];
+		#javascriptVariable("nodeNames", $nodeNames)
+		#javascriptVariable("nodeUsageAddresses", $nodeUsageAddresses)
 	</script>
 	
 	<script src="js/moment.js"></script>
 	<script src="js/Chart.min.js"></script>
 	<script src="js/chartjs-plugin-streaming.js"></script>
 	<script src="js/nodeUsage.js"></script>
+	
+	#parse("server.vm")
 	<script src="js/index.js"></script>
 #end
 

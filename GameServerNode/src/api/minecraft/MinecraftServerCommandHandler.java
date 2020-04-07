@@ -82,7 +82,7 @@ public class MinecraftServerCommandHandler extends GameServerCommandHandler<Mine
 			var currentProperties = server.getProperties();
 			for(var name : currentProperties.stringPropertyNames())
 			{
-				response.getWriter().println(String.format("%s=%s", name, currentProperties.getProperty(name)));
+				response.getWriter().print(String.format("%s=%s\r\n", name, currentProperties.getProperty(name)));
 			}
 		}
 		else if(command.equals(RESTARTS_COMMAND))

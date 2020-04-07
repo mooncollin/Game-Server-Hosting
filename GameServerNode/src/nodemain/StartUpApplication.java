@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -36,6 +34,9 @@ import utils.Pair;
 import utils.BoundedCircularList;
 import utils.TimerTaskID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @WebListener
 public class StartUpApplication implements ServletContextListener
 {
@@ -43,8 +44,9 @@ public class StartUpApplication implements ServletContextListener
 	private static final Map<Integer, GameServer> servers = Collections.synchronizedMap(new HashMap<Integer, GameServer>());;
 	private static final Map<GameServer, Integer> serverToID = Collections.synchronizedMap(new HashMap<GameServer, Integer>());
 	public static final BoundedCircularList<Pair<Integer, Long>> nodeUsage = new BoundedCircularList<Pair<Integer, Long>>(500);
-	public static final Logger LOGGER = Logger.getGlobal();
+	public static final Logger LOGGER = LoggerFactory.getLogger(StartUpApplication.class);
 	public static final OperatingSystemMXBean SYSTEM = OperatingSystemMXBean.class.cast(ManagementFactory.getOperatingSystemMXBean());
+	public static final String SERVLET_PATH = "GameServerNode";
 	
 	public static Database database;
 	
@@ -113,7 +115,7 @@ public class StartUpApplication implements ServletContextListener
 		}
 		catch(SQLException e)
 		{
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.error(e.getMessage());
 			return;
 		}
 		

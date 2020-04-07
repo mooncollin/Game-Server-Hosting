@@ -2,12 +2,7 @@
 #set ($background = "images/minecraft/settings_background.jpg")
 
 #define ($content)
-	<h1 class="text-light ml-5 mt-4 d-inline-block">$serverName</h1>
-	<div class="float-right mt-5 mr-5">
-		#consoleLink($serverID)
-		#filesLink($serverID, $serverName)
-		#settingsLink($serverID)
-	</div>
+	<h1 class="text-light ml-5 mt-3 d-inline-block">$serverName</h1>
 	<hr>
 	<ul class="list-group list-group-flush float-right sticky-top">
 		<li class="list-group-item form-group rounded mr-5">
@@ -19,7 +14,7 @@
 			</button>
 		</li>
 	</ul>
-	<div class="container bg-dark">
+	<div class="container bg-dark py-3 mb-5">
 		<form method="POST" id="settingsForm">
 			<ul class="list-group list-group-flush">
 				<li class="list-group-item">

@@ -5,7 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -18,8 +18,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import nodemain.NodeProperties;
-import utils.ParameterURL;
 import utils.Utils;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/FileUpload")
 @MultipartConfig
@@ -31,13 +32,13 @@ public class FileUpload extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL postEndpoint(String[] directories, boolean isFolder)
+	public static ParameterURL postEndpoint(List<String> directories, boolean isFolder)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
 		url.addQuery(ApiSettings.FOLDER.getName(), isFolder);
 		return url;
 	}
@@ -67,7 +68,7 @@ public class FileUpload extends HttpServlet
 		{
 			var fileName = p.getSubmittedFileName();
 			
-			var directoryPath = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get());
+			var directoryPath = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get().toArray(String[]::new));
 			
 			if(folder != null && fileName.endsWith(".zip"))
 			{

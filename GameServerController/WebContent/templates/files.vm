@@ -1,13 +1,10 @@
 #parse("linkMacros.vm")
+#parse("javascript.vm")
 #set ($background = "images/minecraft/files_background.jpg")
+#set ($active = 'Files')
 
 #define ($content)
-	<h1 class="ml-5 mt-4 text-light d-inline-block">$serverName</h1>
-	<div class="float-right mt-5 mr-5">
-		#consoleLink($serverID)
-		#filesLink($serverID, $serverName)
-		#settingsLink($serverID)
-	</div>
+	<h1 class="ml-5 mt-3 text-light d-inline-block">$serverName</h1>
 	<hr>
 	<nav>
 		<ol class="breadcrumb">
@@ -16,7 +13,7 @@
 					#if(!$foreach.hasNext)
 						$dir.name
 					#else
-						<a href="$urlMappings['frontend.GameServerFiles']?id=$serverID&directory=$dir.fullPath">
+						<a href="$Endpoints.GAME_SERVER_FILES.get($serverID, $dir.fullPath)">
 							$dir.name
 						</a>
 					#end
@@ -31,13 +28,13 @@
 		<button title="Upload folder" onClick="upload('folder')" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
 			<i class="fas fa-upload"></i>
 		</button>
-		<a  title="Download current folder" href="$urlMappings['backend.api.GameServerFileDownload']?id=$serverID&directory=$directories" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
+		<a  title="Download current folder" href="$Endpoints.GAME_SERVER_FILE_DOWNLOAD.get($serverID, $directories)" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
 			<i class="fas fa-download"></i>
 		</a>
 		<button title="Delete multiple files" onClick="startDeleteMultiple(this)" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
 			<i class="fas fa-fire"></i>
 		</button>
-		<button hidden="true" title="Submit delete" onClick="submitDeleteMultiple(this)" link="$urlMappings['backend.api.GameServerFileDeleteMultiple']?id=$serverID&directory=$directories" id="deleteMultipleSubmit" data-toggle="tooltip" data-placement="top" class="btn bg-success rounded ml-3">
+		<button hidden="true" title="Submit delete" onClick="submitDeleteMultiple(this)" link="$Endpoints.GAME_SERVER_FILE_DELETE_MULTIPLE.get($serverID, $directories, null)" id="deleteMultipleSubmit" data-toggle="tooltip" data-placement="top" class="btn bg-success rounded ml-3">
 			<i class="fas fa-check"></i>
 		</button>
 		<button title="Create new folder" onClick="showFolderField()" data-toggle="tooltip" data-placement="top" class="btn bg-light rounded ml-3">
@@ -46,19 +43,22 @@
 		<div class="form-inline">
 			<input type="text" name="folderName" id="folderName" hidden="true" placeholder="Enter new folder name" class="ml-3 form-control">
 		</div>
-		<button hidden="true" id="submitFolder" onClick="submitFolder('$urlMappings['backend.api.GameServerFileRename']?id=$serverID&directory=$directories')" class="btn bg-success rounded ml-3">
+		<button hidden="true" id="submitFolder" onClick="submitFolder('$Endpoints.GAME_SERVER_FILE_RENAME.get($serverID, $directories, null, false)')" class="btn bg-success rounded ml-3">
 			Submit
 		</button>
 	</div>
 	<div id="fileListing" class="list-group list-group-flush">
 		#foreach($file in $files)
+			#set($fullPath = [])
+			#set($__dummy__ = $fullPath.addAll($directories))
+			#set($__dummy__ = $fullPath.add($file.name))
 			#if($file.directory)
 				#define($fileHref)
-				$urlMappings['frontend.GameServerFiles']?id=$serverID&directory=$directories,$file.name
+				$Endpoints.GAME_SERVER_FILES.get($serverID, $fullPath)
 				#end
 			#else
 				#define($fileHref)
-				$urlMappings['backend.api.GameServerFileDownload']?id=$serverID&directory=$directories,$file.name
+				$Endpoints.GAME_SERVER_FILE_DOWNLOAD.get($serverID, $fullPath)
 				#end
 			#end
 			<div class="d-flex justify-content-between">
@@ -72,10 +72,10 @@
 					#end
 					<span>$file.name</span>
 				</a>
-				<button onClick="editName('$file.name', this)" style="max-width: 5%;" linkLocation="$fileHref" location="$urlMappings['backend.api.GameServerFileRename']?id=$serverID&directory=$directories,$file.name" class="list-group-item list-group-item-action bg-warning text-light">
+				<button onClick="editName('$file.name', this)" style="max-width: 5%;" linkLocation="$fileHref" location="$Endpoints.GAME_SERVER_FILE_RENAME.get($serverID, $fullPath, null, false)" class="list-group-item list-group-item-action bg-warning text-light">
 					<i class="fas fa-edit"></i>
 				</button>
-				<button onClick="deleteFile(this)" style="max-width: 5%;" fileName="$file.name" location="$urlMappings['backend.api.GameServerFileDelete']?id=$serverID&directory=$directories,$file.name" class="list-group-item list-group-item-action bg-danger text-light">
+				<button onClick="deleteFile(this)" style="max-width: 5%;" fileName="$file.name" location="$Endpoints.GAME_SERVER_FILE_DELETE.get($serverID, $fullPath)" class="list-group-item list-group-item-action bg-danger text-light">
 					<i class="fas fa-trash"></i>
 				</button>
 			</div>
@@ -90,8 +90,8 @@
 	</form>
 	
 	<script>
-		var serverName = "$serverName";
-		var directory = "$directories";
+		#javascriptVariable("serverName", $serverName)
+		#javascriptVariable("directory", $directoryString)
 	</script>
 	
 	<script src="js/GameServerFile.js"></script>

@@ -13,7 +13,8 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 import nodemain.StartUpApplication;
-import utils.ParameterURL;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/ServerDelete")
 public class ServerDelete extends HttpServlet
@@ -24,7 +25,7 @@ public class ServerDelete extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL getEndpoint(int id)

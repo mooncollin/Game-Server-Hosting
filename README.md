@@ -36,7 +36,7 @@ The game servers currently supported:
 
 * Minecraft
 
-Since this project was mainly created for hosting Minecraft servers, some of the general implementation is geared towards Minecraft server functionality/requirements. The server abstraction is not fully complete, but one can still create their own types of game servers by inheriting certain interfaces and creating new tables in their database for their own needs. Ability to load code to handle new games at run-time is being researched.
+Since this project was mainly created for hosting Minecraft servers, some of the general implementation is geared towards Minecraft server functionality/requirements. The server abstraction is not fully complete, but one can still create their own types of game servers by inheriting classes and creating new tables in their database for their own needs. Ability to load code to handle new games at run-time is being researched.
 
 Current dependencies:
 * Tomcat 8/9 (http://tomcat.apache.org/): This is used both as a platform to run the applications and as a library dependency for http/web socket programming.
@@ -49,11 +49,31 @@ Current dependencies:
 
 All installation instructions are located in the "Backend Installation Instructions" document in this repo.
 
-The installation instructions require a .war file of both the GameServerController and GameServerNode Eclipse projects. This can be done by using the Eclipse IDE to export a project into a war file. These .war file will then need to be deployed onto Tomcat through the admin console.
+The installation instructions require a .war file of both the GameServerController and GameServerNode Eclipse projects. This can be done by using the Eclipse IDE to export a project into a war file. These war files will then need to be deployed onto Tomcat through the admin console.
 
 Network factors such as firewalls, port forwarding, and static IPs are not managed by this application and will need to be done by the user manually.
 
 # Changelog
+
+## Version 1.4
+UI Update and bug fixes
+
+### Front-end Fixes:
+* Can now edit settings correctly on Linux
+* Refactored node command/socket connections
+
+### Front-end Features:
+* Nicer look to navigation
+* Added Restart button to console page
+* Added Copy Address button to console page (Gets the public IP address and port of the server)
+* Using a new console interface! (https://terminal.jcubic.pl/)
+
+	Now warning messages will appear in yellow, error messages in red, and hyperlinks in blue.
+
+### Back-end Features:
+* Redesigned URL endpoint creation (again) to be used easier
+* Added a restart method to game servers
+* Added a public ip address method to game servers
 
 ## Version 1.3
 Major bug fix update!

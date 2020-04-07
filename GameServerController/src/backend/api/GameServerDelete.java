@@ -6,48 +6,42 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
-import frontend.Index;
+import frontend.Endpoints;
 import nodeapi.ApiSettings;
-import utils.ParameterURL;
 
-@WebServlet("/GameServerDelete")
+@WebServlet(
+		name = "GameServerDelete",
+		urlPatterns = "/GameServerDelete",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
+)
 public class GameServerDelete extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerDelete";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint(int id)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
-		return url;
-	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		if(serverID.isEmpty())
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		if(serverAddress == null)
 		{
-			response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
@@ -60,8 +54,7 @@ public class GameServerDelete extends HttpServlet
 			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
 			if(httpResponse.statusCode() == 200)
 			{
-				StartUpApplication.serverTypes.remove(serverID.get());
-				StartUpApplication.serverIPAddresses.remove(serverID.get());
+				StartUpApplication.removeServerIPAddress(serverID.get());
 			}
 		}
 		catch(InterruptedException e)
@@ -69,6 +62,6 @@ public class GameServerDelete extends HttpServlet
 			
 		}
 		
-		response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+		response.sendRedirect(Endpoints.INDEX.get().getURL());
 	}
 }

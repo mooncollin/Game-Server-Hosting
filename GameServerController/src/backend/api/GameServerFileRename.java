@@ -4,45 +4,30 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.Arrays;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
-import frontend.GameServerFiles;
+import frontend.Endpoints;
 import nodeapi.ApiSettings;
-import utils.ParameterURL;
 
-@WebServlet("/GameServerFileRename")
+@WebServlet(
+		name = "GameServerFileRename",
+		urlPatterns = "/GameServerFileRename",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
+)
 public class GameServerFileRename extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerFileRename";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint(int serverID, String[] directories, String rename, boolean newFolder)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
-		
-		if(rename != null && !rename.isEmpty())
-		{
-			url.addQuery(newFolder ? ApiSettings.NEW_FOLDER.getName() : ApiSettings.RENAME.getName(), rename);
-		}
-		
-		return url;
-	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -51,20 +36,20 @@ public class GameServerFileRename extends HttpServlet
 		var rename = ApiSettings.RENAME.parse(request);
 		var newFolder = ApiSettings.NEW_FOLDER.parse(request);
 
-		if(directory.isEmpty() || (rename.isEmpty() && newFolder.isEmpty()))
+		if(directory.isEmpty() || (rename.isEmpty() && newFolder.isEmpty()) || directory.get().size() <= 1)
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		var redirectURL = GameServerFiles.getEndpoint(serverID.get(), directory.get());
+		var redirectURL = Endpoints.GAME_SERVER_FILES.get(serverID.get(), directory.get().subList(0, directory.get().size() - 1));
 		
 		try
 		{
@@ -83,7 +68,7 @@ public class GameServerFileRename extends HttpServlet
 		}
 		catch(InterruptedException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}

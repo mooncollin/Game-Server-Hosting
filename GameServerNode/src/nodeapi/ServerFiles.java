@@ -2,7 +2,7 @@ package nodeapi;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,8 +11,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import nodemain.NodeProperties;
-import utils.ParameterURL;
 import utils.Utils;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/ServerFiles")
 public class ServerFiles extends HttpServlet
@@ -23,13 +24,13 @@ public class ServerFiles extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL getEndpoint(String[] directories)
+	public static ParameterURL getEndpoint(List<String> directories)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
+		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
 		return url;
 	}
 	
@@ -43,7 +44,7 @@ public class ServerFiles extends HttpServlet
 			return;
 		}
 		
-		var currentDirectory = Paths.get(NodeProperties.getProperties().getProperty("deploy_folder"), directory.get()).toFile();
+		var currentDirectory = Paths.get(NodeProperties.getProperties().getProperty("deploy_folder"), directory.get().toArray(String[]::new)).toFile();
 		
 		if(!currentDirectory.isDirectory())
 		{

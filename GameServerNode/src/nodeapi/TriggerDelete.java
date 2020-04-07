@@ -2,7 +2,6 @@ package nodeapi;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -13,8 +12,9 @@ import javax.servlet.http.HttpServletResponse;
 import model.Query;
 import models.TriggersTable;
 import nodemain.StartUpApplication;
-import utils.ParameterURL;
 import utils.Utils;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/TriggerDelete")
 public class TriggerDelete extends HttpServlet
@@ -25,7 +25,7 @@ public class TriggerDelete extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL getEndpoint(int triggerID)
@@ -62,7 +62,7 @@ public class TriggerDelete extends HttpServlet
 			trigger.delete(StartUpApplication.database);
 		} catch (SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}

@@ -16,7 +16,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 import model.Database;
 import models.MinecraftServerTable;
@@ -36,11 +35,7 @@ public class MinecraftServer extends GameServer
 	public static final String SERVER_PROPERTIES_FILE_NAME = "server.properties";
 	public static final String MINIMUM_HEAP_ARGUMENT = "-Xms%dm";
 	public static final String MAXIMUM_HEAP_ARGUMENT = "-Xmx%dm";
-	
-	public static final String RAM_AMOUNT_PARAMETER = "ramAmount";
-	public static final String RESTART_PARAMETER = "restartsUnexpected";
-	public static final String ARGUMENTS_PARAMETER = "arguments";
-	public static final String SERVER_COMMAND_PARAMETER = "serverCommand";
+	public static final String SERVER_TYPE = "minecraft";
 	
 	public static final Map<String, Object> MINECRAFT_PROPERTIES = Map.ofEntries
 	(
@@ -108,7 +103,7 @@ public class MinecraftServer extends GameServer
 					lineRead = reader.readLine();
 				} catch (IOException e1)
 				{
-					StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Reading from MinecraftServer caused an error:\n%s", e1.getMessage()));
+					StartUpApplication.LOGGER.error(String.format("Reading from MinecraftServer caused an error:\n%s", e1.getMessage()));
 					break;
 				}
 				
@@ -270,7 +265,7 @@ public class MinecraftServer extends GameServer
 					}
 					catch(IOException e)
 					{
-						StartUpApplication.LOGGER.log(Level.WARNING, e.getMessage());
+						StartUpApplication.LOGGER.error(e.getMessage());
 					}
 				}
 			});
@@ -299,7 +294,7 @@ public class MinecraftServer extends GameServer
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.log(Level.WARNING, String.format("Failed to write to server MinecraftServer:\n%s", e.getMessage()));
+				StartUpApplication.LOGGER.warn(String.format("Failed to write to server MinecraftServer:\n%s", e.getMessage()));
 			}
 		}
 		
@@ -325,7 +320,7 @@ public class MinecraftServer extends GameServer
 		command.add("nogui");
 		
 		var fullCommand = command.toArray(String[]::new);
-		StartUpApplication.LOGGER.log(Level.INFO, String.format("Running command: %s\n", String.join(" ", fullCommand)));
+		StartUpApplication.LOGGER.info(String.format("Running command: %s\n", String.join(" ", fullCommand)));
 		return fullCommand;
 	}
 	
@@ -345,9 +340,13 @@ public class MinecraftServer extends GameServer
 				properties.load(s);
 			} catch (IOException e)
 			{
-				e.printStackTrace();
+				StartUpApplication.LOGGER.error(String.format("Unable to read MinecraftServer properties file:\n%s", e.getMessage()));
 				return null;
 			}
+		}
+		else
+		{
+			StartUpApplication.LOGGER.warn("Minecraft Server properties file is missing. Might be first time loading.");
 		}
 		
 		return properties;
@@ -356,6 +355,7 @@ public class MinecraftServer extends GameServer
 	public boolean setProperties(Properties p)
 	{
 		var propertiesFile = getFolderLocation().toPath().resolve(Path.of(SERVER_PROPERTIES_FILE_NAME)).toFile();
+		StartUpApplication.LOGGER.info("About to save to: " + propertiesFile.getAbsolutePath());
 		var properties = new Properties();
 		for(var prop : MINECRAFT_PROPERTIES.keySet())
 		{
@@ -375,7 +375,7 @@ public class MinecraftServer extends GameServer
 			properties.store(o, String.format("Minecraft server properties"));
 		} catch (IOException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, String.format("Unable to write to MinecraftServer properties file:\n%s", e.getMessage()));
+			StartUpApplication.LOGGER.error(String.format("Unable to write to MinecraftServer properties file:\n%s", e.getMessage()));
 			return false;
 		}
 		
@@ -395,6 +395,24 @@ public class MinecraftServer extends GameServer
 	public String getArguments()
 	{
 		return arguments;
+	}
+	
+	public String getServerType()
+	{
+		return SERVER_TYPE;
+	}
+	
+	@Override
+	public String getPublicIPAddress()
+	{
+		var ip = super.getPublicIPAddress();
+		if(ip == null)
+		{
+			return null;
+		}
+		
+		var properties = getProperties();
+		return String.format("%s:%s", ip, properties.get("server-port"));
 	}
 	
 	@Override

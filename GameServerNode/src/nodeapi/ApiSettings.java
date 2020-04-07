@@ -1,6 +1,8 @@
 package nodeapi;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -19,15 +21,18 @@ public class ApiSettings <T>
 	
 	public static final Pattern SERVER_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_ ]+");
 	
-	public static final ApiSettings<String> SERVER_NAME = new ApiSettings<String>(String.class, "name", false);
+	public static final ApiSettings<String> SERVER_NAME = new ApiSettings<String>(String.class, "name", false, name -> SERVER_NAME_PATTERN.matcher(name).matches(), null);
 	public static final ApiSettings<Integer> SERVER_ID = new ApiSettings<Integer>(Integer.class, "id", false);
 	public static final ApiSettings<String> EXECUTABLE_NAME = new ApiSettings<String>(String.class, "execName", false, name -> !name.isBlank(), null);
 	public static final ApiSettings<String> SERVER_TYPE = new ApiSettings<String>(String.class, "type", false);
 	public static final ApiSettings<String> NODE_NAME = new ApiSettings<String>(String.class, "node", false);
-	public static final ApiSettings<String[]> DIRECTORY = new ApiSettings<String[]>(String[].class, "directory", false, dir -> Arrays.stream(dir)
-																															       .allMatch(s -> !s.equals("..")
-																															   && !dir[0].isBlank())
-																													  , dir -> Optional.of(dir.split(",")));
+	
+	@SuppressWarnings("unchecked")
+	public static final ApiSettings<List<String>> DIRECTORY = new ApiSettings<List<String>>((Class<List<String>>) Collections.<String>emptyList().getClass(), "directory", false, dir -> dir.stream()
+																											       	  .allMatch(s -> !s.equals("..")
+																											       		&& !((String) dir.get(0)).isBlank())
+																											, (String dir) -> Optional.of(Arrays.asList(dir.split(","))));
+	
 	public static final ApiSettings<String> RENAME = new ApiSettings<String>(String.class, "rename", true);
 	public static final ApiSettings<String> NEW_FOLDER = new ApiSettings<String>(String.class, "newFolder", true, folder -> folder == null || !folder.isBlank(), null);
 	public static final ApiSettings<Boolean> FOLDER = new ApiSettings<Boolean>(Boolean.class, "folder", true, null, str -> Optional.of(Boolean.valueOf(str)));
@@ -120,7 +125,7 @@ public class ApiSettings <T>
 	
 	public Optional<T> parse(String str)
 	{
-		var optionValue = parser.apply(str);
+		var<T> optionValue = parser.apply(str);
 		if(optionValue.isEmpty() || !valid(optionValue.get()))
 		{
 			return Optional.empty();

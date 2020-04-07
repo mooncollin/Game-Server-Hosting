@@ -1,9 +1,12 @@
 package frontend.templates;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.velocity.shaded.commons.io.FilenameUtils;
 
+import frontend.Endpoints;
 import model.Table;
 import models.TriggersTable;
 import server.TriggerHandler;
@@ -170,12 +173,12 @@ public class Templates
 	public static class DirectoryEntry
 	{
 		private String name;
-		private String path;
+		private List<String> path;
 		
-		public DirectoryEntry(String name, String[] path)
+		public DirectoryEntry(String name, List<String> path)
 		{
 			this.name = name;
-			this.path = String.join(",", path);
+			this.path = List.copyOf(path);
 		}
 		
 		public String getName()
@@ -183,19 +186,17 @@ public class Templates
 			return name;
 		}
 		
-		public String getPath()
+		public List<String> getPath()
 		{
 			return path;
 		}
 		
-		public String getFullPath()
+		public List<String> getFullPath()
 		{
-			if(path.isBlank())
-			{
-				return name;
-			}
+			var full = new LinkedList<String>(path);
+			full.add(name);
 			
-			return String.format("%s,%s", path, name);
+			return full;
 		}
 	}
 	
@@ -269,5 +270,10 @@ public class Templates
 		{
 			return reservedRam;
 		}
+	}
+	
+	public static String getServerCommandEndpoint()
+	{
+		return Endpoints.SERVER_INTERACT.get().getURL();
 	}
 }

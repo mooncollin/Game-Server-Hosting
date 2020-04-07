@@ -17,7 +17,8 @@ import javax.websocket.server.ServerEndpoint;
 
 import nodemain.StartUpApplication;
 import server.GameServer;
-import utils.ParameterURL;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @ServerEndpoint("/Output")
 public class Output
@@ -36,7 +37,7 @@ public class Output
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.WEB_SOCKET_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.WEB_SOCKET, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL getEndpoint(int id)
@@ -96,6 +97,17 @@ public class Output
 		}
 		
 		var foundServer = StartUpApplication.getServer(serverID.get());
+		if(foundServer == null)
+		{
+			try
+			{
+				session.close();
+			} catch (IOException e)
+			{
+			}
+			
+			return;
+		}
 		var neither = !outputOnly && !runningOnly;
 		
 		if(outputOnly || neither)

@@ -2,7 +2,6 @@ package server;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.logging.Level;
 
 import nodemain.StartUpApplication;
 
@@ -80,7 +79,7 @@ abstract public class TriggerHandler
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+				StartUpApplication.LOGGER.error(e.getMessage());
 			}
 		}
 		else if(getAction().equals(STOP_SERVER))
@@ -89,14 +88,13 @@ abstract public class TriggerHandler
 		}
 		else if(getAction().equals(RESTART_SERVER))
 		{
-			server.stopServer();
 			try
 			{
-				server.startServer();
+				server.restartServer();
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+				StartUpApplication.LOGGER.error(e.getMessage());
 			}
 		}
 	}

@@ -1,18 +1,19 @@
 package server;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.Level;
 
-import api.minecraft.MinecraftServer;
 import model.Database;
 import models.GameServerTable;
 import models.NodeTable;
@@ -24,11 +25,22 @@ import java.util.Collections;
 abstract public class GameServer
 {
 	public static final int DEFAULT_LOG_MAXIMUM_LENGTH = 1_000_000;
-
-	public static final Map<String, Class<? extends GameServer>> PROPERTY_NAMES_TO_TYPE = 
-		Map.ofEntries(
-				Map.entry("minecraft", MinecraftServer.class)
-		);
+	private static final URL IP_ADDRESS_FINDER;
+	
+	static
+	{
+		URL temp;
+		try
+		{
+			temp = new URL("http://checkip.amazonaws.com");
+		} catch (MalformedURLException e)
+		{
+			temp = null;
+			
+		}
+		
+		IP_ADDRESS_FINDER = temp;
+	}
 	
 	protected Process process;
 	protected String log;
@@ -169,7 +181,7 @@ abstract public class GameServer
 		if(result)
 		{
 			notifyRunningNotifiers();
-			StartUpApplication.LOGGER.log(Level.WARNING, "Server forced to stop");
+			StartUpApplication.LOGGER.warn("Server forced to stop");
 		}
 		
 		return result;
@@ -196,6 +208,36 @@ abstract public class GameServer
 	abstract public boolean stopServer();
 	abstract public boolean startServer() throws IOException;
 	abstract public boolean writeToServer(String out);
+	
+	public boolean restartServer() throws IOException
+	{
+		var stopping = stopServer();
+		if(!stopping)
+		{
+			return false;
+		}
+		var starting = startServer();
+		return starting;
+	}
+	
+	public String getPublicIPAddress()
+	{
+		if(IP_ADDRESS_FINDER == null)
+		{
+			return null;
+		}
+		
+		try
+		{
+			var ip = new BufferedReader(new InputStreamReader(IP_ADDRESS_FINDER.openStream()));
+			return ip.readLine();
+		} catch (IOException e)
+		{
+			return null;
+		}
+	}
+	
+	abstract public String getServerType();
 	
 	protected List<OutputStream> getOutputConnectors()
 	{

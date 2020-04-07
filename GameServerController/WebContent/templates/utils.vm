@@ -1,0 +1,17 @@
+#if($css)
+#else
+	#set($css = [])
+#end
+
+#if($js)
+#else
+	#set($js = [])
+#end
+
+#macro(addCSS $src)
+#set($__dummy__ = $css.add($src))
+#end
+
+#macro(addJS $src)
+#set($__dummy__ = $js.add($src))
+#end

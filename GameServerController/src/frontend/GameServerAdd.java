@@ -6,8 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
-import java.util.LinkedList;
-import java.util.logging.Level;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -27,67 +27,55 @@ import model.Query;
 import models.GameServerTable;
 import models.NodeTable;
 import nodeapi.ApiSettings;
-import server.GameServer;
 import utils.MultipartInputStream;
-import utils.ParameterURL;
 import utils.Utils;
 
-@WebServlet("/GameServerAdd")
+@WebServlet(
+		name = "GameServerAdd",
+		urlPatterns = "/GameServerAdd",
+		asyncSupported = true
+)
 @MultipartConfig
 public class GameServerAdd extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerAdd";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint()
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		return url;
-	}
-	
-	public static ParameterURL postEndpoint(String serverName, String execName, String nodeName, String type)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_NAME.getName(), serverName);
-		url.addQuery(ApiSettings.EXECUTABLE_NAME.getName(), execName);
-		url.addQuery(ApiSettings.NODE_NAME.getName(), nodeName);
-		url.addQuery(ApiSettings.SERVER_TYPE.getName(), type);
-		
-		return url;
-	}
-	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var nodes = new LinkedList<NodeInfo>();
+		List<NodeInfo> nodes;
+		Set<String> serverTypes;
 		try
 		{
 			var nodeRows = Query.query(StartUpApplication.database, NodeTable.class)
 							 .all();
 			
-			for(var node : nodeRows)
-			{
-				var name = node.getColumnValue(NodeTable.NAME);
-				nodes.add(new NodeInfo(name,
-									   node.getColumnValue(NodeTable.MAX_RAM_ALLOWED),
-									   StartUpApplication.getNodeReservedRam(name)));
-			}
+			nodes = nodeRows.parallelStream()
+							.map(row -> {
+								var name = row.getColumnValue(NodeTable.NAME);
+									try
+									{
+										return new NodeInfo(name,
+															row.getColumnValue(NodeTable.MAX_RAM_ALLOWED),
+															StartUpApplication.getNodeReservedRam(name));
+									} catch (SQLException e)
+									{
+										throw new RuntimeException(e.getMessage());
+									}
+							})
+							.collect(Collectors.toList());
+			
+			serverTypes = models.Utils.getServerTypes();
 			
 		} catch (SQLException | RuntimeException e1)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e1.getMessage());
+			StartUpApplication.LOGGER.error(e1.getMessage());
 			response.setStatus(500);
 			return;
 		}
 		
 		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
 		context.put("nodes", nodes);
-		context.put("serverTypes", GameServer.PROPERTY_NAMES_TO_TYPE.keySet());
+		context.put("serverTypes", serverTypes);
 		context.put("minRamAmount", MinecraftServer.MINIMUM_HEAP_SIZE);
 		context.put("defaultRamAmount", MinecraftServer.MINIMUM_HEAP_SIZE);
 		context.put("ramStep", MinecraftServer.HEAP_STEP);
@@ -105,15 +93,14 @@ public class GameServerAdd extends HttpServlet
 		
 		if(!Utils.optionalsPresent(serverName, executableName, nodeName, type))
 		{
-			doGet(request, response);
+			response.sendRedirect(Endpoints.GAME_SERVER_ADD.get().getURL());
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.nodeIPAddresses.get(nodeName.get());
-		
+		var serverAddress = StartUpApplication.getNodeIPAddress(nodeName.get());
 		if(serverAddress == null)
 		{
-			doGet(request, response);
+			response.sendRedirect(Endpoints.GAME_SERVER_ADD.get().getURL());
 			return;
 		}
 		
@@ -125,13 +112,13 @@ public class GameServerAdd extends HttpServlet
 			
 			if(gameServer.isPresent())
 			{
-				doGet(request, response);
+				response.sendRedirect(Endpoints.GAME_SERVER_ADD.get().getURL());
 				return;
 			}
 		}
 		catch(SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}
@@ -139,7 +126,7 @@ public class GameServerAdd extends HttpServlet
 		var url = nodeapi.ServerAdd.postEndpoint(serverName.get(), executableName.get(), type.get());
 		url.setHost(serverAddress);
 		
-		if(type.get().equals("minecraft"))
+		if(type.get().equals(MinecraftServer.SERVER_TYPE))
 		{
 			var ram = ApiSettings.RAM_AMOUNT.parse(request);
 			if(ram.isEmpty())
@@ -172,9 +159,8 @@ public class GameServerAdd extends HttpServlet
 				if(httpResponse.statusCode() == 200)
 				{
 					var id = Integer.parseInt(httpResponse.body());
-					StartUpApplication.serverTypes.put(id, GameServer.PROPERTY_NAMES_TO_TYPE.get(type.get()));
-					StartUpApplication.serverIPAddresses.put(id, serverAddress);
-					response.sendRedirect(StartUpApplication.getUrlMapping(Index.class));
+					StartUpApplication.addServerIPAddress(id, nodeName.get());
+					response.sendRedirect(Endpoints.INDEX.get().getURL());
 					return;
 				}
 			}

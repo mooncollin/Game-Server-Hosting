@@ -2,7 +2,6 @@ package nodeapi;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -14,8 +13,9 @@ import model.Query;
 import model.Table;
 import models.TriggersTable;
 import nodemain.StartUpApplication;
-import utils.ParameterURL;
 import utils.Utils;
+import utils.servlet.Endpoint;
+import utils.servlet.ParameterURL;
 
 @WebServlet("/TriggerEdit")
 public class TriggerEdit extends HttpServlet
@@ -26,7 +26,7 @@ public class TriggerEdit extends HttpServlet
 	
 	private static final ParameterURL PARAMETER_URL = new ParameterURL
 	(
-		ParameterURL.HTTP_PROTOCOL, "", ApiSettings.TOMCAT_HTTP_PORT, URL
+			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
 	public static ParameterURL getEndpoint(int triggerID)
@@ -66,7 +66,7 @@ public class TriggerEdit extends HttpServlet
 			StartUpApplication.addTrigger(trigger);
 		} catch (SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}

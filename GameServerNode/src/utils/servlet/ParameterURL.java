@@ -1,4 +1,4 @@
-package utils;
+package utils.servlet;
 
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -7,13 +7,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import utils.servlet.Endpoint.Protocol;
+
 public class ParameterURL
 {
 	public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
-	public static final String HTTP_PROTOCOL = "http";
-	public static final String WEB_SOCKET_PROTOCOL = "ws";
 	
-	private String protocol;
+	private Protocol protocol;
 	private String host;
 	private Integer port;
 	private String endpoint;
@@ -21,7 +21,7 @@ public class ParameterURL
 	
 	private Map<String, String> queryParameters;
 	
-	public ParameterURL(String protocol, String host, Integer port, String endpoint)
+	public ParameterURL(Protocol protocol, String host, Integer port, String endpoint)
 	{
 		this.queryParameters = new HashMap<String, String>();
 		setProtocol(protocol);
@@ -51,12 +51,12 @@ public class ParameterURL
 		return encoding;
 	}
 	
-	public void setProtocol(String protocol)
+	public void setProtocol(Protocol protocol)
 	{
-		this.protocol = Objects.requireNonNullElse(protocol, "");
+		this.protocol = protocol;
 	}
 	
-	public String getProtocol()
+	public Protocol getProtocol()
 	{
 		return protocol;
 	}
@@ -137,9 +137,8 @@ public class ParameterURL
 	@Override
 	public String toString()
 	{
-		return String.format("%s%s%s%s/%s%s%s", 
-			protocol, 
-			protocol.isEmpty() ? "" : "://",
+		return String.format("%s%s%s/%s%s%s", 
+			protocol == null ? "" : protocol.getValue() + "://",
 			host,
 			port == null ? "" :  ":" + String.valueOf(port),
 			endpoint,

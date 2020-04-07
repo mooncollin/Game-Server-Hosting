@@ -1,0 +1,36 @@
+#set($__obj__ = '')
+#set($stringClass = $__obj__.class.forName('java.lang.String'))
+#set($mapClass = $__obj__.class.forName('java.util.Map'))
+#set($listClass = $__obj__.class.forName('java.util.List'))
+
+#macro(javascriptVariable $name $value)
+	var $name = #javascriptValue($value);
+#end
+
+#macro(javascriptMapValues $map)
+{
+	#foreach($key in $map.keySet())
+		#javascriptValue($key) : #javascriptValue($map[$key]),
+	#end
+}
+#end
+
+#macro(javascriptListValues $list)
+[
+	#foreach($value in $list)
+		#javascriptValue($value),
+	#end
+]
+#end
+
+#macro(javascriptValue $value)
+	#if($stringClass.isAssignableFrom($value.class))
+		"$value"
+	#elseif($mapClass.isAssignableFrom($value.class))
+		#javascriptMapValues($value)
+	#elseif($listClass.isAssignableFrom($value.class))
+		#javascriptListValues($value)
+	#else
+		$value
+	#end
+#end

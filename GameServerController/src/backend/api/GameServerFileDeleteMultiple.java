@@ -5,43 +5,36 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
-import frontend.GameServerFiles;
+import frontend.Endpoints;
 import nodeapi.ApiSettings;
-import utils.ParameterURL;
 import utils.Utils;
 
-@WebServlet("/GameServerFileDeleteMultiple")
+@WebServlet(
+		name = "GameServerFileDeleteMultiple",
+		urlPatterns = "/GameServerFileDeleteMultiple",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = {
+				@HttpMethodConstraint(value = "GET"),
+				@HttpMethodConstraint(value = "POST")
+		}
+)
 public class GameServerFileDeleteMultiple extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = StartUpApplication.SERVLET_PATH + "/GameServerFileDeleteMultiple";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint(int serverID, String[] directories, String files)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
-		url.addQuery(ApiSettings.FILES.getName(), files);
-		return url;
-	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{	
@@ -54,20 +47,22 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		var redirectURL = GameServerFiles.getEndpoint(serverID.get(), directory.get());
+		var redirectURL = Endpoints.GAME_SERVER_FILES.get(serverID.get(), directory.get());
 		
 		var futures = new LinkedList<CompletableFuture<HttpResponse<Void>>>();
 		
 		for(var file : files.get())
 		{
-			var url = nodeapi.FileDelete.getEndpoint(Utils.concatenate(directory.get(), file));
+			var newList = new LinkedList<String>(directory.get());
+			newList.add(file);
+			var url = nodeapi.FileDelete.getEndpoint(newList);
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			futures.add(StartUpApplication.client.sendAsync(httpRequest, BodyHandlers.discarding()));
@@ -79,7 +74,7 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 		}
 		catch(Exception e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 		}
 		
 		response.sendRedirect(redirectURL.getURL());

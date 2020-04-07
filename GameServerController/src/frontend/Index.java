@@ -3,10 +3,12 @@ package frontend;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.logging.Level;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -16,28 +18,23 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 
 import backend.main.StartUpApplication;
-import frontend.javascript.JavaScriptUtils;
+import frontend.templates.Templates;
 import frontend.templates.Templates.ServerInfo;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
-import utils.ParameterURL;
 
-@WebServlet("/Home")
+@WebServlet(
+		name = "Index",
+		urlPatterns = "/Home",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
+)
 public class Index extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, StartUpApplication.getUrlMapping(Index.class)
-	);
-	
-	public static ParameterURL getEndpoint()
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		return url;
-	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -48,23 +45,33 @@ public class Index extends HttpServlet
 								   .all();
 		} catch (SQLException e)
 		{
-			StartUpApplication.LOGGER.log(Level.SEVERE, e.getMessage());
+			StartUpApplication.LOGGER.error(e.getMessage());
 			response.setStatus(500);
 			return;
 		}
 		
-		var servers = gameServers.stream()
+		var servers = gameServers.parallelStream()
 								 .map(s -> {
 									 var serverID = s.getColumnValue(GameServerTable.ID);
 									 var serverName = s.getColumnValue(GameServerTable.NAME);
-									 var serverTypeName = StartUpApplication.serverTypesToNames.get(StartUpApplication.serverTypes.get(serverID));
+									 String serverTypeName;
+									 
+									try
+									{
+										serverTypeName = models.Utils.getServerType(serverID);
+									} catch (NoSuchElementException | SQLException e)
+									{
+										throw new RuntimeException(e.getMessage());
+									}
+									
 									 return new ServerInfo(serverID, serverName, serverTypeName);
 								 })
 								 .collect(Collectors.toList());
 		
 		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
 		context.put("servers", servers);
-		context.put("javascriptUtils", JavaScriptUtils.class);
+		context.put("serverCommandEndpoint", Templates.getServerCommandEndpoint());
+		context.put("nodeOutputAddresses", StartUpApplication.getNodeOutputAddresses("running"));
 		
 		var template = Velocity.getTemplate("index.vm");
 		template.merge(context, response.getWriter());

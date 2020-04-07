@@ -4,9 +4,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.Arrays;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -14,33 +15,21 @@ import javax.servlet.http.HttpServletResponse;
 
 import backend.main.StartUpApplication;
 import nodeapi.ApiSettings;
-import utils.ParameterURL;
-import utils.Utils;
 
-@WebServlet("/GameServerFile")
+@WebServlet(
+		name = "GameServerFile",
+		urlPatterns = "/GameServerFile",
+		asyncSupported = true
+)
+@ServletSecurity(
+		httpMethodConstraints = {
+				@HttpMethodConstraint(value = "GET"),
+				@HttpMethodConstraint(value = "POST")
+		}
+)
 public class GameServerFileDownload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-
-	public static final String URL = StartUpApplication.SERVLET_PATH +  "/GameServerFile";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-		null, null, null, URL
-	);
-	
-	public static ParameterURL getEndpoint(int serverID, String[] directories)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", Arrays.asList(directories)));
-		return url;
-	}
-	
-	public static ParameterURL postEndpoint(int serverID, String[] directories)
-	{
-		return getEndpoint(serverID, directories);
-	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
@@ -53,14 +42,14 @@ public class GameServerFileDownload extends HttpServlet
 			return;
 		}
 		
-		var serverAddress = StartUpApplication.serverIPAddresses.get(serverID.get());
+		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
 		if(serverAddress == null)
 		{
 			response.setStatus(404);
 			return;
 		}
 		
-		var fileName = Utils.lastOf(directory.get(), 1);
+		var fileName = directory.get().get(directory.get().size() - 1);
 		if(!fileName.contains("."))
 		{
 			fileName += ".zip";

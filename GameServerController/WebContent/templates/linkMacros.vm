@@ -1,38 +1,51 @@
 #macro(consoleLink $id)
-	<a href="$urlMappings['frontend.GameServerConsole']?id=$id" class="rounded-circle bg-light p-2 mr-4" data-toggle="tooltip" data-placement="bottom" title="Open server console">
+	<a href="$Endpoints.GAME_SERVER_CONSOLE.get($id)" class="mr-4 text-decoration-none" data-toggle="tooltip" data-placement="bottom" title="Open server console">
 		<i class="fas fa-terminal"></i>
 	</a>
 #end
 
 #macro(filesLink $id $name)
-	<a href="$urlMappings['frontend.GameServerFiles']?id=$id&directory=$name" class="rounded-circle bg-light p-2 mr-4" data-toggle="tooltip" data-placement="bottom" title="View server files">
+	<a href="$Endpoints.GAME_SERVER_FILES.get($id, [$name])" class="mr-4 text-decoration-none" data-toggle="tooltip" data-placement="bottom" title="View server files">
 		<i class="fas fa-file fa-lg"></i>
 	</a>
 #end
 
 #macro(settingsLink $id)
-	<a href="$urlMappings['frontend.GameServerSettings']?id=$id" class="rounded-circle bg-light p-2 mr-4" data-toggle="tooltip" data-placement="bottom" title="Edit server settings">
+	<a href="$Endpoints.GAME_SERVER_SETTINGS.get($id)" class="mr-4 text-decoration-none" data-toggle="tooltip" data-placement="bottom" title="Edit server settings">
 		<i class="fas fa-edit"></i>
 	</a>
 #end
 
 #macro(deleteLink $id $name)
-	<a href="#" link="$urlMappings['backend.api.GameServerDelete']?id=$id" onClick="deleteServer(this, '$name')" class="rounded-circle bg-light p-2" data-toggle="tooltip" data-placement="bottom" title="Delete Server">
+	<a href="#" link="$Endpoints.GAME_SERVER_DELETE.get($id)" onClick="deleteServer(this, '$name')" class="text-decoration-none" data-toggle="tooltip" data-placement="bottom" title="Delete Server">
 		<i class="fas fa-trash-alt"></i>
 	</a>
 #end
 
 #macro(startButton $id $extra)
-	<button id="start#if($id != "")-#end$id" onClick="startServer($id)" class="btn btn-primary $extra">
+	<button id="start-$id" onClick="runCommand('start', $id)" class="btn btn-primary $extra">
 		Start Server
-		<span class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
+		<span id="spinner-start-$id" class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
 	</button>
 #end
 
 #macro(stopButton $id $extra)
-	<button id="stop#if($id != "")-#end$id" onClick="stopServer($id)" class="btn btn-danger $extra">
+	<button id="stop-$id" onClick="runCommand('stop', $id)" class="btn btn-danger $extra">
 		Stop Server
-		<span class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
+		<span id="spinner-stop-$id" class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
+	</button>
+#end
+
+#macro(restartButton $id $extra)
+	<button id="restart-$id" onClick="runCommand('restart', $id)" class="btn btn-info $extra">
+		Restart Server
+		<span id="spinner-restart-$id" class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
+	</button>
+#end
+
+#macro(ipAddressButton $id $extra)
+	<button id="ipaddress-$id" onClick="getIPAddress($id)" class="btn btn-outline-info $extra">
+		Copy Address
 	</button>
 #end
 
@@ -44,6 +57,7 @@
 				<th scope="col">Type</th>
 				<th scope="col">Status</th>
 				<th scope="col">Options</th>
+				<th scope="col"></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -57,7 +71,7 @@
 						</span>
 						<span>Unknown</span>
 					</td>
-					<td class="pb-3">
+					<td class="py-3">
 						#consoleLink($server.Id)
 						#filesLink($server.Id, $server.Name)
 						#settingsLink($server.Id)
