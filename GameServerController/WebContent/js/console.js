@@ -194,65 +194,51 @@ function getIPAddress(serverID) {
 	});
 }
 
-function consoleTextFinalize(text, div) {
+function consoleTextFinalize(div, text) {
 	var typeReg = /^\[\d+:\d+:\d+\] \[[\w\s]+\/(\w+)?\]/g;
 	var match = typeReg.exec(text);
 	if(match != null) {
 		var type = match[1];
 		if(type == "WARN") {
-			div.find("span").css("color", "yellow");
+			div.style.color = "yellow";
 		}
 		else if(type == "ERROR") {
-			div.find("span").css("color", "red");
+			div.style.color = "red";
 		}
 	}
 }
 
-var term = 
-	   $('#terminal').terminal(function(command) {
-		   	if(!serverStatus[serverID].running) {
-		   		this.echo("Please start server to enter commands");
-		   	}
-		   	else {
-		   		runCommand("serverCommand&serverCommand=" + command, serverID);
-		   	}
-	   }, {
-	   		height: 500,
-	   		greetings: false,
-	   		scrollOnEcho: false,
-	   		scrollBottomOffset: 20
-	   });
+var term = new Terminal('terminal', function(command) {
+	if(!serverStatus[serverID].running) {
+		term.print("Please start server to enter commands");
+	}
+	else {
+		runCommand("serverCommand&serverCommand=" + command, serverID);
+	}
+}, {}, {}); 
 
 
 $('#start-' + serverID)[0].onclick = null;
 $('#start-' + serverID).click(function() {
 	term.clear();
 	runCommand('start', serverID);
-})
+});
 
 runCommand("last", serverID).then(response => {
 	if(response.status === 200) {
 		response.text().then(text => {
 			if(text != '') {
 				var lines = text.split("\r\n");
-				lines.forEach(function(line) {
-					term.echo($.trim(line), {
-						finalize: function(div) {
-							consoleTextFinalize(line, div);
-						}
-					});
+				lines.forEach(async function(line) {
+					await term.print($.trim(line), consoleTextFinalize);
 				});
-				
+				term.scrollToBottom();
 			}
 			intializeSockets(nodeOutputAddresses, function(event, serverID) {
 				var serverData = event.data;
 				if(serverData instanceof Blob) {
-					serverData.text().then(function(text) {
-						term.echo($.trim(text), {
-							finalize: function(div) {
-								consoleTextFinalize(text, div);
-							}
-						});
+					serverData.text().then(async function(text) {
+						await term.print($.trim(text), consoleTextFinalize);
 					})
 				}
 				else {

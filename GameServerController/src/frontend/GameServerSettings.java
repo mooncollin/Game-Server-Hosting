@@ -53,7 +53,6 @@ public class GameServerSettings extends HttpServlet
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		StartUpApplication.LOGGER.info("WE ARE GETTING TO GAMESERVERCONTROLLER SETTINGS GET");
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		if(!Utils.optionalsPresent(serverID))
 		{
@@ -183,7 +182,6 @@ public class GameServerSettings extends HttpServlet
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		StartUpApplication.LOGGER.info("WE ARE GETTING TO GAMESERVERCONTROLLER SETTINGS POST");
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		var execName = ApiSettings.EXECUTABLE_NAME.parse(request);
 		if(!Utils.optionalsPresent(serverID))

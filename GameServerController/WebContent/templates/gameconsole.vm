@@ -4,12 +4,11 @@
 #set ($background = "$randomBackground")
 #set ($active = 'Console')
 
-#addCSS("css/jquery.terminal-2.15.2.min.css")
-#addJS("js/jquery.terminal-2.15.2.min.js")
+#addCSS("css/terminal.css")
 
 #macro(triggerTab $serverID $triggers $filterType)
 	<div id="$filterType" class="tab-pane fade #if($filterType == 'allTriggers') show active #end">
-		<table style="table-layout: fixed;" class="table table-dark">
+		<table style="table-layout: fixed;" class="table table-dark table-responsive-lg">
 			<thead>
 				<tr>
 					<th>Type</th>
@@ -31,13 +30,17 @@
 							<td>$trigger.value</td>
 							<td>$trigger.command</td>
 							<td>$trigger.extra</td>
-							<td>
-								<button link="$Endpoints.GAME_SERVER_TRIGGER_DELETE.get($serverID, $trigger.id)" onClick="deleteRow(this)" class="btn-danger text-light btn float-right">
-									<i class="fas fa-trash"></i>
-								</button>
-								<button onClick="editRow(this, $trigger.id, '$filterType')" class="btn-warning text-light btn float-right mr-2">
-									<i class="fas fa-edit"></i>
-								</button>
+							<td class="d-flex flex-row justify-content-end">
+								<div class="flex-column">
+									<button onClick="editRow(this, $trigger.id, '$filterType')" class="btn-warning text-light btn mr-2">
+										<i class="fas fa-edit"></i>
+									</button>
+								</div>
+								<div class="flex-column">
+									<button link="$Endpoints.GAME_SERVER_TRIGGER_DELETE.get($serverID, $trigger.id)" onClick="deleteRow(this)" class="btn-danger text-light btn">
+										<i class="fas fa-trash"></i>
+									</button>
+								</div>
 							</td>
 						</tr>
 					#end
@@ -56,17 +59,20 @@
 #end
 
 #define ($content)
-	<div class="ml-5">
+	<div class="mx-5">
 		<h1 id="title" class="text-light mt-3">
 			$serverName
 		</h1>
 		<hr>
-		<div id="terminal" class="form-control"></div>
-		<div class="rounded bg-dark mw-100 p-2 my-4">
-			#startButton($serverID, "mr-2")
-			#restartButton($serverID, "mr-2")
-			#stopButton($serverID)
-			<span class="float-lg-right">#ipAddressButton($serverID)</span>
+		<div id="terminal"></div>
+		<div class="rounded bg-dark p-1 my-4 d-flex flex-row flex-wrap">
+			#startButton($serverID, "mx-2 flex-column my-2")
+			#restartButton($serverID, "mx-2 flex-column my-2")
+			#stopButton($serverID, "mr-lg-auto flex-column my-2 mx-2")
+			<button onClick="term.scrollToBottom()" class="btn btn-outline-warning mx-2 my-2 flex-column">
+				Follow
+			</button>
+			#ipAddressButton($serverID, "mx-2 flex-column my-2")
 		</div>
 		<ul class="nav nav-tabs mt-5 bg-dark">
 			<li class="nav-item">
@@ -82,7 +88,7 @@
 				<a href="#outputTriggers" data-toggle="tab" class="nav-link">Output Triggers</a>
 			</li>
 		</ul>
-		<div id="tab-contents" class="tab-content">
+		<div id="tab-contents" class="tab-content mb-5">
 			#triggerTab($serverID, $triggers, "allTriggers")
 			#triggerTab($serverID, $triggers, "timeTriggers")
 			#triggerTab($serverID, $triggers, "recurringTriggers")
@@ -98,6 +104,7 @@
 	</script>
 	
 	#parse("server.vm")
+	<script src="js/terminal.js"></script>
 	<script src="js/console.js"></script>
 #end
 

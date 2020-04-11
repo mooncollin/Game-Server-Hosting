@@ -13,7 +13,6 @@ body
 
 #content
 {
-	background-repeat: none;
 	background-size: cover;
 }
 
@@ -125,5 +124,10 @@ a[data-toggle="collapse"]
 	#sidebarCollapse
 	{
 		display: none;
+	}
+	
+	#content
+	{
+		width: calc(100% - 250px);
 	}
 }

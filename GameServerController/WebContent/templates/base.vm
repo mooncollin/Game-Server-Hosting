@@ -26,12 +26,19 @@
 					<h2>GameServer Hosting</h2>
 				</div>
 				<ul class="list-unstyled components">
-					<li class="#if($active=='Servers')active#end">
-						<a href='$Endpoints.INDEX.get()' class="text-white">
-							<i class="fas fa-server mr-2"></i>
-							<span>Servers</span>
-						</a>
-					</li>
+					<div class="d-flex flex-row">
+						<li class="flex-fill #if($active=='Servers')active#end">
+							<a href='$Endpoints.INDEX.get()' class="text-white">
+								<i class="fas fa-server mr-2"></i>
+								<span>Servers</span>
+							</a>
+						</li>
+						<li class="#if($active=='addServer')active#end">
+							<a href="$Endpoints.GAME_SERVER_ADD.get()" style="border-left: 1px solid #333;" title="Add game server" data-toggle="tooltip" data-placement="bottom" class="text-white">
+								<i class="fas fa-plus mr-2"></i>
+							</a>
+						</li>
+					</div>
 					<li class="#if($active=='Nodes')active#end">
 						<a href='$Endpoints.NODES_INFO.get()' class="text-white">
 							<i class="fas fa-project-diagram mr-2"></i>

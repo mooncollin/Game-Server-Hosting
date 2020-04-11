@@ -61,8 +61,8 @@
 				$Endpoints.GAME_SERVER_FILE_DOWNLOAD.get($serverID, $fullPath)
 				#end
 			#end
-			<div class="d-flex justify-content-between">
-				<a id="file-$file.name" href="$fileHref" class="list-group-item list-group-item-action bg-dark text-light form-inline input-group input-group-sm col-lg-11">
+			<div class="d-flex">
+				<a id="file-$file.name" href="$fileHref" class="list-group-item list-group-item-action bg-dark text-light form-inline input-group input-group-sm col-lg-11 col-sm-8 col-8">
 					#if($file.directory)
 						<i class="fas fa-folder mr-2"></i>
 					#elseif($file.icon == "file")
@@ -72,10 +72,10 @@
 					#end
 					<span>$file.name</span>
 				</a>
-				<button onClick="editName('$file.name', this)" style="max-width: 5%;" linkLocation="$fileHref" location="$Endpoints.GAME_SERVER_FILE_RENAME.get($serverID, $fullPath, null, false)" class="list-group-item list-group-item-action bg-warning text-light">
+				<button onClick="editName('$file.name', this)" style="transition: all 0.3s;" linkLocation="$fileHref" location="$Endpoints.GAME_SERVER_FILE_RENAME.get($serverID, $fullPath, null, false)" class="list-group-item list-group-item-action bg-warning text-light">
 					<i class="fas fa-edit"></i>
 				</button>
-				<button onClick="deleteFile(this)" style="max-width: 5%;" fileName="$file.name" location="$Endpoints.GAME_SERVER_FILE_DELETE.get($serverID, $fullPath)" class="list-group-item list-group-item-action bg-danger text-light">
+				<button onClick="deleteFile(this)" style="transition: all 0.3s;" fileName="$file.name" location="$Endpoints.GAME_SERVER_FILE_DELETE.get($serverID, $fullPath)" class="list-group-item list-group-item-action bg-danger text-light">
 					<i class="fas fa-trash"></i>
 				</button>
 			</div>

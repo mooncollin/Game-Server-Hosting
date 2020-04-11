@@ -25,11 +25,11 @@ public class TriggerHandlerFactory
 
 		try
 		{
-			if(triggerType.equals("time"))
+			if(triggerType.equals(TriggerHandler.TIME_TYPE))
 			{
 				specificTrigger = new TriggerHandlerTime(server, triggerCommand, triggerExtra, triggerID, LocalTime.MIDNIGHT.plusSeconds(Integer.valueOf(triggerValue)));
 			}
-			else if(triggerType.equals("output"))
+			else if(triggerType.equals(TriggerHandler.OUTPUT_TYPE))
 			{
 				if(triggerValue.startsWith("r/") && triggerValue.endsWith("/"))
 				{
@@ -70,7 +70,7 @@ public class TriggerHandlerFactory
 					}, TriggerHandlerConditionType.OUTPUT);
 				}
 			}
-			else if(triggerType.equals("recurring"))
+			else if(triggerType.equals(TriggerHandler.RECURRING_TYPE))
 			{
 				specificTrigger = new TriggerHandlerRecurring(server, triggerCommand, triggerExtra, triggerID, Integer.parseInt(triggerValue));
 			}

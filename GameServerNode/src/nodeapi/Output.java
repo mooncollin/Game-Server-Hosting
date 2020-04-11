@@ -146,6 +146,10 @@ public class Output
 			synchronized (RUNNING_OUTPUT)
 			{
 				var set = RUNNING_OUTPUT.get(server);
+				if(set == null)
+				{
+					break;
+				}
 				var it = runningSessions.entrySet().iterator();
 				while(it.hasNext())
 				{
@@ -216,6 +220,10 @@ public class Output
 			synchronized (SERVER_OUTPUT)
 			{
 				var set = RUNNING_OUTPUT.get(server);
+				if(set == null)
+				{
+					break;
+				}
 				sessions.addAll(set);
 				sessions.retainAll(set);
 			}

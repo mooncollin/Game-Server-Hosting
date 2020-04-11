@@ -55,6 +55,22 @@ Network factors such as firewalls, port forwarding, and static IPs are not manag
 
 # Changelog
 
+## Version 1.5
+UI Update, trigger fix, and other fixes
+
+### Front-end Fixes:
+* Switched back to custom console interface. Lots of problems with the other one. Hopefully this time it works properly (Mobile has to refresh to see console feed).
+* Stop server buttons work on server page and nodes page once again.
+
+### Front-end Features:
+* Changed UI a bit again. Looks A LOT nicer on smaller screens.
+* Add server is now on the left side near servers in navigation
+* Removed Add Game Type button as that hasn't been implemented yet
+* Added Follow button to console to trail the console
+
+### Back-end Fixes:
+* Triggers work again
+
 ## Version 1.4
 UI Update and bug fixes
 

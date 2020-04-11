@@ -3,6 +3,7 @@ intializeSockets(nodeOutputAddresses, function(event, serverID) {
 	let circle = statusRow.children[0];
 	let text = statusRow.children[1];
 	if(event.data === "<on>") {
+		serverStatus[serverID].running = true;
 		circle.classList.remove('text-danger');
 		circle.classList.add('text-success');
 		text.innerHTML = 'Running';
@@ -13,6 +14,7 @@ intializeSockets(nodeOutputAddresses, function(event, serverID) {
 		clearAction(serverID);
 	}
 	else if(event.data === "<off>") {
+		serverStatus[serverID].running = false;
 		circle.classList.remove('text-success');
 		circle.classList.add('text-danger');
 		text.innerHTML = 'Stopped';

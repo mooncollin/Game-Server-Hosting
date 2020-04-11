@@ -11,7 +11,7 @@ function runCommand(command, serverID) {
 			serverStatus[serverID].action = command;
 		}
 		
-		var url = serverCommandEndpoint + "?id=" + serverID + "&command=" + command;
+		var url = encodeURI(serverCommandEndpoint + "?id=" + serverID + "&command=" + command);
 		var spinner = document.getElementById("spinner-" + command + "-" + serverID);
 		if(spinner != null) {
 			spinner.hidden = false;

@@ -50,14 +50,13 @@
 #end
 
 #macro(serverList $servers)
-	<table class="table table-striped table-hover table-dark">
+	<table class="table table-striped table-hover table-dark table-responsive-lg">
 		<thead>
 			<tr>
 				<th scope="col">Name</th>
 				<th scope="col">Type</th>
 				<th scope="col">Status</th>
 				<th scope="col">Options</th>
-				<th scope="col"></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -71,15 +70,30 @@
 						</span>
 						<span>Unknown</span>
 					</td>
-					<td class="py-3">
-						#consoleLink($server.Id)
-						#filesLink($server.Id, $server.Name)
-						#settingsLink($server.Id)
-						#deleteLink($server.Id, $server.Name)
+					<td class="py-3 d-flex flex-row">
+						<div class="flex-column">
+							#consoleLink($server.Id)
+						</div>
+						<div class="flex-column">
+							#filesLink($server.Id, $server.Name)
+						</div>
+						<div class="flex-column">
+							#settingsLink($server.Id)
+						</div>
+						<div class="flex-column">
+							#deleteLink($server.Id, $server.Name)
+						</div>
 					</td>
-					<td class="float-right">
-						#startButton($server.Id "mr-4")
-						#stopButton($server.Id "mr-4")
+					<td class="d-flex flex-row">
+						<div class="flex-column">
+							#startButton($server.Id "mr-4")
+						</div>
+						<div class="flex-column">
+							#restartButton($server.Id "mr-4")
+						</div>
+						<div class="flex-column">
+							#stopButton($server.Id "mr-4")
+						</div>
 					</td>
 				</tr>
 			#end
