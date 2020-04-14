@@ -12,9 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
 import javax.servlet.annotation.MultipartConfig;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -33,16 +31,15 @@ import nodeapi.ApiSettings;
 import utils.MultipartInputStream;
 import utils.Utils;
 
+/**
+ * Responsible for the frontend to a game server's files.
+ * @author Collin
+ *
+ */
 @WebServlet(
 		name = "GameServerFiles",
 		urlPatterns = "/GameServerFiles",
 		asyncSupported = true
-)
-@ServletSecurity(
-		httpMethodConstraints = {
-				@HttpMethodConstraint(value = "GET"),
-				@HttpMethodConstraint(value = "POST")
-		}
 )
 @MultipartConfig
 public class GameServerFiles extends HttpServlet
@@ -152,6 +149,7 @@ public class GameServerFiles extends HttpServlet
 		context.put("serverID", serverID.get());
 		context.put("directoryList", directoryList);
 		context.put("directories", directory.get());
+		context.put("module", StartUpApplication.getModule(gameServer.getColumnValue(GameServerTable.SERVER_TYPE)));
 		context.put("directoryString", String.join(",", directory.get()));
 		context.put("redirectURL", redirectURL);
 		context.put("files", files);

@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 
-import api.minecraft.MinecraftServer;
 import utils.Utils;
 import utils.functional.True;
 
@@ -65,10 +64,11 @@ public class ApiSettings <T>
 	public static final ApiSettings<String> TRIGGER_TYPE = new ApiSettings<String>(String.class, "type", false);
 	public static final ApiSettings<String> OUTPUT_MODE = new ApiSettings<String>(String.class, "mode", true);
 	
-	public static final ApiSettings<Integer> RAM_AMOUNT = new ApiSettings<Integer>(Integer.class, "ramAmount", false, amount -> amount >= MinecraftServer.MINIMUM_HEAP_SIZE && amount % 1024 == 0, null);
 	public static final ApiSettings<Boolean> RESTARTS_UNEXPECTED = new ApiSettings<Boolean>(Boolean.class, "restartsUnexpected", true, null, str -> str == null ? Optional.of(false) : Optional.of(str.equals("on")));
 	public static final ApiSettings<String> ARGUMENTS = new ApiSettings<String>(String.class, "arguments", false, null, str -> Optional.of(str.trim()));
-	public static final ApiSettings<String> PROPERTIES = new ApiSettings<String>(String.class, "properties", false);
+	
+	public static final ApiSettings<String> MODULE_NAME = new ApiSettings<String>(String.class, "modulename", false, null, null);
+	public static final ApiSettings<String> MODULE_SERVLET_NAME = new ApiSettings<String>(String.class, "moduleservletname", false, null, null);
 	
 	private final String name;
 	private final boolean nullable;

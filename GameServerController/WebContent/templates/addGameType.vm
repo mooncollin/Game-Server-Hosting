@@ -1,0 +1,39 @@
+#parse("linkMacros.vm")
+#set ($background = "images/material-back.jpeg")
+#set ($active = 'addGameType')
+
+#define ($content)
+	<div id="inner-content" class="ml-5 mt-5">
+		<h1 class="text-light">Add Game Type</h1>
+		<hr class="border border-light">
+		<form method="POST" enctype="multipart/form-data">
+			<li class="form-group form-inline list-group-item">
+				<div class="input-group">
+				  <div class="input-group-prepend">
+				    <span class="input-group-text">Upload Jar</span>
+				  </div>
+				  <div class="custom-file">
+				    <input type="file" class="custom-file-input" id="jar" accept=".jar" required>
+				    <label class="custom-file-label" for="jar">Choose file</label>
+				  </div>
+				</div>
+			</li>
+			<li class="form-group form-inline list-group-item">
+				<div class="input-group">
+				  <div class="input-group-prepend">
+				    <span class="input-group-text">Upload Icon</span>
+				  </div>
+				  <div class="custom-file">
+				    <input type="file" class="custom-file-input" id="icon" name="icon" accept=".jpg,.png,.gif">
+				    <label class="custom-file-label" for="jar">Choose file</label>
+				  </div>
+				</div>
+			</li>
+			<li class="list-group-item">
+				<button class="btn btn-primary">Submit</button>
+			</li>
+		</form>
+	</div>
+#end
+
+#parse("base.vm")

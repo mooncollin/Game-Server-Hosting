@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -28,13 +26,15 @@ import models.TriggersTable;
 import nodeapi.ApiSettings;
 import server.TriggerHandler;
 
+/**
+ * The frontend for a game server's console.
+ * @author Collin
+ *
+ */
 @WebServlet(
 		name = "GameServerConsole",
 		urlPatterns = "/GameServerConsole",
 		asyncSupported = true
-)
-@ServletSecurity(
-		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
 )
 public class GameServerConsole extends HttpServlet
 {
@@ -103,9 +103,9 @@ public class GameServerConsole extends HttpServlet
 		outputAddresses.entrySet().removeIf(e -> !e.getKey().equals(serverID.get()));
 		
 		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
-		context.put("randomBackground", Assets.getRandomMinecraftBackground());
 		context.put("serverName", gameserver.getColumnValue(GameServerTable.NAME));
 		context.put("serverID", serverID.get());
+		context.put("module", StartUpApplication.getModule(gameserver.getColumnValue(GameServerTable.SERVER_TYPE)));
 		context.put("serverCommandEndpoint", Templates.getServerCommandEndpoint());
 		context.put("nodeOutputAddresses", outputAddresses);
 		context.put("triggerTypes", List.of(TriggerHandler.RECURRING_TYPE, TriggerHandler.TIME_TYPE, TriggerHandler.OUTPUT_TYPE));

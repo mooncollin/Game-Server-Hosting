@@ -1,7 +1,7 @@
 #parse("utils.vm")
 #parse("linkMacros.vm")
 #parse("javascript.vm")
-#set ($background = "$randomBackground")
+#set ($background = "images/material-back.jpeg")
 #set ($active = 'Console')
 
 #addCSS("css/terminal.css")
@@ -106,6 +106,7 @@
 	#parse("server.vm")
 	<script src="js/terminal.js"></script>
 	<script src="js/console.js"></script>
+	<script src="js/trigger.js"></script>
 #end
 
 #parse("base.vm")

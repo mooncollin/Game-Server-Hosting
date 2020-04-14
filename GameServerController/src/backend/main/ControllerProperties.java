@@ -5,16 +5,53 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
 
+/**
+ * A class that contains information from the controller properties files as well
+ * as other application constants.
+ * @author Collin
+ *
+ */
 public class ControllerProperties
 {
+	/**
+	 * The location of the controller properties file. This is taken from the system's
+	 * environmental variables.
+	 */
 	public static final String PROPERTIES_LOCATION = System.getenv("GAME_SERVER_CONTROLLER_PROPERTIES");
+	
+	/**
+	 * The relative path to the Apache Velocity templates folder.
+	 */
 	public static final String TEMPLATES_PATH = "/templates";
+	
+	/**
+	 * The list of node names directly taken from the properties file.
+	 */
 	public static final String NODE_NAMES;
+	
+	/**
+	 * The list of node ip addresses directly taken from the properties file.
+	 */
 	public static final String NODE_ADDRESSES;
+	
+	/**
+	 * The url for the database taken from the properties file.
+	 */
 	public static final String DATABASE_URL;
+	
+	/**
+	 * The username for the database taken from the properties file.
+	 */
 	public static final String DATABASE_USERNAME;
+	
+	/**
+	 * The password for the database taken from the properties file.
+	 */
 	public static final String DATABASE_PASSWORD;
 	
+	/**
+	 * The object holding the properties from the properties file.
+	 */
 	private static final Properties properties;
 	
 	static
@@ -45,6 +82,10 @@ public class ControllerProperties
 		DATABASE_PASSWORD = properties.getProperty("database_password");
 	}
 	
+	/**
+	 * Returns the current properties.
+	 * @return controller properties
+	 */
 	public static Properties getProperties()
 	{
 		return properties;

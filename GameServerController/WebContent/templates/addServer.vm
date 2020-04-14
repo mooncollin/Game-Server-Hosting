@@ -9,7 +9,7 @@
 		<form method="POST" enctype="multipart/form-data">
 			<li class="list-group-item form-group form-inline">
 				<label for="name" class="d-inline-block w-25 align-middle">Server Name</label>
-				<input class="form-control" type="text" name="name" id="name" placeholder="Enter server name" required>
+				<input class="form-control" type="text" name="name" id="name" placeholder="Enter server name" pattern="$namePattern" required>
 				<small class="form-text text-muted">This name must be unique.</small>
 			</li>
 			<li class="list-group-item form-group form-inline">
@@ -21,7 +21,7 @@
 				<label for="node" class="d-inline-block w-25 align-middle">Select Node</label>
 				<select id="node" name="node" required onChange="changeNode()" class="form-control">
 					#foreach($node in $nodes)
-						<option totalram="$node.totalRam" reservedram="$node.reservedRam">
+						<option>
 							$node.name
 						</option>
 					#end
@@ -39,11 +39,6 @@
 				</select>
 			</li>
 			<li class="form-group form-inline list-group-item">
-				<label for="ramAmount" class="d-inline-block w-25 align-middle">Maximum RAM (MB)</label>
-				<input class="form-control" type="number" id="ramAmount" name="ramAmount" placeholder="Enter maximum amount of ram to use in MB" min="$minRamAmount" step="$ramStep" value="$defaultRamAmount" required>
-				<small class="form-text text-muted">RAM must be in 1024 increments</small>
-			</li>
-			<li class="form-group form-inline list-group-item">
 				<label for="restartsUnexpected" class="d-inline-block w-25 align-middle">Automatic Restart</label>
 				<input class="form-control" type="checkbox" id="restartsUnexpected" name="restartsUnexpected" placeholder="Enter maximum amount of ram to use in MB">
 				<small class="form-text text-muted">This will restart the server when it stops unexpectingly.</small>
@@ -58,8 +53,6 @@
 			</li>
 		</form>
 	</div>
-	
-	<script src="js/addServer.js"></script>
 #end
 
 #parse("base.vm")

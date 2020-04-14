@@ -1,6 +1,7 @@
 package nodeapi;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -8,9 +9,14 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+import org.json.simple.parser.ParseException;
+
 import nodemain.StartUpApplication;
 import utils.Utils;
 import utils.servlet.Endpoint;
+import utils.servlet.HttpStatus;
 import utils.servlet.ParameterURL;
 
 @WebServlet("/ServerInteract")
@@ -25,52 +31,20 @@ public class ServerInteract extends HttpServlet
 			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL getEndpoint(int id, String command)
+	public static ParameterURL postEndpoint(int id)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
 		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
-		url.addQuery(ApiSettings.COMMAND.getName(), command);
 		return url;
-	}
-	
-	public static ParameterURL postEndpoint(int id, String command)
-	{
-		return getEndpoint(id, command);
-	}
-	
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		var serverID = ApiSettings.SERVER_ID.parse(request);
-		var command = ApiSettings.COMMAND.parse(request);
-		
-		if(!Utils.optionalsPresent(serverID, command))
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		var foundServer = StartUpApplication.getServer(serverID.get());
-		
-		if(foundServer == null)
-		{
-			response.setStatus(400);
-			return;
-		}
-		
-		if(!foundServer.getCommandHandler().commandGET(command.get(), request, response))
-		{
-			response.setStatus(400);
-		}
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var serverID = ApiSettings.SERVER_ID.parse(request);
-		var command = ApiSettings.COMMAND.parse(request);
 		
-		if(!Utils.optionalsPresent(serverID, command))
+		if(!Utils.optionalsPresent(serverID))
 		{
-			response.setStatus(400);
+			response.setStatus(HttpStatus.BAD_REQUEST.getCode());
 			return;
 		}
 		
@@ -78,13 +52,25 @@ public class ServerInteract extends HttpServlet
 		
 		if(foundServer == null)
 		{
-			response.setStatus(400);
+			response.setStatus(HttpStatus.BAD_REQUEST.getCode());
 			return;
 		}
 		
-		if(!foundServer.getCommandHandler().commandPOST(command.get(), request, response))
+		JSONObject requestObj;
+		try
 		{
-			response.setStatus(400);
+			requestObj = (JSONObject) JSONValue.parseWithException((request.getReader()));
+		} catch (ParseException | ClassCastException e)
+		{
+			request.getReader().transferTo(new OutputStreamWriter(System.out));
+			response.setStatus(HttpStatus.BAD_REQUEST.getCode());
+			return;
 		}
+		
+		var responseObj = new JSONObject();
+		var httpStatus = foundServer.getCommandHandler().command(requestObj, responseObj);
+		response.setStatus(httpStatus.getCode());
+		response.setContentType("application/json");
+		responseObj.writeJSONString(response.getWriter());
 	}
 }

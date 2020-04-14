@@ -1,6 +1,6 @@
 #parse("linkMacros.vm")
 #parse("javascript.vm")
-#set ($background = "images/minecraft/files_background.jpg")
+#set ($background = "images/material-back.jpeg")
 #set ($active = 'Files')
 
 #define ($content)

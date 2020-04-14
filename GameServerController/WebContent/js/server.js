@@ -1,22 +1,23 @@
-function runCommand(command, serverID) {
+function runCommand(serverID, values, callback) {
 	if(!isActionProcessing(serverID)) {
-		if(command == "start" && isRunning(serverID)) {
+		if(values.command == "start" && isRunning(serverID)) {
 			return;
 		}
-		if(command == "stop" && !isRunning(serverID)) {
+		if(values.command == "stop" && !isRunning(serverID)) {
 			return;
 		}
 		
-		if(command == "start" || command == "stop" || command == "restart") {
-			serverStatus[serverID].action = command;
+		if(values.type === 'action') {
+			serverStatus[serverID].action = values.command;
 		}
 		
-		var url = encodeURI(serverCommandEndpoint + "?id=" + serverID + "&command=" + command);
-		var spinner = document.getElementById("spinner-" + command + "-" + serverID);
-		if(spinner != null) {
-			spinner.hidden = false;
-		}
-		return fetch(url);
+		var url = encodeURI(serverCommandEndpoint + "?id=" + serverID);
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = callback;
+		xhr.open("POST", url, true);
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.send(JSON.stringify(values));
+		return xhr;
 	}
 	
 	return null;

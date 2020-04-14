@@ -23,21 +23,21 @@
 #end
 
 #macro(startButton $id $extra)
-	<button id="start-$id" onClick="runCommand('start', $id)" class="btn btn-primary $extra">
+	<button id="start-$id" onClick="runCommand($id, {'command': 'start', 'type': 'action'}, function(){if(this.readyState === 1) {document.getElementById('spinner-start-$id').hidden=false;}})" class="btn btn-primary $extra">
 		Start Server
 		<span id="spinner-start-$id" class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
 	</button>
 #end
 
 #macro(stopButton $id $extra)
-	<button id="stop-$id" onClick="runCommand('stop', $id)" class="btn btn-danger $extra">
+	<button id="stop-$id" onClick="runCommand($id, {'command': 'stop', 'type': 'action'}, function(){if(this.readyState === 1) {document.getElementById('spinner-stop-$id').hidden=false;}})" class="btn btn-danger $extra">
 		Stop Server
 		<span id="spinner-stop-$id" class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
 	</button>
 #end
 
 #macro(restartButton $id $extra)
-	<button id="restart-$id" onClick="runCommand('restart', $id)" class="btn btn-info $extra">
+	<button id="restart-$id" onClick="runCommand($id, {'command': 'restart', 'type': 'action'}, function(){if(this.readyState === 1) {document.getElementById('spinner-restart-$id').hidden=false;}})" class="btn btn-info $extra">
 		Restart Server
 		<span id="spinner-restart-$id" class="spinner-border spinner-border-sm ml-2" hidden="true" disabled="true"></span>
 	</button>
@@ -80,6 +80,18 @@
 						<div class="flex-column">
 							#settingsLink($server.Id)
 						</div>
+						#foreach($servletName in $server.module.gameServerUIHandler().getRegisteredServlets().keySet())
+							<div class="flex-column">
+								<a href="$Endpoints.MODULE_SERVLETS.get($server.module.gameServerOptions().getServerType(), $servletName, $server.id)" class="mr-4 text-decoration-none"  data-toggle="tooltip" data-placement="bottom" title="$servletName">
+									#set($servletIcon = $server.module.gameServerUIHandler().getIconClass($servletName))
+									#if($servletIcon)
+										<i class="$servletIcon"></i>
+									#else
+										<i class="fas fa-external-link-alt"></i>
+									#end
+								</a>
+							</div>
+						#end
 						<div class="flex-column">
 							#deleteLink($server.Id, $server.Name)
 						</div>

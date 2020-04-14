@@ -1,7 +1,6 @@
 package nodeapi;
 
 import java.io.IOException;
-import java.sql.SQLException;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -9,9 +8,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import model.Query;
-import model.Table;
-import models.GameServerTable;
 import nodemain.StartUpApplication;
 import utils.servlet.Endpoint;
 import utils.servlet.ParameterURL;
@@ -28,14 +24,14 @@ public class ServerDelete extends HttpServlet
 			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL getEndpoint(int id)
+	public static ParameterURL postEndpoint(int id)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
 		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
 		return url;
 	}
 
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		
@@ -45,37 +41,10 @@ public class ServerDelete extends HttpServlet
 			return;
 		}
 		
-		
 		var serverFound = StartUpApplication.getServer(serverID.get());
 		if(serverFound == null)
 		{
 			response.setStatus(400);
-			return;
-		}
-		
-		try
-		{
-			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-								  .filter(GameServerTable.ID, serverID.get())
-								  .first();
-			
-			Table gameServer;
-			
-			if(option.isEmpty())
-			{
-				response.setStatus(400);
-				return;
-			}
-			else
-			{
-				gameServer = option.get();
-			}
-			
-			gameServer.delete(StartUpApplication.database);
-		}
-		catch(SQLException e)
-		{
-			response.setStatus(500);
 			return;
 		}
 		

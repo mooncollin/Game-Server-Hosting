@@ -6,16 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
-import java.util.LinkedList;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -24,28 +16,22 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 
-import api.minecraft.MinecraftServer;
 import backend.main.StartUpApplication;
-import frontend.templates.Templates;
-import frontend.templates.Templates.PropertyInfo;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
-import models.MinecraftServerTable;
-import models.NodeTable;
 import nodeapi.ApiSettings;
 import utils.Utils;
 
+/**
+ * The frontend for a game server's settings.
+ * @author Collin
+ *
+ */
 @WebServlet(
 		name = "GameServerSettings",
 		urlPatterns = "/GameServerSettings",
 		asyncSupported = true
-)
-@ServletSecurity(
-		httpMethodConstraints = {
-				@HttpMethodConstraint(value = "GET"),
-				@HttpMethodConstraint(value = "POST")
-		}
 )
 public class GameServerSettings extends HttpServlet
 {
@@ -71,110 +57,28 @@ public class GameServerSettings extends HttpServlet
 		try
 		{
 			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-					   			   .filter(GameServerTable.ID.cloneWithValue(serverID.get()))
+					   			   .filter(GameServerTable.ID, serverID.get())
 					   			   .first();
 			if(option.isEmpty())
 			{
 				response.sendRedirect(Endpoints.INDEX.get().getURL());
 				return;
 			}
-			else
-			{
-				foundGameServer = option.get();
-			}
+			
+			foundGameServer = option.get();
 		} catch (SQLException e)
 		{
 			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
-		Table minecraftServerFound;
-		try
-		{
-			var option = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-										.filter(MinecraftServerTable.SERVER_ID, foundGameServer.getColumnValue(GameServerTable.ID))
-										.first();
-			if(option.isEmpty())
-			{
-				response.sendRedirect(Endpoints.INDEX.get().getURL());
-				return;
-			}
-			else
-			{
-				minecraftServerFound = option.get();
-			}
-		} catch (SQLException e2)
-		{
-			response.sendRedirect(Endpoints.INDEX.get().getURL());
-			return;
-		}
-		
-		long totalRam;
-		long reservedRam;
-		
-		try
-		{
-			var option = Query.query(StartUpApplication.database, NodeTable.class)
-					 .filter(NodeTable.NAME, foundGameServer.getColumnValue(GameServerTable.NODE_OWNER))
-					 .first();
-			
-			if(option.isEmpty())
-			{
-				response.sendRedirect(Endpoints.INDEX.get().getURL());
-				return;
-			}
-			
-			var node = option.get();
-	
-			totalRam = node.getColumnValue(NodeTable.MAX_RAM_ALLOWED);
-			reservedRam = StartUpApplication.getNodeReservedRam(node.getColumnValue(NodeTable.NAME));
-		} catch (SQLException e1)
-		{
-			response.setStatus(500);
-			return;
-		}
-		
-		String nodeResponse;
-		try
-		{
-			var url = nodeapi.ServerInteract.getEndpoint(serverID.get(), "properties");
-			url.setHost(serverAddress);
-			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
-			nodeResponse = httpResponse.body();
-		}
-		catch(InterruptedException e)
-		{
-			response.setStatus(500);
-			return;
-		}
-		
-		var defaultProperties = new TreeMap<String, Object>();
-		
-		defaultProperties.putAll(
-			Stream.of(nodeResponse.split("\r\n"))
-				  .map(line -> line.split("=", 2))
-				  .collect(Collectors.toMap(key -> key[0], value -> value.length > 1 ? value[1] : ""))
-		);
-		
-		var properties = new LinkedList<PropertyInfo>();
-		for(var entry : defaultProperties.entrySet())
-		{
-			properties.add(new PropertyInfo(entry.getKey(), Templates.minecraftPropertyToInputType(MinecraftServer.MINECRAFT_PROPERTIES.get(entry.getKey())), entry.getValue().toString()));
-		}
-		
 		var context = (VelocityContext) StartUpApplication.GLOBAL_CONTEXT.clone();
 		context.put("serverID", serverID.get());
 		context.put("serverName", foundGameServer.getColumnValue(GameServerTable.NAME));
 		context.put("executableName", foundGameServer.getColumnValue(GameServerTable.EXECUTABLE_NAME));
-		context.put("ramAmount", minecraftServerFound.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE));
-		context.put("minimumRamAmount", MinecraftServer.MINIMUM_HEAP_SIZE);
-		context.put("ramStep", MinecraftServer.HEAP_STEP);
-		context.put("ramTotal", totalRam);
-		context.put("ramAvailable", totalRam - reservedRam);
-		context.put("arguments", minecraftServerFound.getColumnValue(MinecraftServerTable.ARGUMENTS));
-		context.put("restarts", minecraftServerFound.getColumnValue(MinecraftServerTable.AUTO_RESTARTS));
-		context.put("properties", properties);
+		context.put("arguments", foundGameServer.getColumnValue(GameServerTable.ARGUMENTS));
+		context.put("module", StartUpApplication.getModule(foundGameServer.getColumnValue(GameServerTable.SERVER_TYPE)));
+		context.put("restarts", foundGameServer.getColumnValue(GameServerTable.AUTO_RESTARTS));
 		
 		var template = Velocity.getTemplate("settings.vm");
 		template.merge(context, response.getWriter());
@@ -184,30 +88,22 @@ public class GameServerSettings extends HttpServlet
 	{
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		var execName = ApiSettings.EXECUTABLE_NAME.parse(request);
-		if(!Utils.optionalsPresent(serverID))
+		var arguments = ApiSettings.ARGUMENTS.parse(request);
+		var restarts = ApiSettings.RESTARTS_UNEXPECTED.parse(request);
+		if(!Utils.optionalsPresent(serverID, execName, arguments, restarts))
 		{
 			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
 		var serverAddress = StartUpApplication.getServerIPAddress(serverID.get());
-		String serverType;
-		try
-		{
-			serverType = models.Utils.getServerType(serverID.get());
-		} catch (NoSuchElementException | SQLException e1)
+		if(serverAddress == null)
 		{
 			response.sendRedirect(Endpoints.INDEX.get().getURL());
 			return;
 		}
 		
 		var redirectURL = Endpoints.GAME_SERVER_SETTINGS.get(serverID.get());
-		
-		if(!Utils.optionalsPresent(execName))
-		{
-			response.sendRedirect(Endpoints.INDEX.get().getURL());
-			return;
-		}
 		
 		try
 		{
@@ -225,36 +121,8 @@ public class GameServerSettings extends HttpServlet
 			var gameServer = option.get();
 			
 			gameServer.setColumnValue(GameServerTable.EXECUTABLE_NAME, execName.get());
-			
-			if(serverType.equals(MinecraftServer.SERVER_TYPE))
-			{
-				var ramAmount = ApiSettings.RAM_AMOUNT.parse(request);
-				var arguments = ApiSettings.ARGUMENTS.parse(request);
-				var restarts = ApiSettings.RESTARTS_UNEXPECTED.parse(request);
-				if(!Utils.optionalsPresent(ramAmount, arguments, restarts))
-				{
-					response.sendRedirect(redirectURL.getURL());
-					return;
-				}
-				
-				var option2 = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-								   .filter(MinecraftServerTable.SERVER_ID, gameServer.getColumnValue(GameServerTable.ID))
-								   .first();
-				
-				if(option2.isEmpty())
-				{
-					StartUpApplication.LOGGER.error("Minecraft Server exists in cache, but not in the database!");
-					response.sendRedirect(Endpoints.INDEX.get().getURL());
-					return;
-				}
-				
-				var minecraftServer = option2.get();
-				
-				minecraftServer.setColumnValue(MinecraftServerTable.MAX_HEAP_SIZE, ramAmount.get());
-				minecraftServer.setColumnValue(MinecraftServerTable.ARGUMENTS, arguments.get());
-				minecraftServer.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, restarts.get());
-				minecraftServer.commit(StartUpApplication.database);
-			}
+			gameServer.setColumnValue(GameServerTable.ARGUMENTS, arguments.get());
+			gameServer.setColumnValue(GameServerTable.AUTO_RESTARTS, restarts.get());
 			
 			gameServer.commit(StartUpApplication.database);
 		}
@@ -268,35 +136,6 @@ public class GameServerSettings extends HttpServlet
 		var sendURL = nodeapi.ServerEdit.postEndpoint(serverID.get());
 		sendURL.setHost(serverAddress);
 		
-		if(serverType.equals(MinecraftServer.SERVER_TYPE))
-		{	
-			// Server Properties
-			var propertiesPost = MinecraftServer.MINECRAFT_PROPERTIES.keySet()
-					.stream()
-					.map(key -> {
-						var property = Objects.requireNonNullElse(request.getParameter(key), "");
-						return String.format("%s=%s", key, property);
-					})
-					.collect(Collectors.joining("&"));
-			
-
-			try
-			{
-				var url = nodeapi.ServerInteract.getEndpoint(serverID.get(), ApiSettings.PROPERTIES.getName());
-				url.setHost(serverAddress);
-				var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
-						.header("content-type", "application/x-www-form-urlencoded")
-						.POST(BodyPublishers.ofString(propertiesPost))
-						.build();
-				StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
-			}
-			catch(InterruptedException e)
-			{
-				response.setStatus(500);
-				return;
-			}
-		}
-		
 		try
 		{
 			var httpRequest = HttpRequest.newBuilder(URI.create(sendURL.getURL()))
@@ -307,7 +146,7 @@ public class GameServerSettings extends HttpServlet
 		}
 		catch(InterruptedException e)
 		{
-			response.setStatus(500);
+			response.sendRedirect(redirectURL.getURL());
 			return;
 		}
 		

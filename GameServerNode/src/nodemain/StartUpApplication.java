@@ -1,6 +1,9 @@
 package nodemain;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Collections;
@@ -15,7 +18,6 @@ import javax.servlet.annotation.WebListener;
 
 import com.sun.management.OperatingSystemMXBean;
 
-import api.minecraft.MinecraftServer;
 import model.Database;
 import model.Filter.FilterType;
 import model.Query;
@@ -27,11 +29,10 @@ import nodeapi.NodeUsage;
 import nodeapi.Output;
 import server.GameServer;
 import server.GameServerFactory;
+import server.GameServerModule;
 import server.TriggerHandlerFactory;
 import server.TriggerHandlerRecurring;
 import server.TriggerHandlerTime;
-import utils.Pair;
-import utils.BoundedCircularList;
 import utils.TimerTaskID;
 
 import org.slf4j.Logger;
@@ -40,13 +41,11 @@ import org.slf4j.LoggerFactory;
 @WebListener
 public class StartUpApplication implements ServletContextListener
 {
-	
+	private static final Map<String, GameServerModule> loadedModules = new HashMap<String, GameServerModule>();
 	private static final Map<Integer, GameServer> servers = Collections.synchronizedMap(new HashMap<Integer, GameServer>());;
 	private static final Map<GameServer, Integer> serverToID = Collections.synchronizedMap(new HashMap<GameServer, Integer>());
-	public static final BoundedCircularList<Pair<Integer, Long>> nodeUsage = new BoundedCircularList<Pair<Integer, Long>>(500);
 	public static final Logger LOGGER = LoggerFactory.getLogger(StartUpApplication.class);
 	public static final OperatingSystemMXBean SYSTEM = OperatingSystemMXBean.class.cast(ManagementFactory.getOperatingSystemMXBean());
-	public static final String SERVLET_PATH = "GameServerNode";
 	
 	public static Database database;
 	
@@ -65,36 +64,6 @@ public class StartUpApplication implements ServletContextListener
 		if(!database.canConnect())
 		{
 			throw new RuntimeException("Is the database up?");
-		}
-		
-		GameServer.setup(database);
-		MinecraftServer.setup(database);
-		
-		try
-		{
-			var option = Query.query(StartUpApplication.database, NodeTable.class)
-						  .filter(NodeTable.NAME, NodeProperties.NAME)
-						  .first();
-			
-			Table me;
-			
-			if(option.isEmpty())
-			{
-				me = new NodeTable();
-				me.setColumnValue(NodeTable.NAME, NodeProperties.NAME);
-				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
-			}
-			else
-			{
-				me = option.get();
-				me.setColumnValue(NodeTable.MAX_RAM_ALLOWED, NodeProperties.MAX_RAM);
-			}
-			
-			me.commit(StartUpApplication.database);
-		}
-		catch(SQLException e)
-		{
-			throw new RuntimeException("Error starting up node: " + e.getMessage());
 		}
 		
 		GameServer.setup(database);
@@ -206,7 +175,13 @@ public class StartUpApplication implements ServletContextListener
 		servers.values()
 			   .parallelStream()
 			   .forEach(server -> {
-				   server.stopServer();
+				   try
+				{
+					server.stopServer();
+				} catch (IOException e)
+				{
+					StartUpApplication.LOGGER.error(String.format("Error stopping server:\n%s", e.getMessage()));
+				}
 				   server.getTriggerTimer().cancel();
 			   });
 		
@@ -244,5 +219,36 @@ public class StartUpApplication implements ServletContextListener
 	public static void removeServer(int id)
 	{
 		serverToID.remove(servers.remove(id));
+	}
+	
+	public static File getDeployFolder()
+	{
+		return Paths.get(NodeProperties.DEPLOY_FOLDER).toFile();
+	}
+	
+	public static File getServerFolder(Table server)
+	{
+		return getDeployFolder().toPath().resolve(server.getColumnValue(GameServerTable.NAME)).toFile();
+	}
+	
+	public static File getExecutableFile(Table server)
+	{
+		return getServerFolder(server).toPath().resolve(server.getColumnValue(GameServerTable.EXECUTABLE_NAME)).toFile();
+	}
+	
+	public static GameServerModule getModule(String name)
+	{
+		synchronized (loadedModules)
+		{
+			return loadedModules.get(name);
+		}
+	}
+	
+	public static void addModule(GameServerModule module)
+	{
+		synchronized (loadedModules)
+		{
+			loadedModules.put(module.gameServerOptions().getServerType(), module);
+		}
 	}
 }

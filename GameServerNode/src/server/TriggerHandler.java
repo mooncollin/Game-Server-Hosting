@@ -70,7 +70,15 @@ abstract public class TriggerHandler
 	
 	public void trigger()
 	{
-		server.writeToServer(command);
+		try
+		{
+			server.writeToServer(command);
+		} catch (IOException e)
+		{
+			StartUpApplication.LOGGER.error(String.format("Error writing to server:\n%s", e.getMessage()));
+			return;
+		}
+		
 		if(getAction().equals(START_SERVER))
 		{
 			try
@@ -79,12 +87,20 @@ abstract public class TriggerHandler
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.error(e.getMessage());
+				StartUpApplication.LOGGER.error(String.format("Error starting server:\n%s", e.getMessage()));
+				return;
 			}
 		}
 		else if(getAction().equals(STOP_SERVER))
 		{
-			server.stopServer();
+			try
+			{
+				server.stopServer();
+			} catch (IOException e)
+			{
+				StartUpApplication.LOGGER.error(String.format("Error stopping server:\n%s", e.getMessage()));
+				return;
+			}
 		}
 		else if(getAction().equals(RESTART_SERVER))
 		{
@@ -94,7 +110,7 @@ abstract public class TriggerHandler
 			}
 			catch(IOException e)
 			{
-				StartUpApplication.LOGGER.error(e.getMessage());
+				StartUpApplication.LOGGER.error(String.format("Error restarting server:\n%s", e.getMessage()));
 			}
 		}
 	}

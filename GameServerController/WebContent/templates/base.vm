@@ -27,6 +27,19 @@
 				</div>
 				<ul class="list-unstyled components">
 					<div class="d-flex flex-row">
+						<li class="flex-fill #if($active=='gameTypes')active#end">
+							<a href='$Endpoints.GAME_TYPES.get()' class="text-white">
+								<i class="fas fa-gamepad mr-2"></i>
+								<span>Games</span>
+							</a>
+						</li>
+						<li class="#if($active=='addGameType')active#end">
+							<a href="$Endpoints.GAME_TYPE_ADD.get()" style="border-left: 1px solid #333;" title="Add game server" data-toggle="tooltip" data-placement="bottom" class="text-white">
+								<i class="fas fa-plus mr-2"></i>
+							</a>
+						</li>
+					</div>
+					<div class="d-flex flex-row">
 						<li class="flex-fill #if($active=='Servers')active#end">
 							<a href='$Endpoints.INDEX.get()' class="text-white">
 								<i class="fas fa-server mr-2"></i>
@@ -75,6 +88,23 @@
 									</span>
 								</a>
 							</li>
+							#if($module)
+								#foreach($servletName in $module.gameServerUIHandler().getRegisteredServlets().keySet())
+									<li class="#if($active==$servletName)active#end">
+										<a href="$Endpoints.MODULE_SERVLETS.get($module.gameServerOptions().getServerType(), $servletName, $serverID)" class="text-white">
+											<span class="ml-5">
+												#set($servletIcon = $module.gameServerUIHandler().getIconClass($servletName))
+												#if($servletIcon)
+													<i class="$servletIcon mr-2"></i>
+												#else
+													<i class="fas fa-external-link-alt mr-2"></i>
+												#end
+												$servletName
+											</span>
+										</a>
+									</li>
+								#end
+							#end
 						</ul>
 					</li>
 					#end

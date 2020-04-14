@@ -6,8 +6,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -23,9 +21,13 @@ import utils.Utils;
 		urlPatterns = "/GameServerTriggerDelete",
 		asyncSupported = true
 )
-@ServletSecurity(
-		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
-)
+/**
+ * Backend endpoint for deleting a trigger. Responsible for deleting the trigger
+ * from the database and relaying to the corresponding node that a trigger is not
+ * longer in use.
+ * @author Collin
+ *
+ */
 public class GameServerTriggerDelete extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;

@@ -8,16 +8,54 @@ import java.util.Iterator;
 
 import javax.servlet.http.Part;
 
+/**
+ * Class that allows for streaming parts of a HTTP Post
+ * request.
+ * @author Collin
+ *
+ */
 public class MultipartInputStream extends InputStream
 {
+	/**
+	 * The current parts.
+	 */
 	private Collection<Part> parts;
+	
+	/**
+	 * The input stream of the current part.
+	 */
 	private InputStream currentPartInput;
+	
+	/**
+	 * The part currently being streamed.
+	 */
 	private Part currentPart;
+	
+	/**
+	 * The header associated with the part currently
+	 * being streamed.
+	 */
 	private ByteArrayInputStream currentPartHeader;
+	
+	/**
+	 * The multipart footer.
+	 */
 	private ByteArrayInputStream footer;
+	
+	/**
+	 * An iterator for the parts of this stream.
+	 */
 	private Iterator<Part> partIt;
+	
+	/**
+	 * The boundary used in this multipart stream.
+	 */
 	private final String boundary;
 	
+	/**
+	 * Constructor.
+	 * @param parts parts used to stream
+	 */
 	public MultipartInputStream(Collection<Part> parts)
 	{
 		this.parts = parts;
@@ -35,11 +73,18 @@ public class MultipartInputStream extends InputStream
 		}
 	}
 	
+	/**
+	 * Gets the generated boundary message of this stream.
+	 * @return boundary message
+	 */
 	public String getBoundary()
 	{
 		return boundary;
 	}
 	
+	/**
+	 * Reads a character from this stream.
+	 */
 	public int read() throws IOException
 	{
 		if(currentPart != null)
@@ -69,6 +114,11 @@ public class MultipartInputStream extends InputStream
 		return -1;
 	}
 	
+	/**
+	 * Reads from the stream and into the given byte array
+	 * at the offset and length.
+	 */
+	@Override
 	public int read(byte[] b, int off, int len) throws IOException
 	{
 		if(b.length == 0)
@@ -106,6 +156,10 @@ public class MultipartInputStream extends InputStream
 		return totalBytesRead == 0 ? -1 : totalBytesRead;
 	}
 	
+	/**
+	 * Closes this stream.
+	 */
+	@Override
 	public void close() throws IOException
 	{
 		closeCurrentPart();
@@ -118,6 +172,11 @@ public class MultipartInputStream extends InputStream
 		footer.close();
 	}
 	
+	/**
+	 * Checks how many bytes are available in this stream.
+	 * Only checks the bytes in the current part.
+	 */
+	@Override
 	public int available() throws IOException
 	{
 		var avail = footer.available();
@@ -130,6 +189,11 @@ public class MultipartInputStream extends InputStream
 		return avail;
 	}
 	
+	/**
+	 * Cleans up the current part and advances to the next part
+	 * if one exists.
+	 * @throws IOException
+	 */
 	private void getNextPart() throws IOException
 	{
 		if(partIt.hasNext())
@@ -145,6 +209,10 @@ public class MultipartInputStream extends InputStream
 		}
 	}
 	
+	/**
+	 * Gets the current part header.
+	 * @return part header
+	 */
 	private byte[] getPartHeader()
 	{
 		if(currentPart != null)
@@ -155,11 +223,19 @@ public class MultipartInputStream extends InputStream
 		return new byte[] {};
 	}
 	
+	/**
+	 * Gets the current footer
+	 * @return footer
+	 */
 	private byte[] getFooter()
 	{
 		return String.format("\r\n--%s--", boundary).getBytes();
 	}
 	
+	/**
+	 * Closes the current part.
+	 * @throws IOException
+	 */
 	private void closeCurrentPart() throws IOException
 	{
 		if(currentPart != null)

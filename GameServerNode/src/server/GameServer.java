@@ -5,6 +5,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.SQLException;
@@ -15,6 +18,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import model.Database;
+import models.GameModuleTable;
 import models.GameServerTable;
 import models.NodeTable;
 import models.TriggersTable;
@@ -24,7 +28,6 @@ import java.util.Collections;
 
 abstract public class GameServer
 {
-	public static final int DEFAULT_LOG_MAXIMUM_LENGTH = 1_000_000;
 	private static final URL IP_ADDRESS_FINDER;
 	
 	static
@@ -36,54 +39,47 @@ abstract public class GameServer
 		} catch (MalformedURLException e)
 		{
 			temp = null;
-			
 		}
 		
 		IP_ADDRESS_FINDER = temp;
 	}
 	
 	protected Process process;
-	protected String log;
-	private int logSize;
 	private File folderLocation;
-	private File executableName;
+	private File executableFile;
 	private final List<TriggerHandler> triggerHandlers;
 	private final Timer timer;
 	private final List<TimerTask> timerTasks;
 	private final List<OutputStream> outputConnectors;
 	private final Object runningStateNotifier = new Object();
 	
-	public static void setup(Database db)
+	public final static void setup(Database db)
 	{
 		var triggersTable = new TriggersTable();
 		var nodeTable = new NodeTable();
 		var gameserverTable = new GameServerTable();
+		var gametypesTable = new GameModuleTable();
 		
 		try
 		{
 			nodeTable.createTable(db);
 			gameserverTable.createTable(db);
 			triggersTable.createTable(db);
+			gametypesTable.createTable(db);
 		} catch (SQLException e)
 		{
 			throw new RuntimeException(String.format("Error Creating tables: %s", e.getMessage()));
 		}
 	}
-
-	public GameServer(File folderLocation, File fileName)
-	{
-		this(folderLocation, fileName, DEFAULT_LOG_MAXIMUM_LENGTH);
-	}
 	
-	public GameServer(File folderLocation, File fileName, int logSize)
+	public GameServer(File folderLocation, File fileName)
 	{
 		outputConnectors = new LinkedList<OutputStream>();
 		triggerHandlers = Collections.synchronizedList(new LinkedList<TriggerHandler>());
 		timerTasks = Collections.synchronizedList(new LinkedList<TimerTask>());
 		timer = new Timer();
-		setLogSize(logSize);
 		setFolderLocation(folderLocation);
-		setExecutableName(fileName);
+		setExecutableFile(fileName);
 	}
 	
 	public Timer getTriggerTimer()
@@ -103,7 +99,7 @@ abstract public class GameServer
 	
 	public CommandHandler<? extends GameServer> getCommandHandler()
 	{
-		return new GameServerCommandHandler<GameServer>(this);
+		return getGameServerOptions().getCommandHandler();
 	}
 	
 	public void registerOutputConnector(OutputStream s)
@@ -127,19 +123,9 @@ abstract public class GameServer
 		this.folderLocation = Objects.requireNonNull(folderLocation, "Folder location cannot be null");
 	}
 	
-	public void setExecutableName(File fileName)
+	public void setExecutableFile(File fileName)
 	{	
-		this.executableName = Objects.requireNonNull(fileName, "File name cannot be null");
-	}
-	
-	public void setLogSize(int logSize)
-	{
-		if(logSize < 1)
-		{
-			throw new IllegalArgumentException("Log size must be 1 or greater");
-		}
-		
-		this.logSize = logSize;
+		this.executableFile = Objects.requireNonNull(fileName, "File name cannot be null");
 	}
 	
 	public File getFolderLocation()
@@ -147,19 +133,9 @@ abstract public class GameServer
 		return folderLocation;
 	}
 	
-	public File getExecutableName()
+	public File getExecutableFile()
 	{
-		return executableName;
-	}
-	
-	public int getLogSize()
-	{
-		return logSize;
-	}
-	
-	public String getLog()
-	{
-		return log;
+		return executableFile;
 	}
 	
 	synchronized public boolean forceStopServer()
@@ -205,9 +181,17 @@ abstract public class GameServer
 		}
 	}
 	
-	abstract public boolean stopServer();
+	abstract public String getLog();
+	abstract public boolean stopServer() throws IOException;
 	abstract public boolean startServer() throws IOException;
-	abstract public boolean writeToServer(String out);
+	abstract public boolean writeToServer(Reader in) throws IOException;
+	abstract public boolean readFromServer(Writer out) throws IOException;
+	abstract public GameServerOptions<? extends GameServer> getGameServerOptions();
+	
+	public boolean writeToServer(String in) throws IOException
+	{
+		return writeToServer(new StringReader(in));
+	}
 	
 	public boolean restartServer() throws IOException
 	{
@@ -227,9 +211,8 @@ abstract public class GameServer
 			return null;
 		}
 		
-		try
+		try(var ip = new BufferedReader(new InputStreamReader(IP_ADDRESS_FINDER.openStream())))
 		{
-			var ip = new BufferedReader(new InputStreamReader(IP_ADDRESS_FINDER.openStream()));
 			return ip.readLine();
 		} catch (IOException e)
 		{
@@ -237,10 +220,8 @@ abstract public class GameServer
 		}
 	}
 	
-	abstract public String getServerType();
-	
 	protected List<OutputStream> getOutputConnectors()
 	{
 		return outputConnectors;
-	}
+	}	
 }

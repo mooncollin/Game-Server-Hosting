@@ -1,56 +1,71 @@
 package server;
 
-import java.io.File;
-import java.nio.file.Paths;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Objects;
 
-import api.minecraft.MinecraftServer;
 import model.Query;
 import model.Table;
+import models.GameModuleTable;
 import models.GameServerTable;
-import models.MinecraftServerTable;
-import nodemain.NodeProperties;
 import nodemain.StartUpApplication;
 
 public class GameServerFactory
 {
-	public static GameServer getSpecificServer(Table server)
+	synchronized public static GameServer getSpecificServer(Table server)
 	{
 		Objects.requireNonNull(server);
 		GameServer specificServer = null;
-		var folderLocation = new File(Paths.get(NodeProperties.DEPLOY_FOLDER, server.getColumnValue(GameServerTable.NAME)).toString());
-		var fileName = Paths.get(folderLocation.getAbsolutePath(), server.getColumnValue(GameServerTable.EXECUTABLE_NAME)).toFile();
-		if(server.getColumn(GameServerTable.SERVER_TYPE).getValue().equals(MinecraftServer.SERVER_TYPE))
+		var folderLocation = StartUpApplication.getServerFolder(server);
+		var executableFile = StartUpApplication.getExecutableFile(server);
+		
+		var module = StartUpApplication.getModule(server.getColumnValue(GameServerTable.SERVER_TYPE));
+		if(module == null)
 		{
-			Table minecraftServer;
 			try
 			{
-				var option = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-										   .filter(MinecraftServerTable.SERVER_ID, server.getColumnValue(GameServerTable.ID))
-										   .first();
-				if(option.isEmpty())
+				var query = Query.query(StartUpApplication.database, GameModuleTable.class)
+								 .filter(GameModuleTable.NAME, server.getColumnValue(GameServerTable.SERVER_TYPE))
+								 .first();
+				
+				if(query.isEmpty())
 				{
+					StartUpApplication.LOGGER.error(String.format("Game module: '%s' does not exist", server.getColumnValue(GameServerTable.SERVER_TYPE)));
 					return null;
 				}
-				else
-				{
-					minecraftServer = option.get();
-				}
-			} catch (SQLException e)
+				
+				var jarBytes = (byte[]) query.get().getColumnValue(GameModuleTable.JAR.getName());
+				module = GameServerModuleLoader.loadModule(jarBytes);
+			}
+			catch(SQLException e)
 			{
+				StartUpApplication.LOGGER.error(String.format("Error fetching game modules from database:\n%s", e.getMessage()));
+				return null;
+			} catch (IOException e)
+			{
+				StartUpApplication.LOGGER.error(String.format("Error loading game module from database:\n%s", e.getMessage()));
 				return null;
 			}
-			
+		}
+		
+		if(module != null)
+		{
+			StartUpApplication.addModule(module);
+			specificServer = module.createGameServer(folderLocation, executableFile);
 			if(!folderLocation.exists())
 			{
 				folderLocation.mkdir();
 			}
-			
-			specificServer = new MinecraftServer(folderLocation, fileName, minecraftServer.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE), 
-					minecraftServer.getColumnValue(MinecraftServerTable.ARGUMENTS));
-			
-			((MinecraftServer) specificServer).autoRestart(minecraftServer.getColumnValue(MinecraftServerTable.AUTO_RESTARTS));
+		}
+		else
+		{
+			try
+			{
+				server.delete(StartUpApplication.database);
+			} catch (SQLException e)
+			{
+				StartUpApplication.LOGGER.error(String.format("Error deleting server from database:\n%s", e.getMessage()));
+			}
 		}
 		
 		return specificServer;

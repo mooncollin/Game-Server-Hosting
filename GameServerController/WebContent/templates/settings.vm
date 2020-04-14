@@ -1,5 +1,6 @@
 #parse("linkMacros.vm")
-#set ($background = "images/minecraft/settings_background.jpg")
+#set ($background = "images/material-back.jpeg")
+#set ($active = "Settings")
 
 #define ($content)
 	<h1 class="text-light ml-5 mt-3 d-inline-block">$serverName</h1>
@@ -15,29 +16,14 @@
 					<input class="form-control" type="text" name="execName" id="execName" disabled required placeholder="Enter name of server executable" value="$executableName">
 				</div>
 				<div class="list-group-item form-group form-inline">
-					<label for="ramAmount" class="d-inline-block w-25 align-middle">Maximum RAM (MB)</label>
-					<input class="form-control" type="number" name="ramAmount" id="ramAmount" disabled required placeholder="Enter maximum amount of ram to use in MB" value="$ramAmount" min="$minimumRamAmount" step="$ramStep">
-					<small class="form-text text-muted">RAM must be in 1024 increments</small>
-					<small class="form-text text-muted">This node has a total of $ramTotal MB of RAM. Memory Available: $ramAvailable MB</small>
-				</div>
-				<div class="list-group-item form-group form-inline">
 					<label for="arguments" class="d-inline-block w-25 align-middle">Extra JVM Arguments</label>
 					<input class="form-control w-100" type="text" name="arguments" id="arguments" disabled placeholder="Enter optional arguments" value="$arguments">
-					<small class="form-text text-muted">These will be used when executing server start. Options -Xmx and -Xms are already set using the RAM given.</small>
+					<small class="form-text text-muted">These will be used when executing server start.</small>
 				</div>
 				<div class="list-group-item form-group form-inline">
 					<label for="restartsUnexpected" class="d-inline-block w-25 align-middle">Automatic Restart</label>
 					<input class="form-control" type="checkbox" name="restartsUnexpected" id="restartsUnexpected" disabled #if($restarts)checked#end>
 				</div>
-				<div class="list-group-item">
-					<h1>Server Properties</h1>
-				</div>
-				#foreach($property in $properties)
-					<div class="list-group-item form-group form-inline">
-						<label for="$property.name" class="d-inline-block w-25 align-middle">$property.name</label>
-						<input class="form-control" type="$property.type" id="$property.name" name="$property.name" placeholder="Enter $property.name" #if($property.type == "checkbox" && $property.value == "true")checked#end#if($property.type != "checkbox")value="$property.value"#end disabled>
-					</div>
-				#end
 			</form>
 		</div>
 		<div>

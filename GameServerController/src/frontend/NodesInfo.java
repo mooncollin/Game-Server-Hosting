@@ -7,8 +7,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -24,13 +22,15 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 
+/**
+ * The frontend for displaying information about the various nodes.
+ * @author Collin
+ *
+ */
 @WebServlet(
 		name = "NodesInfo",
 		urlPatterns = "/NodesInfo",
 		asyncSupported = true
-)
-@ServletSecurity(
-		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
 )
 public class NodesInfo extends HttpServlet
 {	
@@ -64,7 +64,9 @@ public class NodesInfo extends HttpServlet
 			var serverID = server.getColumnValue(GameServerTable.ID);
 			var serverName = server.getColumnValue(GameServerTable.NAME);
 			var serverTypeName = server.getColumnValue(GameServerTable.SERVER_TYPE);
-			nodesToServers.get(nodeOwner).add(new ServerInfo(serverID, serverName, serverTypeName));
+			var module = StartUpApplication.getModule(serverTypeName);
+			
+			nodesToServers.get(nodeOwner).add(new ServerInfo(serverID, serverName, serverTypeName, module));
 		}
 		
 		var nodeUsageAddresses = new LinkedList<String>();

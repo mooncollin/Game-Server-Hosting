@@ -9,8 +9,6 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -26,12 +24,12 @@ import utils.Utils;
 		urlPatterns = "/GameServerFileDeleteMultiple",
 		asyncSupported = true
 )
-@ServletSecurity(
-		httpMethodConstraints = {
-				@HttpMethodConstraint(value = "GET"),
-				@HttpMethodConstraint(value = "POST")
-		}
-)
+/**
+ * Backend endpoint for deleting multiple files at once for a particular game server.
+ * Responsible for relaying the file properties to the corresponding node.
+ * @author Collin
+ *
+ */
 public class GameServerFileDeleteMultiple extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;

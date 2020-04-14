@@ -37,8 +37,18 @@ public class GameServerTable extends Table
 																	  .setLength(100)
 																	  .build();
 	
+	public static final Column<Boolean> AUTO_RESTARTS = ColumnBuilder.<Boolean>start(Types.BOOLEAN)
+																	 .setName("autorestarts")
+																	 .isNullable(true)
+																	 .build();
+	
+	public static final Column<String> ARGUMENTS = ColumnBuilder.<String>start(Column.TEXT)
+																.setName("arguments")
+																.isNullable(true)
+																.build();
+	
 	public GameServerTable()
 	{	
-		super("gameserver", ID.typeClone(), NAME.typeClone(), NODE_OWNER.typeClone(), SERVER_TYPE.typeClone(), EXECUTABLE_NAME.typeClone());
+		super("gameserver", ID.typeClone(), NAME.typeClone(), NODE_OWNER.typeClone(), SERVER_TYPE.typeClone(), EXECUTABLE_NAME.typeClone(), AUTO_RESTARTS.typeClone(), ARGUMENTS.typeClone());
 	}
 }

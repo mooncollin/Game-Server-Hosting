@@ -1,0 +1,54 @@
+#parse("linkMacros.vm")
+#set ($background = "images/material-back.jpeg")
+#set ($active = 'gameTypes')
+
+#define ($content)
+	<div id="inner-content" class="ml-5 mt-5">
+		<h1 class="text-light">Game Types</h1>
+		<hr class="border border-light">
+		<div class="bg-white w-100 h-75 p-5">
+		#if($modules.isEmpty())
+			<div class="jumbotron">
+			  	<h1 class="display-4">It looks likes you haven't added a game type yet!</h1>
+			  	<p class="lead">Click the button below to go to add a new game!</p>
+			  	<hr class="my-4">
+			  	<p class="lead">
+			    	<a class="btn btn-primary btn-lg" href="$Endpoints.GAME_TYPE_ADD.get()" role="button">Add a new game type</a>
+			  	</p>
+			</div>
+		#end
+		<ul class="list-group">
+		#foreach($module in $modules)
+			<li class="list-group-item d-flex flex-row align-items-center">
+				<img src="data:image/jpeg;base64, $module.icon" width="64" height="64" alt="">
+				<h2 class="d-inline ml-3 mr-auto">$module.name</h2>
+				<form method="POST" action="$Endpoints.GAME_TYPE_ADD.post()" enctype="multipart/form-data" class="form-inline">
+					<div class="input-group">
+					  <div class="input-group-prepend">
+					    <span class="input-group-text">Update Jar</span>
+					  </div>
+					  <div class="custom-file">
+					    <input type="file" class="custom-file-input" name="jar" id="jar" accept=".jar">
+					    <label class="custom-file-label" for="jar">Choose file</label>
+					  </div>
+					</div>
+					<div class="input-group ml-3">
+					  <div class="input-group-prepend">
+					    <span class="input-group-text">Update Icon</span>
+					  </div>
+					  <div class="custom-file">
+					    <input type="file" class="custom-file-input" id="icon" name="icon" accept=".jpg,.png,.gif">
+					    <label class="custom-file-label" for="icon">Choose file</label>
+					  </div>
+					</div>
+					<input type="text" hidden name="name" value="$module.name">
+					<button class="btn btn-primary ml-3">Submit</button>
+				</form>
+			</li>
+		#end
+		</ul>
+		</div>
+	<div>
+#end
+
+#parse("base.vm")

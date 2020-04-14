@@ -1,9 +1,7 @@
 package nodeapi;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.sql.SQLException;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -16,8 +14,6 @@ import javax.servlet.http.HttpServletResponse;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
-import models.MinecraftServerTable;
-import nodemain.NodeProperties;
 import nodemain.StartUpApplication;
 import server.GameServerFactory;
 import utils.Utils;
@@ -37,32 +33,37 @@ public class ServerAdd extends HttpServlet
 			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
 	);
 	
-	public static ParameterURL postEndpoint(String serverName, String execName, String type)
+	public static ParameterURL postEndpoint(int id)
 	{
 		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_NAME.getName(), serverName);
-		url.addQuery(ApiSettings.EXECUTABLE_NAME.getName(), execName);
-		url.addQuery(ApiSettings.SERVER_TYPE.getName(), type);
+		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
 		return url;
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		var serverName = ApiSettings.SERVER_NAME.parse(request);
-		var execName = ApiSettings.EXECUTABLE_NAME.parse(request);
-		var type = ApiSettings.SERVER_TYPE.parse(request);
-		if(!Utils.optionalsPresent(serverName, execName, type))
+		var serverID = ApiSettings.SERVER_ID.parse(request);
+		if(!Utils.optionalsPresent(serverID))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		Optional<Table> serverExists;
+		Table gameServer;
 		try
 		{
-			serverExists = Query.query(StartUpApplication.database, GameServerTable.class)
-									.filter(GameServerTable.NAME.cloneWithValue(serverName.get()))
+			var gameServerOptional = Query.query(StartUpApplication.database, GameServerTable.class)
+									.filter(GameServerTable.ID, serverID.get())
 									.first();
+			
+			if(gameServerOptional.isEmpty())
+			{
+				response.setStatus(400);
+				return;
+			}
+			
+			gameServer = gameServerOptional.get();
+			
 		} catch (SQLException e)
 		{
 			StartUpApplication.LOGGER.error(e.getMessage());
@@ -70,76 +71,26 @@ public class ServerAdd extends HttpServlet
 			return;
 		}
 		
-		if(serverExists.isPresent())
+		var generatedServer = GameServerFactory.getSpecificServer(gameServer);
+		if(generatedServer == null)
 		{
-			response.setStatus(400);
+			response.setStatus(500);
 			return;
 		}
+		StartUpApplication.addServer(serverID.get(), generatedServer);
 		
-		if(type.get().equals("minecraft"))
+		var fileParts = request.getParts()
+							   .parallelStream()
+							   .filter(p -> p.getSubmittedFileName() != null)
+							   .collect(Collectors.toList());
+		
+		for(var p : fileParts)
 		{
-			var ram = ApiSettings.RAM_AMOUNT.parse(request);
-			var restart = ApiSettings.RESTARTS_UNEXPECTED.parse(request);
-			if(!Utils.optionalsPresent(ram, restart))
+			var fileName = p.getSubmittedFileName();
+			if(fileName.endsWith(".zip"))
 			{
-				response.setStatus(400);
-				return;
+				FileUpload.uploadFolder(StartUpApplication.getServerFolder(gameServer), p.getInputStream());
 			}
-			
-			var gameServer = new GameServerTable();
-			gameServer.setColumnValue(GameServerTable.NAME, serverName.get());
-			gameServer.setColumnValue(GameServerTable.NODE_OWNER, NodeProperties.NAME);
-			gameServer.setColumnValue(GameServerTable.SERVER_TYPE, "minecraft");
-			gameServer.setColumnValue(GameServerTable.EXECUTABLE_NAME, execName.get());
-			
-			try
-			{
-				gameServer.commit(StartUpApplication.database);
-			}
-			catch(SQLException e)
-			{
-				response.setStatus(500);
-				return;
-			}
-			
-			var minecraft = new MinecraftServerTable();
-			minecraft.setColumnValue(MinecraftServerTable.MAX_HEAP_SIZE, ram.get());
-			minecraft.setColumnValue(MinecraftServerTable.AUTO_RESTARTS, restart.get());
-			minecraft.setColumnValue(MinecraftServerTable.ARGUMENTS, "");
-			minecraft.setColumnValue(MinecraftServerTable.SERVER_ID, gameServer.getColumnValue(GameServerTable.ID));
-			
-			try
-			{
-				minecraft.commit(StartUpApplication.database);
-			} catch (SQLException e1)
-			{
-				response.setStatus(500);
-				return;
-			}
-			
-			var generatedServer = GameServerFactory.getSpecificServer(gameServer);
-			StartUpApplication.addServer(gameServer.getColumnValue(GameServerTable.ID), generatedServer);
-			
-			var fileParts = request.getParts()
-								   .parallelStream()
-								   .filter(p -> p.getSubmittedFileName() != null)
-								   .collect(Collectors.toList());
-			
-			for(var p : fileParts)
-			{
-				var fileName = p.getSubmittedFileName();
-				if(fileName.endsWith(".zip"))
-				{
-					FileUpload.uploadFolder(Paths.get(NodeProperties.DEPLOY_FOLDER, serverName.get()).toFile(), p.getInputStream());
-				}
-			}
-			
-			response.getWriter().print(gameServer.getColumnValue(GameServerTable.ID));
-		}
-		else
-		{
-			response.setStatus(400);
-			return;
 		}
 	}
 }

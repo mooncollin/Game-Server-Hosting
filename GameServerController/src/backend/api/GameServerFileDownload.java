@@ -6,8 +6,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -21,12 +19,13 @@ import nodeapi.ApiSettings;
 		urlPatterns = "/GameServerFile",
 		asyncSupported = true
 )
-@ServletSecurity(
-		httpMethodConstraints = {
-				@HttpMethodConstraint(value = "GET"),
-				@HttpMethodConstraint(value = "POST")
-		}
-)
+/**
+ * Backend endpoint for downloading a file from a particular game server.
+ * Responsible for asking the corresponding node for a particular file
+ * and relaying that file back to the client.
+ * @author Collin
+ *
+ */
 public class GameServerFileDownload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;

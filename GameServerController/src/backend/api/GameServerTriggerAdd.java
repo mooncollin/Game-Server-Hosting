@@ -7,8 +7,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -28,9 +26,13 @@ import utils.Utils;
 		urlPatterns = "/GameServerTriggerAdd",
 		asyncSupported = true
 )
-@ServletSecurity(
-		httpMethodConstraints = @HttpMethodConstraint(value = "POST")
-)
+/**
+ * Backend endpoint for adding a trigger to a specific game server.
+ * Responsible for adding the trigger to the database and relaying
+ * a new trigger to the corresponding node.
+ * @author Collin
+ *
+ */
 public class GameServerTriggerAdd extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;

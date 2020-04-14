@@ -7,8 +7,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -30,9 +28,13 @@ import utils.Utils;
 		urlPatterns = "/GameServerTriggerEdit",
 		asyncSupported = true
 )
-@ServletSecurity(
-		httpMethodConstraints = @HttpMethodConstraint(value = "POST")
-)
+/**
+ * Backend endpoint for editing a trigger. Responsible for editing the database entry
+ * and relaying the new trigger information to the corresponding node so that it may 
+ * change the running trigger.
+ * @author Collin
+ *
+ */
 public class GameServerTriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;

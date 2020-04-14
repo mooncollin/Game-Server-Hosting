@@ -3,12 +3,9 @@ package frontend;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -24,13 +21,15 @@ import model.Query;
 import model.Table;
 import models.GameServerTable;
 
+/**
+ * The frontend for the home page.
+ * @author Collin
+ *
+ */
 @WebServlet(
 		name = "Index",
 		urlPatterns = "/Home",
 		asyncSupported = true
-)
-@ServletSecurity(
-		httpMethodConstraints = @HttpMethodConstraint(value = "GET")
 )
 public class Index extends HttpServlet
 {
@@ -54,17 +53,10 @@ public class Index extends HttpServlet
 								 .map(s -> {
 									 var serverID = s.getColumnValue(GameServerTable.ID);
 									 var serverName = s.getColumnValue(GameServerTable.NAME);
-									 String serverTypeName;
-									 
-									try
-									{
-										serverTypeName = models.Utils.getServerType(serverID);
-									} catch (NoSuchElementException | SQLException e)
-									{
-										throw new RuntimeException(e.getMessage());
-									}
+									 var serverTypeName = s.getColumnValue(GameServerTable.SERVER_TYPE);
+									 var module = StartUpApplication.getModule(serverTypeName);
 									
-									 return new ServerInfo(serverID, serverName, serverTypeName);
+									 return new ServerInfo(serverID, serverName, serverTypeName, module);
 								 })
 								 .collect(Collectors.toList());
 		

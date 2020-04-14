@@ -1,7 +1,6 @@
 package nodeapi;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.sql.SQLException;
 
 import javax.servlet.ServletException;
@@ -10,12 +9,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import api.minecraft.MinecraftServer;
 import model.Query;
 import model.Table;
 import models.GameServerTable;
-import models.MinecraftServerTable;
-import nodemain.NodeProperties;
 import nodemain.StartUpApplication;
 import utils.Utils;
 import utils.servlet.Endpoint;
@@ -57,15 +53,12 @@ public class ServerEdit extends HttpServlet
 			return;
 		}
 		
-		var foundMinecraftServer = (MinecraftServer) foundServer;
-		
 		Table gameServer;
-		Table minecraftServer;
 		
 		try
 		{
 			var option = Query.query(StartUpApplication.database, GameServerTable.class)
-								  .filter(GameServerTable.ID.cloneWithValue(serverID.get()))
+								  .filter(GameServerTable.ID, serverID.get())
 								  .first();
 			
 			if(option.isEmpty())
@@ -75,26 +68,6 @@ public class ServerEdit extends HttpServlet
 			}
 			
 			gameServer = option.get();
-			
-			if(foundServer.getClass().equals(MinecraftServer.class))
-			{
-				var option2 = Query.query(StartUpApplication.database, MinecraftServerTable.class)
-										   .filter(MinecraftServerTable.SERVER_ID, gameServer.getColumnValue(GameServerTable.ID))
-										   .first();
-				
-				if(option2.isEmpty())
-				{
-					response.setStatus(400);
-					return;
-				}
-				
-				minecraftServer = option2.get();
-			}
-			else
-			{
-				response.setStatus(400);
-				return;
-			}
 		}
 		catch(SQLException e)
 		{
@@ -102,12 +75,6 @@ public class ServerEdit extends HttpServlet
 			return;
 		}
 		
-		var folderLocation = Paths.get(NodeProperties.DEPLOY_FOLDER, gameServer.getColumnValue(GameServerTable.NAME));
-		var executableFile = folderLocation.resolve(gameServer.getColumnValue(GameServerTable.EXECUTABLE_NAME)).toFile();
-		foundServer.setExecutableName(executableFile);
-		
-		foundMinecraftServer.setMaximumHeapSize(minecraftServer.getColumnValue(MinecraftServerTable.MAX_HEAP_SIZE));
-		foundMinecraftServer.setArguments(minecraftServer.getColumnValue(MinecraftServerTable.ARGUMENTS));
-		foundMinecraftServer.autoRestart(minecraftServer.getColumnValue(MinecraftServerTable.AUTO_RESTARTS));
+		foundServer.setExecutableFile(StartUpApplication.getExecutableFile(gameServer));
 	}
 }
