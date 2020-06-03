@@ -13,7 +13,7 @@
 				    <span class="input-group-text">Upload Jar</span>
 				  </div>
 				  <div class="custom-file">
-				    <input type="file" class="custom-file-input" id="jar" accept=".jar" required>
+				    <input type="file" class="custom-file-input" id="jar" name="jar" accept=".jar" required>
 				    <label class="custom-file-label" for="jar">Choose file</label>
 				  </div>
 				</div>
@@ -25,7 +25,7 @@
 				  </div>
 				  <div class="custom-file">
 				    <input type="file" class="custom-file-input" id="icon" name="icon" accept=".jpg,.png,.gif">
-				    <label class="custom-file-label" for="jar">Choose file</label>
+				    <label class="custom-file-label" for="icon">Choose file</label>
 				  </div>
 				</div>
 			</li>

@@ -17,17 +17,11 @@ import nodeapi.ApiSettings;
 import utils.Utils;
 
 @WebServlet(
-		name = "GameServerFileRename",
-		urlPatterns = "/GameServerFileRename",
+		name = "GameServerNewFolder",
+		urlPatterns = "/GameServerNewFolder",
 		asyncSupported = true
 )
-/**
- * Responsible for relaying that a file should be renamed and that information is
- * relayed to the corresponding node.
- * @author Collin
- *
- */
-public class GameServerFileRename extends HttpServlet
+public class GameServerNewFolder extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	
@@ -35,9 +29,9 @@ public class GameServerFileRename extends HttpServlet
 	{
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		var directory = ApiSettings.DIRECTORY.parse(request);
-		var rename = ApiSettings.RENAME.parse(request);
-
-		if(!Utils.optionalsPresent(serverID, directory, rename) || directory.get().isEmpty())
+		var newFolder = ApiSettings.NEW_FOLDER.parse(request);
+		
+		if(!Utils.optionalsPresent(serverID, directory, newFolder) || directory.get().isEmpty())
 		{
 			response.setStatus(400);
 			return;
@@ -48,18 +42,18 @@ public class GameServerFileRename extends HttpServlet
 		{
 			response.setStatus(404);
 			return;
-		}	
+		}
 		
-		var redirectURL = Endpoints.GAME_SERVER_FILES.get(serverID.get(), directory.get().subList(0, directory.get().size() - 1));
+		var redirectURL = Endpoints.GAME_SERVER_FILES.get(serverID.get(), directory.get());
 		
 		try
 		{
-			var url = nodeapi.Endpoints.FILE_RENAME.get(directory.get(), rename.get());
+			var url = nodeapi.Endpoints.NEW_FOLDER.get(directory.get(), newFolder.get());
 			
 			url.setHost(serverAddress);
 			
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
-			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
+			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
 			if(httpResponse.statusCode() != 200)
 			{
 				response.sendRedirect(redirectURL.getURL());

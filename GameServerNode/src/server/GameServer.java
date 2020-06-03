@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.SQLException;
@@ -185,7 +184,6 @@ abstract public class GameServer
 	abstract public boolean stopServer() throws IOException;
 	abstract public boolean startServer() throws IOException;
 	abstract public boolean writeToServer(Reader in) throws IOException;
-	abstract public boolean readFromServer(Writer out) throws IOException;
 	abstract public GameServerOptions<? extends GameServer> getGameServerOptions();
 	
 	public boolean writeToServer(String in) throws IOException

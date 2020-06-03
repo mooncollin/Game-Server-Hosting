@@ -85,7 +85,7 @@ public class GameServerConsole extends HttpServlet
 			return;
 		}
 		
-		var outputEndpoint = nodeapi.Output.getEndpoint(serverID.get());
+		var outputEndpoint = nodeapi.Endpoints.OUTPUT.open(serverID.get());
 		outputEndpoint.setHost(serverAddress);
 		
 		var triggerOldValues = new HashMap<Integer, Map<String, String>>();

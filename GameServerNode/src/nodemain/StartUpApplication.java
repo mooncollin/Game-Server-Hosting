@@ -47,6 +47,9 @@ public class StartUpApplication implements ServletContextListener
 	public static final Logger LOGGER = LoggerFactory.getLogger(StartUpApplication.class);
 	public static final OperatingSystemMXBean SYSTEM = OperatingSystemMXBean.class.cast(ManagementFactory.getOperatingSystemMXBean());
 	
+	public static final String SERVLET_ROOT = "/GameServerNode";
+	public static final int APPLICATION_PORT = 8080;
+	
 	public static Database database;
 	
 	public void contextInitialized(ServletContextEvent event)
@@ -64,6 +67,25 @@ public class StartUpApplication implements ServletContextListener
 		if(!database.canConnect())
 		{
 			throw new RuntimeException("Is the database up?");
+		}
+		
+		try
+		{
+			var thisNode = Query.query(database, NodeTable.class)
+								.filter(NodeTable.NAME, NodeProperties.NAME)
+								.first();
+			
+			if(thisNode.isEmpty())
+			{
+				var newNode = new NodeTable();
+				newNode.setColumnValue(NodeTable.NAME, NodeProperties.NAME);
+				newNode.commit(database);
+			}
+		}
+		catch(SQLException e)
+		{
+			LOGGER.error(e.getMessage());
+			return;
 		}
 		
 		GameServer.setup(database);

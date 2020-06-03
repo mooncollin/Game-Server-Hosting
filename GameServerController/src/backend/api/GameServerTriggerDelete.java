@@ -52,7 +52,7 @@ public class GameServerTriggerDelete extends HttpServlet
 		
 		var redirectUrl = Endpoints.GAME_SERVER_CONSOLE.get(serverID.get());
 		
-		var url = nodeapi.TriggerDelete.getEndpoint(triggerID.get());
+		var url = nodeapi.Endpoints.TRIGGER_DELETE.get(triggerID.get());
 		url.setHost(serverAddress);
 		
 		try

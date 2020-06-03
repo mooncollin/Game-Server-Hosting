@@ -279,7 +279,7 @@ public class StartUpApplication implements ServletContextListener
 					.parallelStream()
 					.collect(Collectors.toMap(Function.identity(), k -> {
 						var nodeAddress = StartUpApplication.serverIPAddresses.get(k);
-						var url = nodeapi.Output.getEndpoint(k, mode);
+						var url = nodeapi.Endpoints.OUTPUT.open(k, mode);
 						url.setHost(nodeAddress);
 						return url.getURL();
 					}));

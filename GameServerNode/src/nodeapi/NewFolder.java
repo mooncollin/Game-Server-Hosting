@@ -1,9 +1,7 @@
 package nodeapi;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -14,42 +12,35 @@ import javax.servlet.http.HttpServletResponse;
 import nodemain.NodeProperties;
 
 @WebServlet(
-		name = "FileDelete",
-		urlPatterns = "/FileDelete",
+		name = "NewFolder",
+		urlPatterns = "/NewFolder",
 		asyncSupported = true
 )
-public class FileDelete extends HttpServlet
+public class NewFolder extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-
+	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var directory = ApiSettings.DIRECTORY.parse(request);
-		if(directory.isEmpty())
+		var newFolder = ApiSettings.NEW_FOLDER.parse(request);
+		if(directory.isEmpty() || newFolder.isEmpty())
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get().toArray(String[]::new)).toFile();
-		if(!currentFile.exists() || currentFile.equals(Paths.get(NodeProperties.DEPLOY_FOLDER).toFile()))
+		var currentFile = Paths.get(NodeProperties.DEPLOY_FOLDER, directory.get().toArray(String[]::new)).resolve(newFolder.get()).toFile();
+		
+		if(currentFile.equals(Paths.get(NodeProperties.DEPLOY_FOLDER).toFile()))
 		{
 			response.setStatus(400);
 			return;
 		}
 		
-		deleteDirectoryOrFile(currentFile);
-	}
-	
-	public static void deleteDirectoryOrFile(File directory)
-	{
-		if(directory.isDirectory())
+		if(!currentFile.exists())
 		{
-			Arrays.stream(directory.listFiles())
-				  .parallel()
-				  .forEach(FileDelete::deleteDirectoryOrFile);
+			currentFile.mkdirs();
 		}
-		
-		directory.delete();
 	}
 }

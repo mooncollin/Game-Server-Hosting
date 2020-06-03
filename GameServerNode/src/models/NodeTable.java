@@ -3,18 +3,30 @@ package models;
 import java.sql.Types;
 
 import model.Column;
+import model.ColumnBuilder;
 import model.Table;
 
+/**
+ * Table for holding information about a node.
+ * @author Collin
+ *
+ */
 public class NodeTable extends Table
 {
-	public static final Column<String> NAME =
-			new Column<String>("name", Types.VARCHAR, 100, true, false, false, null);
+	/**
+	 * Name of the node.
+	 */
+	public static final Column<String> NAME = ColumnBuilder.<String>start(Types.VARCHAR)
+														   .setName("name")
+														   .setLength(100)
+														   .isPrimaryKey(true)
+														   .build();
 	
-	public static final Column<Integer> MAX_RAM_ALLOWED =
-			new Column<Integer>("ram", Types.INTEGER, 0, false, false, false, null);
-	
+	/**
+	 * Constructor.
+	 */
 	public NodeTable()
 	{
-		super("node", NAME.typeClone(), MAX_RAM_ALLOWED.typeClone());
+		super("node", NAME.typeClone());
 	}
 }

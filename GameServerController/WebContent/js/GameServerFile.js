@@ -42,7 +42,8 @@ function submitForm() {
 
 function submitFolder(url) {
 	if(folderField.value != '') {
-		window.location.href = url + "&newFolder=" + folderField.value; 
+//		window.location.href = url + "&newFolder=" + folderField.value;
+		window.location.href = encodeURI(url + "&newFolder=" + folderField.value);
 	}
 }
 

@@ -71,7 +71,7 @@ public class BoundedCircularList<T>
 		}
 		if(end < start)
 		{
-			for(int i = 0; i < end; i++, copyStart++)
+			for(int i = 0; i <= end; i++, copyStart++)
 			{
 				copiedData[copyStart] = data[i];
 			}

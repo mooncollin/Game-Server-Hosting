@@ -35,9 +35,9 @@ import utils.Utils;
  *
  */
 @WebServlet(
-		name = "GameServerAdd",
-		urlPatterns = "/GameServerAdd",
-		asyncSupported = true
+	name = "GameServerAdd",
+	urlPatterns = "/GameServerAdd",
+	asyncSupported = true
 )
 @MultipartConfig
 public class GameServerAdd extends HttpServlet
@@ -128,7 +128,7 @@ public class GameServerAdd extends HttpServlet
 			return;
 		}
 		
-		var url = nodeapi.ServerAdd.postEndpoint(gameServer.getColumnValue(GameServerTable.ID));
+		var url = nodeapi.Endpoints.SERVER_ADD.post(gameServer.getColumnValue(GameServerTable.ID));
 		url.setHost(serverAddress);
 		
 		var fileParts = request.getParts()

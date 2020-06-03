@@ -1,14 +1,8 @@
 package utils.servlet;
 
-import javax.servlet.http.HttpServlet;
+import java.util.Objects;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-
-import javax.servlet.annotation.WebServlet;
-
-abstract public class Endpoint
+public class Endpoint
 {
 	public static enum HttpMethod
 	{
@@ -56,85 +50,11 @@ abstract public class Endpoint
 		}
 	}
 	
-	public static <T extends HttpServlet> String getServletName(Class<T> servlet)
-	{
-		var annotation = servlet.getDeclaredAnnotation(WebServlet.class);
-		if(annotation == null)
-		{
-			return null;
-		}
-		
-		return annotation.name();
-	}
-	
-	public static <T extends HttpServlet> String[] getServletUrlPatterns(Class<T> servlet)
-	{
-		var annotation = servlet.getDeclaredAnnotation(WebServlet.class);
-		if(annotation == null)
-		{
-			return null;
-		}
-		
-		return annotation.urlPatterns();
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static String[] getServletUrlPatterns(String name)
-	{
-		try
-		{
-			return getServletUrlPatterns((Class<? extends HttpServlet>) Class.forName(name));
-		} catch (Exception e)
-		{
-			return null;
-		}
-	}
-	
-	public static <T extends HttpServlet> String getServletURL(Class<T> servlet)
-	{
-		return getServletUrlPatterns(servlet)[0];
-	}
-	
-	public static String getServletURL(String name)
-	{
-		return getServletUrlPatterns(name)[0];
-	}
-	
-	public static String getQueryString(Map<String, ?> entries)
-	{
-		return String.format("?%s", 
-			String.join("&", entries.entrySet()
-									.stream()
-									.map(entry -> String.format("%s=%s", entry.getKey(), URLEncoder.encode(entry.getValue().toString(), StandardCharsets.UTF_8)))
-									.toArray(String[]::new))
-		);
-	}
-	
-	private final Protocol protocol;
-	private final String host;
-	private final Integer port;
-	private final String name;
-	private final String endpoint;
-	
-	public <T extends HttpServlet> Endpoint(Class<T> servlet, String host, Integer port)
-	{
-		this(getServletName(servlet), null, host, port, getServletURL(servlet));
-	}
-	
-	public <T extends HttpServlet> Endpoint(Class<T> servlet, String prefix, String host, Integer port)
-	{
-		this(getServletName(servlet), null, host, port, prefix + getServletURL(servlet));
-	}
-	
-	public <T extends HttpServlet> Endpoint(Class<T> servlet, String host)
-	{
-		this(getServletName(servlet), null, host, null, getServletURL(servlet));
-	}
-	
-	public <T extends HttpServlet> Endpoint(Class<T> servlet)
-	{
-		this(getServletName(servlet), null, null, null, getServletURL(servlet));
-	}
+	private Protocol protocol;
+	private String host;
+	private Integer port;
+	private String name;
+	private String endpoint;
 	
 	public Endpoint(String name, Protocol protocol, String host, Integer port, String endpoint)
 	{
@@ -143,6 +63,12 @@ abstract public class Endpoint
 		this.host = host;
 		this.port = port;
 		this.endpoint = endpoint;
+	}
+	
+	public Endpoint local()
+	{
+		this.protocol = null;
+		return this;
 	}
 	
 	public String getName()
@@ -170,6 +96,31 @@ abstract public class Endpoint
 		return endpoint;
 	}
 	
+	public void setName(String name)
+	{
+		this.name = name;
+	}
+	
+	public void setProtocol(Protocol p)
+	{
+		this.protocol = p;
+	}
+	
+	public void setPort(Integer port)
+	{
+		this.port = port;
+	}
+	
+	public void setEndpoint(String endpoint)
+	{
+		this.endpoint = endpoint;
+	}
+	
+	public void setHost(String host)
+	{
+		this.host = host;
+	}
+	
 	public ParameterURL getRequestURL()
 	{
 		return new ParameterURL(protocol, host, port, endpoint);
@@ -181,6 +132,26 @@ abstract public class Endpoint
 		return getRequestURL().getURL();
 	}
 	
-	abstract public ParameterURL get(Object... values);
-	abstract public ParameterURL post(Object... values);
+	public Endpoint relative()
+	{
+		setProtocol(null);
+		setHost(null);
+		setPort(null);
+		return this;
+	}
+	
+	public Endpoint relative(String prefix)
+	{
+		setProtocol(null);
+		setHost(null);
+		setPort(null);
+		prefix(prefix);
+		return this;
+	}
+	
+	public Endpoint prefix(String prefix)
+	{
+		setEndpoint(prefix + Objects.requireNonNullElse(getEndpoint(), ""));
+		return this;
+	}
 }

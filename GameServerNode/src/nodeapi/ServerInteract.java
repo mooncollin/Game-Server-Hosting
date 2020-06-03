@@ -15,28 +15,16 @@ import org.json.simple.parser.ParseException;
 
 import nodemain.StartUpApplication;
 import utils.Utils;
-import utils.servlet.Endpoint;
 import utils.servlet.HttpStatus;
-import utils.servlet.ParameterURL;
 
-@WebServlet("/ServerInteract")
+@WebServlet(
+		name = "ServerInteract",
+		urlPatterns = "/ServerInteract",
+		asyncSupported = true
+)
 public class ServerInteract extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = "/GameServerNode/ServerInteract";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL postEndpoint(int id)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
-		return url;
-	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{

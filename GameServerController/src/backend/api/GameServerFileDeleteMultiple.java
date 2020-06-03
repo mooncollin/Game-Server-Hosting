@@ -60,7 +60,7 @@ public class GameServerFileDeleteMultiple extends HttpServlet
 		{
 			var newList = new LinkedList<String>(directory.get());
 			newList.add(file);
-			var url = nodeapi.FileDelete.getEndpoint(newList);
+			var url = nodeapi.Endpoints.FILE_DELETE.get(newList);
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			futures.add(StartUpApplication.client.sendAsync(httpRequest, BodyHandlers.discarding()));

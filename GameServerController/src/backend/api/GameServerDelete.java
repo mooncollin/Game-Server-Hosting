@@ -80,7 +80,7 @@ public class GameServerDelete extends HttpServlet
 		
 		StartUpApplication.removeServerIPAddress(serverID.get());
 		
-		var url = nodeapi.ServerDelete.postEndpoint(serverID.get());
+		var url = nodeapi.Endpoints.SERVER_DELETE.post(serverID.get());
 		url.setHost(serverAddress);
 		
 		try

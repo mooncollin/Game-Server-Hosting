@@ -15,28 +15,16 @@ import models.GameModuleTable;
 import nodemain.StartUpApplication;
 import server.GameServerModuleLoader;
 import utils.Utils;
-import utils.servlet.Endpoint;
 import utils.servlet.HttpStatus;
-import utils.servlet.ParameterURL;
 
-@WebServlet("/ModuleUpdate")
+@WebServlet(
+		name = "ModuleUpdate",
+		urlPatterns = "/ModuleUpdate",
+		asyncSupported = true
+)
 public class UpdateModule extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = "/GameServerNode/ModuleUpdate";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL postEndpoint(String moduleName)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.MODULE_NAME.getName(), moduleName);
-		return url;
-	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{

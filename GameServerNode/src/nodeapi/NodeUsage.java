@@ -1,5 +1,6 @@
 package nodeapi;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -13,29 +14,14 @@ import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
 import nodemain.StartUpApplication;
-import utils.servlet.Endpoint;
-import utils.servlet.ParameterURL;
 
 @ServerEndpoint("/NodeUsage")
 public class NodeUsage
 {
-	public static final String URL = "/GameServerNode/NodeUsage";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.WEB_SOCKET, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL getEndpoint()
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		return url;
-	}
-	
 	public static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor();
 	public static Future<?> NODE_USAGE_TASK;
 	
-	private static final long NODE_USAGE_WAIT_TIME = 350;
+	private static final Duration NODE_USAGE_WAIT_TIME = Duration.ofMillis(350);
 	
 	private static final Set<Session> allSessions = new HashSet<Session>();
 	
@@ -47,7 +33,7 @@ public class NodeUsage
 			allSessions.add(session);
 			if(allSessions.size() == 1)
 			{
-				NODE_USAGE_TASK = TIMER.scheduleAtFixedRate(NodeUsage::sendUsage, 0, NODE_USAGE_WAIT_TIME, TimeUnit.MILLISECONDS);
+				NODE_USAGE_TASK = TIMER.scheduleAtFixedRate(NodeUsage::sendUsage, 0, NODE_USAGE_WAIT_TIME.toMillisPart(), TimeUnit.MILLISECONDS);
 			}
 		}
 	}
@@ -76,10 +62,8 @@ public class NodeUsage
 		{
 			synchronized (allSessions)
 			{
-				for(var session : allSessions)
-				{
-					sendUsage(session, cpuLoad, ramUsage);
-				}
+				allSessions.parallelStream()
+						   .forEach(session -> sendUsage(session, cpuLoad, ramUsage));
 			}
 		}
 	}

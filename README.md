@@ -82,6 +82,14 @@ Network factors such as firewalls, port forwarding, and static IPs are not manag
 
 # Changelog
 
+## Version 2.1
+* Fixed [issue #1](https://github.com/mooncollin/Game-Server-Hosting/issues/1)
+* Fixed [issue #2](https://github.com/mooncollin/Game-Server-Hosting/issues/2)
+* Fixed [issue #3](https://github.com/mooncollin/Game-Server-Hosting/issues/3)
+* Fixed [issue #5](https://github.com/mooncollin/Game-Server-Hosting/issues/5)
+* Fixed [issue #6](https://github.com/mooncollin/Game-Server-Hosting/issues/6)
+* Node backend now uses Endpoints framework, just like the GameServerController
+
 ## Version 2.0!!
 Custom game server update!
 

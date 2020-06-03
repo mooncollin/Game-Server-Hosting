@@ -52,7 +52,7 @@ public class GameServerFileDelete extends HttpServlet
 		
 		try
 		{
-			var url = nodeapi.FileDelete.getEndpoint(directory.get());
+			var url = nodeapi.Endpoints.FILE_DELETE.get(directory.get());
 			url.setHost(serverAddress);
 			
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();

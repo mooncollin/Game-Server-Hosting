@@ -106,7 +106,7 @@ public class GameServerFiles extends HttpServlet
 		
 		try
 		{
-			var url = nodeapi.ServerFiles.getEndpoint(directories);
+			var url = nodeapi.Endpoints.SERVER_FILES.get(directories);
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
@@ -178,7 +178,7 @@ public class GameServerFiles extends HttpServlet
 			return;
 		}
 		
-		var url = nodeapi.FileUpload.postEndpoint(directory.get(), isFolder.get());
+		var url = nodeapi.Endpoints.FILE_UPLOAD.post(directory.get(), isFolder.get());
 		url.setHost(serverAddress);
 		
 		var fileParts = request.getParts()

@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -16,27 +15,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import nodemain.NodeProperties;
-import utils.servlet.Endpoint;
-import utils.servlet.ParameterURL;
 
-@WebServlet("/FileDownload")
+@WebServlet(
+		name = "FileDownload",
+		urlPatterns = "/FileDownload",
+		asyncSupported = true
+)
 public class FileDownload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = "/GameServerNode/FileDownload";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL getEndpoint(List<String> directories)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
-		return url;
-	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{

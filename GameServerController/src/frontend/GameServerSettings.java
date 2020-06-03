@@ -133,7 +133,7 @@ public class GameServerSettings extends HttpServlet
 			return;
 		}
 		
-		var sendURL = nodeapi.ServerEdit.postEndpoint(serverID.get());
+		var sendURL = nodeapi.Endpoints.SERVER_EDIT.post(serverID.get());
 		sendURL.setHost(serverAddress);
 		
 		try

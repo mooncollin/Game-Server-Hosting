@@ -14,27 +14,15 @@ import model.Table;
 import models.TriggersTable;
 import nodemain.StartUpApplication;
 import utils.Utils;
-import utils.servlet.Endpoint;
-import utils.servlet.ParameterURL;
 
-@WebServlet("/TriggerEdit")
+@WebServlet(
+		name = "TriggerEdit",
+		urlPatterns = "/TriggerEdit",
+		asyncSupported = true
+)
 public class TriggerEdit extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = "/GameServerNode/TriggerEdit";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL getEndpoint(int triggerID)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.TRIGGER_ID.getName(), triggerID);
-		return url;
-	}
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{

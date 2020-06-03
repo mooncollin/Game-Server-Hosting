@@ -72,7 +72,7 @@ public class NodesInfo extends HttpServlet
 		var nodeUsageAddresses = new LinkedList<String>();
 		for(var nodeName : StartUpApplication.NODE_NAMES)
 		{
-			var url = nodeapi.NodeUsage.getEndpoint();
+			var url = nodeapi.Endpoints.NODE_USAGE.open();
 			var ipAddress = StartUpApplication.getNodeIPAddress(nodeName);
 			url.setHost(ipAddress);
 			nodeUsageAddresses.add(url.getURL());

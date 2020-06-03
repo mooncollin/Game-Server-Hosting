@@ -25,6 +25,7 @@ import model.Query;
 import models.GameModuleTable;
 import server.GameServerModule;
 import server.GameServerModuleLoader;
+import utils.servlet.HttpStatus;
 
 /**
  * The frontend for adding a new game type.
@@ -91,6 +92,7 @@ public class GameTypeAdd extends HttpServlet
 				
 				if(query.isEmpty())
 				{
+					StartUpApplication.LOGGER.warn("Cannot find game module in database");
 					response.sendRedirect(Endpoints.GAME_TYPES.get().getURL());
 					return;
 				}
@@ -104,11 +106,13 @@ public class GameTypeAdd extends HttpServlet
 				{
 					moduleTable.setColumnValue(GameModuleTable.ICON, new SerialBlob(iconString.getBytes()));
 				}
+				
 				moduleTable.commit(StartUpApplication.database);
+				
 				if(module != null)
 				{
 					StartUpApplication.addModule(module);
-					var url = nodeapi.UpdateModule.postEndpoint(name);
+					var url = nodeapi.Endpoints.MODULE_UPDATE.post(name);
 					for(var address : StartUpApplication.getNodeIPAddresses())
 					{
 						url.setHost(address);
@@ -117,7 +121,12 @@ public class GameTypeAdd extends HttpServlet
 													 .build();
 						try
 						{
-							StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
+							var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.discarding());
+							if(httpResponse.statusCode() != HttpStatus.OK.getCode())
+							{
+								StartUpApplication.LOGGER.error(String.format("Did not get %d http status from asking for node to update a game module. Instead got: %d", HttpStatus.OK.getCode(), httpResponse.statusCode()));
+								response.setStatus(httpResponse.statusCode());
+							}
 						}
 						catch(InterruptedException e)
 						{
@@ -137,6 +146,7 @@ public class GameTypeAdd extends HttpServlet
 		
 		if(module == null)
 		{
+			StartUpApplication.LOGGER.error("Module uploaded could not be dynamically loaded");
 			response.sendRedirect(Endpoints.GAME_TYPE_ADD.get().getURL());
 			return;
 		}

@@ -104,7 +104,7 @@ public class GameServerTriggerAdd extends HttpServlet
 			return;
 		}
 		
-		var url = nodeapi.TriggerEdit.getEndpoint(trigger.getColumnValue(TriggersTable.ID));
+		var url = nodeapi.Endpoints.TRIGGER_EDIT.get(trigger.getColumnValue(TriggersTable.ID));
 		url.setHost(serverAddress);
 		
 		try

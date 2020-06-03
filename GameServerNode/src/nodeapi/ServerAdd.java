@@ -17,35 +17,24 @@ import models.GameServerTable;
 import nodemain.StartUpApplication;
 import server.GameServerFactory;
 import utils.Utils;
-import utils.servlet.Endpoint;
-import utils.servlet.ParameterURL;
+import utils.servlet.HttpStatus;
 
-@WebServlet("/ServerAdd")
+@WebServlet(
+		name = "ServerAdd",
+		urlPatterns = "/ServerAdd",
+		asyncSupported = true
+)
 @MultipartConfig
 public class ServerAdd extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = "/GameServerNode/ServerAdd";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL postEndpoint(int id)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
-		return url;
-	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		var serverID = ApiSettings.SERVER_ID.parse(request);
 		if(!Utils.optionalsPresent(serverID))
 		{
-			response.setStatus(400);
+			response.setStatus(HttpStatus.BAD_REQUEST.getCode());
 			return;
 		}
 		

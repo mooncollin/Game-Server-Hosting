@@ -9,9 +9,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -110,13 +110,13 @@ public class MinecraftServer extends GameServer
 					}
 					
 					final var lineTerminated = lineRead + "\r\n";
-					var triggers = getTriggerHandlers();
+					final var lineBytes = lineTerminated.getBytes();
 	
-					triggers.stream()
-						.filter(trigger -> trigger instanceof TriggerHandlerCondition)
-						.map(trigger -> (TriggerHandlerCondition<String>) trigger)
-						.filter(condition -> condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
-						.forEach(condition -> condition.trigger(lineRead));
+					getTriggerHandlers().parallelStream()
+										.filter(trigger -> trigger instanceof TriggerHandlerCondition)
+										.map(trigger -> (TriggerHandlerCondition<String>) trigger)
+										.filter(condition -> condition.getType().equals(TriggerHandlerConditionType.OUTPUT))
+										.forEach(condition -> condition.trigger(lineRead));
 						
 					var streamsToRemove = new LinkedList<OutputStream>();
 					
@@ -124,20 +124,23 @@ public class MinecraftServer extends GameServer
 					
 					synchronized (outputConnectors)
 					{
-						for(var stream : outputConnectors)
-						{
-							synchronized (stream)
-							{
-								try
-								{
-									stream.write(lineTerminated.getBytes());
-								} catch (IOException e)
-								{
-									streamsToRemove.add(stream);
-								}
-								stream.notify();
-							}
-						}
+						outputConnectors.parallelStream()
+										.forEach(stream -> {
+											synchronized (stream)
+											{
+												try
+												{
+													stream.write(lineBytes);
+												} catch (IOException e)
+												{
+													synchronized(streamsToRemove)
+													{
+														streamsToRemove.add(stream);
+													}
+												}
+												stream.notify();
+											}
+										});
 						
 						outputConnectors.removeAll(streamsToRemove);
 					}
@@ -266,20 +269,6 @@ public class MinecraftServer extends GameServer
 		return false;
 	}
 	
-	@Override
-	synchronized public boolean readFromServer(Writer out) throws IOException
-	{
-		if(isRunning())
-		{
-			try(var inStream = new InputStreamReader(process.getInputStream()))
-			{
-				inStream.transferTo(out);
-			}
-			return true;
-		}
-		return false;
-	}
-	
 	public String[] getRunCommand() throws SQLException
 	{
 		var command = new LinkedList<String>();
@@ -325,7 +314,8 @@ public class MinecraftServer extends GameServer
 		}
 		else
 		{
-			MinecraftGameServerModule.LOGGER.warn("Minecraft Server properties file is missing. Might be first time loading.");
+			MinecraftGameServerModule.LOGGER.warn("Minecraft Server properties file is missing. Might be first time loading. Creating default properties...");
+			setProperties(null);
 		}
 		
 		return properties;
@@ -395,7 +385,9 @@ public class MinecraftServer extends GameServer
 	{
 		synchronized(lastReadBounded)
 		{
-			return String.join("", List.of(lastReadBounded.toArray(String[]::new)));
+			var array = lastReadBounded.toArray(String[]::new);
+			var list = List.of(array);
+			return String.join("", list);
 		}
 	}
 }

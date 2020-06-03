@@ -7,21 +7,24 @@ import backend.api.GameServerFileDelete;
 import backend.api.GameServerFileDeleteMultiple;
 import backend.api.GameServerFileDownload;
 import backend.api.GameServerFileRename;
+import backend.api.GameServerNewFolder;
 import backend.api.GameServerTriggerAdd;
 import backend.api.GameServerTriggerDelete;
 import backend.api.GameServerTriggerEdit;
 import backend.api.ServerInteract;
 import backend.main.StartUpApplication;
 import nodeapi.ApiSettings;
-import utils.servlet.Endpoint;
+import utils.servlet.HttpEndpoint;
 import utils.servlet.ParameterURL;
 
 public class Endpoints
 {
+	private Endpoints() {}
+	
 	/**
-	 * The endpoint for the index page.
+	 * The HttpEndpoint for the index page.
 	 */
-	public static final Endpoint INDEX = new Endpoint(Index.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint INDEX = new HttpEndpoint(Index.class)
 	{
 		/**
 		 * Post is not supported.
@@ -40,12 +43,12 @@ public class Endpoints
 		{
 			return getRequestURL();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for the nodes info page.
+	 * The HttpEndpoint for the nodes info page.
 	 */
-	public static final Endpoint NODES_INFO = new Endpoint(NodesInfo.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint NODES_INFO = new HttpEndpoint(NodesInfo.class)
 	{
 		/**
 		 * Post is not supported
@@ -64,12 +67,12 @@ public class Endpoints
 		{
 			return getRequestURL();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for adding a game server
+	 * The HttpEndpoint for adding a game server
 	 */
-	public static final Endpoint GAME_SERVER_ADD = new Endpoint(GameServerAdd.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_ADD = new HttpEndpoint(GameServerAdd.class)
 	{
 		/**
 		 * Used for adding a new game server.
@@ -99,12 +102,12 @@ public class Endpoints
 		{
 			return getRequestURL();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for a server's console.
+	 * The HttpEndpoint for a server's console.
 	 */
-	public static final Endpoint GAME_SERVER_CONSOLE = new Endpoint(GameServerConsole.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_CONSOLE = new HttpEndpoint(GameServerConsole.class)
 	{
 		/**
 		 * Post is not supported.
@@ -126,12 +129,12 @@ public class Endpoints
 			
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 
 	/**
-	 * The endpoint for a server's files.
+	 * The HttpEndpoint for a server's files.
 	 */
-	public static final Endpoint GAME_SERVER_FILES = new Endpoint(GameServerFiles.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_FILES = new HttpEndpoint(GameServerFiles.class)
 	{
 		/**
 		 * Used getting the add file url.
@@ -165,12 +168,12 @@ public class Endpoints
 			url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for a server's settings.
+	 * The HttpEndpoint for a server's settings.
 	 */
-	public static final Endpoint GAME_SERVER_SETTINGS = new Endpoint(GameServerSettings.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_SETTINGS = new HttpEndpoint(GameServerSettings.class)
 	{
 		/**
 		 * Used to get the url for posting new server settings.
@@ -193,12 +196,12 @@ public class Endpoints
 			url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for adding a new game type.
+	 * The HttpEndpoint for adding a new game type.
 	 */
-	public static final Endpoint GAME_TYPE_ADD = new Endpoint(GameTypeAdd.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_TYPE_ADD = new HttpEndpoint(GameTypeAdd.class)
 	{
 		/**
 		 * Gets the url for posting a new game type.
@@ -217,12 +220,12 @@ public class Endpoints
 		{	
 			return getRequestURL();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for listing all the game types.
+	 * The HttpEndpoint for listing all the game types.
 	 */
-	public static final Endpoint GAME_TYPES = new Endpoint(GameTypes.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_TYPES = new HttpEndpoint(GameTypes.class)
 	{
 		/**
 		 * Post is not supported.
@@ -241,12 +244,12 @@ public class Endpoints
 		{	
 			return getRequestURL();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for deleting a game server.
+	 * The HttpEndpoint for deleting a game server.
 	 */
-	public static final Endpoint GAME_SERVER_DELETE = new Endpoint(GameServerDelete.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_DELETE = new HttpEndpoint(GameServerDelete.class)
 	{
 		/**
 		 * Post is not supported.
@@ -270,12 +273,12 @@ public class Endpoints
 			
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for deleting a file on a game server.
+	 * The HttpEndpoint for deleting a file on a game server.
 	 */
-	public static final Endpoint GAME_SERVER_FILE_DELETE = new Endpoint(GameServerFileDelete.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_FILE_DELETE = new HttpEndpoint(GameServerFileDelete.class)
 	{
 		/**
 		 * Post is not supported.
@@ -301,12 +304,12 @@ public class Endpoints
 			url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for deleting multiple files.
+	 * The HttpEndpoint for deleting multiple files.
 	 */
-	public static final Endpoint GAME_SERVER_FILE_DELETE_MULTIPLE = new Endpoint(GameServerFileDeleteMultiple.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_FILE_DELETE_MULTIPLE = new HttpEndpoint(GameServerFileDeleteMultiple.class)
 	{
 		/**
 		 * Post is not supported.
@@ -339,12 +342,12 @@ public class Endpoints
 			url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for downloading a file from a game server.
+	 * The HttpEndpoint for downloading a file from a game server.
 	 */
-	public static final Endpoint GAME_SERVER_FILE_DOWNLOAD = new Endpoint(GameServerFileDownload.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_FILE_DOWNLOAD = new HttpEndpoint(GameServerFileDownload.class)
 	{
 		/**
 		 * Does the same thing as the get method.
@@ -370,12 +373,12 @@ public class Endpoints
 			url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for renaming a file on a game server.
+	 * The HttpEndpoint for renaming a file on a game server.
 	 */
-	public static final Endpoint GAME_SERVER_FILE_RENAME = new Endpoint(GameServerFileRename.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_FILE_RENAME = new HttpEndpoint(GameServerFileRename.class)
 	{
 		/**
 		 * Post is not supported.
@@ -396,25 +399,54 @@ public class Endpoints
 			var serverID = (int) values[0];
 			var directories = (List<String>) values[1];
 			var rename = (String) values[2];
-			var newFolder = (boolean) values[3];
 			
 			var url = getRequestURL();
 			url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
 			url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
-			
-			if(rename != null && !rename.isEmpty())
-			{
-				url.addQuery(newFolder ? ApiSettings.NEW_FOLDER.getName() : ApiSettings.RENAME.getName(), rename);
-			}
+			url.addQuery(ApiSettings.RENAME.getName(), rename);
 			
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for adding a trigger to a game server.
+	 * The HttpEndpoint for creating a new folder on a game server.
 	 */
-	public static final Endpoint GAME_SERVER_TRIGGER_ADD = new Endpoint(GameServerTriggerAdd.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_NEW_FOLDER = new HttpEndpoint(GameServerNewFolder.class)
+	{
+		/**
+		 * Post is not supported.
+		 */
+		@Override
+		public ParameterURL post(Object... values)
+		{
+			throw new UnsupportedOperationException();
+		}
+		
+		/**
+		 * Gets the url for creating a new folder.
+		 */
+		@SuppressWarnings("unchecked")
+		@Override
+		public ParameterURL get(Object... values)
+		{
+			var serverID = (int) values[0];
+			var directories = (List<String>) values[1];
+//			var newFolder = (String) values[2];
+			
+			var url = getRequestURL();
+			url.addQuery(ApiSettings.SERVER_ID.getName(), serverID);
+			url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
+//			url.addQuery(ApiSettings.NEW_FOLDER.getName(), newFolder);
+			
+			return url;
+		}
+	}.relative(StartUpApplication.SERVLET_PATH);
+	
+	/**
+	 * The HttpEndpoint for adding a trigger to a game server.
+	 */
+	public static final HttpEndpoint GAME_SERVER_TRIGGER_ADD = new HttpEndpoint(GameServerTriggerAdd.class)
 	{
 		/**
 		 * The url for adding a trigger.
@@ -451,12 +483,12 @@ public class Endpoints
 		{
 			throw new UnsupportedOperationException();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for deleting a trigger from a game server.
+	 * The HttpEndpoint for deleting a trigger from a game server.
 	 */
-	public static final Endpoint GAME_SERVER_TRIGGER_DELETE = new Endpoint(GameServerTriggerDelete.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_TRIGGER_DELETE = new HttpEndpoint(GameServerTriggerDelete.class)
 	{
 		/**
 		 * Post is not supported.
@@ -481,12 +513,12 @@ public class Endpoints
 			url.addQuery(ApiSettings.TRIGGER_ID.getName(), triggerID);
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for editing a trigger.
+	 * The HttpEndpoint for editing a trigger.
 	 */
-	public static final Endpoint GAME_SERVER_TRIGGER_EDIT = new Endpoint(GameServerTriggerEdit.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint GAME_SERVER_TRIGGER_EDIT = new HttpEndpoint(GameServerTriggerEdit.class)
 	{
 		/**
 		 * The url for editing a trigger.
@@ -511,12 +543,12 @@ public class Endpoints
 		{
 			throw new UnsupportedOperationException();
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for interacting with a server through the CommandHandler framework.
+	 * The HttpEndpoint for interacting with a server through the CommandHandler framework.
 	 */
-	public static final Endpoint SERVER_INTERACT = new Endpoint(ServerInteract.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint SERVER_INTERACT = new HttpEndpoint(ServerInteract.class)
 	{
 		/**
 		 * Get is not supported.
@@ -550,12 +582,12 @@ public class Endpoints
 			
 			return url;
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 	
 	/**
-	 * The endpoint for the GameServerUIHandler framework.
+	 * The HttpEndpoint for the GameServerUIHandler framework.
 	 */
-	public static final Endpoint MODULE_SERVLETS = new Endpoint(GameServerServlets.class, StartUpApplication.SERVLET_PATH)
+	public static final HttpEndpoint MODULE_SERVLETS = new HttpEndpoint(GameServerServlets.class)
 	{
 		/**
 		 * The url to get custom UI pages from modules.
@@ -582,5 +614,5 @@ public class Endpoints
 		{
 			return get(values);
 		}
-	};
+	}.relative(StartUpApplication.SERVLET_PATH);
 }

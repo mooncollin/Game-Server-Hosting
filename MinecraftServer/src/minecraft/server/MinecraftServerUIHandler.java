@@ -3,13 +3,16 @@ package minecraft.server;
 import java.util.Map;
 
 import minecraft.frontend.Settings;
-import nodeapi.ApiSettings;
 import server.GameServerUIHandler;
+import utils.servlet.HttpParameter;
+import utils.servlet.HttpParameterBuilder;
 
 public class MinecraftServerUIHandler extends GameServerUIHandler
-{
-	public static final ApiSettings<Integer> RAM_AMOUNT = new ApiSettings<Integer>(Integer.class, "ramAmount", 
-				false, ram -> ram >= MinecraftServer.MINIMUM_HEAP_SIZE && ram % MinecraftServer.HEAP_STEP == 0, null);
+{	
+	public static final HttpParameter<Integer> RAM_AMOUNT = HttpParameterBuilder.start(Integer.class)
+																				.setName("ramAmount")
+																				.setChecker(ram -> ram >= MinecraftServer.MINIMUM_HEAP_SIZE && ram % MinecraftServer.HEAP_STEP == 0)
+																				.build();
 	
 	private static final Map<String, String> ICON_MAPPING = Map.ofEntries
 	(

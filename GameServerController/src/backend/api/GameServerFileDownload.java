@@ -58,7 +58,7 @@ public class GameServerFileDownload extends HttpServlet
 		
 		try
 		{
-			var url = nodeapi.FileDownload.getEndpoint(directory.get());
+			var url = nodeapi.Endpoints.FILE_DOWNLOAD.get(directory.get());
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL())).build();
 			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofInputStream());

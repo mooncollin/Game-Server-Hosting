@@ -5,7 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -19,34 +18,16 @@ import javax.servlet.http.HttpServletResponse;
 
 import nodemain.NodeProperties;
 import utils.Utils;
-import utils.servlet.Endpoint;
-import utils.servlet.ParameterURL;
 
-@WebServlet("/FileUpload")
+@WebServlet(
+		name = "FileUpload",
+		urlPatterns = "/FileUpload",
+		asyncSupported = true
+)
 @MultipartConfig
 public class FileUpload extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String URL = "/GameServerNode/FileUpload";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.HTTP, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL postEndpoint(List<String> directories, boolean isFolder)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.DIRECTORY.getName(), String.join(",", directories));
-		url.addQuery(ApiSettings.FOLDER.getName(), isFolder);
-		return url;
-	}
-
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		response.setStatus(400);
-	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{

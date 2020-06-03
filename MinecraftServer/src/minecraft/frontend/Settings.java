@@ -85,7 +85,7 @@ public class Settings extends HttpServlet
 		JSONObject nodeResponse;
 		try
 		{
-			var url = nodeapi.ServerInteract.postEndpoint(serverID.get());
+			var url = nodeapi.Endpoints.SERVER_INTERACT.post(serverID.get());
 			url.setHost(serverAddress);
 			
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
@@ -193,7 +193,7 @@ public class Settings extends HttpServlet
 		
 		try
 		{
-			var url = nodeapi.ServerInteract.postEndpoint(serverID.get());
+			var url = nodeapi.Endpoints.SERVER_INTERACT.post(serverID.get());
 			url.setHost(serverAddress);
 			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
 					.header("Content-Type", "application/json")

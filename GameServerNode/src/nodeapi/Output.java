@@ -17,8 +17,6 @@ import javax.websocket.server.ServerEndpoint;
 
 import nodemain.StartUpApplication;
 import server.GameServer;
-import utils.servlet.Endpoint;
-import utils.servlet.ParameterURL;
 
 @ServerEndpoint("/Output")
 public class Output
@@ -31,28 +29,8 @@ public class Output
 	public static final String SERVER_ON_MESSAGE = "<on>";
 	public static final String SERVER_OFF_MESSAGE = "<off>";
 	
-	public static final String URL = "/GameServerNode/Output";
 	public static final String OUTPUT_VALUE = "output";
 	public static final String RUNNING_VALUE = "running";
-	
-	private static final ParameterURL PARAMETER_URL = new ParameterURL
-	(
-			Endpoint.Protocol.WEB_SOCKET, "", ApiSettings.TOMCAT_HTTP_PORT, URL
-	);
-	
-	public static ParameterURL getEndpoint(int id)
-	{
-		var url = new ParameterURL(PARAMETER_URL);
-		url.addQuery(ApiSettings.SERVER_ID.getName(), id);
-		return url;
-	}
-	
-	public static ParameterURL getEndpoint(int id, String mode)
-	{
-		var url = getEndpoint(id);
-		url.addQuery(ApiSettings.OUTPUT_MODE.getName(), mode);
-		return url;
-	}
 	
 	@OnOpen
 	public void onOpen(Session session)
@@ -219,7 +197,7 @@ public class Output
 		{
 			synchronized (SERVER_OUTPUT)
 			{
-				var set = RUNNING_OUTPUT.get(server);
+				var set = SERVER_OUTPUT.get(server);
 				if(set == null)
 				{
 					break;
@@ -243,27 +221,27 @@ public class Output
 				{
 					break;
 				}
-			}
-			
-			if(serverData.size() > 0)
-			{
-				for(var session : sessions)
+				
+				if(serverData.size() > 0)
 				{
-					synchronized (session)
+					for(var session : sessions)
 					{
-						if(session.isOpen())
+						synchronized (session)
 						{
-							try(var sessionStream = session.getBasicRemote().getSendStream())
+							if(session.isOpen())
 							{
-								serverData.writeTo(sessionStream);
-							} catch (IOException e1)
-							{
-								continue;
+								try(var sessionStream = session.getBasicRemote().getSendStream())
+								{
+									serverData.writeTo(sessionStream);
+								} catch (IOException e1)
+								{
+									continue;
+								}
 							}
 						}
 					}
+					serverData.reset();
 				}
-				serverData.reset();
 			}
 		}
 	}

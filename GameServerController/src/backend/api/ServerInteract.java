@@ -52,31 +52,38 @@ public class ServerInteract extends HttpServlet
 			return;
 		}
 		
-		var url = nodeapi.ServerInteract.postEndpoint(serverID.get());
+		var url = nodeapi.Endpoints.SERVER_INTERACT.post(serverID.get());
 		url.setHost(serverAddress);
 		
-		var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
-									 .POST(BodyPublishers.ofInputStream(() ->
-									{
-										try
-										{
-											return request.getInputStream();
-										} catch (IOException e1)
-										{
-											throw new RuntimeException();
-										}
-									}))
-									 .build();
-
 		try
 		{
+			var httpRequest = HttpRequest.newBuilder(URI.create(url.getURL()))
+										 .POST(BodyPublishers.ofInputStream(() ->
+										{
+											try
+											{
+												return request.getInputStream();
+											} catch (IOException e1)
+											{
+												throw new RuntimeException();
+											}
+										}))
+										 .build();
+			
 			var httpResponse = StartUpApplication.client.send(httpRequest, BodyHandlers.ofString());
 			response.setStatus(httpResponse.statusCode());
 			response.setContentType("application/json");
 			response.getWriter().print(httpResponse.body());
-		} catch (InterruptedException e)
+		}
+		catch (InterruptedException e)
 		{
-			response.setStatus(500);
+			StartUpApplication.LOGGER.error(e.getMessage());
+			response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
+		}
+		catch(RuntimeException e)
+		{
+			StartUpApplication.LOGGER.error(e.getMessage());
+			response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.getCode());
 		}
 	}
 }

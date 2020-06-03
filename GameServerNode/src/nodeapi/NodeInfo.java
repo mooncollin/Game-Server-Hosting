@@ -10,10 +10,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import nodemain.NodeProperties;
+import utils.Utils;
 import utils.servlet.Endpoint;
+import utils.servlet.HttpStatus;
 import utils.servlet.ParameterURL;
 
-@WebServlet("/NodeInfo")
+@WebServlet(
+	name = "NodeInfo",
+	urlPatterns = "/NodeInfo",
+	asyncSupported = true
+)
 public class NodeInfo extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
@@ -41,16 +47,16 @@ public class NodeInfo extends HttpServlet
 	{
 		var property = ApiSettings.PROPERTY.parse(request);
 		
-		if(property.isEmpty())
+		if(!Utils.optionalsPresent(property))
 		{
-			response.setStatus(400);
+			response.setStatus(HttpStatus.BAD_REQUEST.getCode());
 			return;
 		}
 		
 		var responseValue = PROPERTY_COMMANDS.get(property.get());
 		if(responseValue == null)
 		{
-			response.setStatus(400);
+			response.setStatus(HttpStatus.BAD_REQUEST.getCode());
 			return;
 		}
 		

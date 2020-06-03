@@ -126,7 +126,7 @@ public class GameServerTriggerEdit extends HttpServlet
 		}
 		
 		
-		var url = nodeapi.TriggerEdit.getEndpoint(triggerID.get());
+		var url = nodeapi.Endpoints.TRIGGER_EDIT.get(triggerID.get());
 		url.setHost(serverAddress);
 		
 		try
